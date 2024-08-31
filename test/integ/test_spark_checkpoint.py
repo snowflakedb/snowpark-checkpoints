@@ -75,4 +75,8 @@ def test_spark_checkpoint_df_fail():
         return df.filter(df.a < 2)
     
     df = session.create_dataframe([[1, 2], [3, 4]], schema=["a", "b"])
-    my_snowpark_fn(df)
+    try:
+        my_snowpark_fn(df)
+        assert(False, "Should have failed")
+    except:
+        pass

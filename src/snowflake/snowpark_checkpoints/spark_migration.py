@@ -9,7 +9,7 @@ fn = TypeVar("F", bound=Callable)
 
 class SparkMigrationError(Exception):
     def __init__(self, message, job_name, checkpoint_name, data):
-        super().__init__(message)
+        super().__init__(f"Job: {job_name} Checkpoint: {checkpoint_name}\n{message}")
         self.data = data
         self.job_name = job_name
         self.checkpoint_name = checkpoint_name
@@ -56,7 +56,7 @@ def check_with_spark(
             # Run the sampled data in snowpark
             snowpark_test_results = snowpark_fn(*snowpark_sample_args, **kwargs)
             spark_test_results = spark_function(*pyspark_sample_args, **kwargs)
-            assert_return(snowpark_test_results, spark_test_results, job_context, checkpoint_name)
+            assert_return(snowpark_test_results, spark_test_results, job_context.job_name, checkpoint_name)
             # Run the original function in snowpark
             return snowpark_fn(*args, **kwargs)
         return wrapper
@@ -71,8 +71,8 @@ def assert_return(snowpark_results, spark_results, job_name, checkpoint_name):
         spark_df = spark_results.toPandas()
         cmp = spark_df.compare(snowpark_df, result_names=("left", "right"))
         if not cmp.empty:
-            raise SparkMigrationError(f"DataFrame difference {cmp.to_string()}", job_name, checkpoint_name, cmp)
+            raise SparkMigrationError(f"DataFrame difference:\n{cmp.to_string()}", job_name, checkpoint_name, cmp)
     else:
         if snowpark_results != spark_results:
-            raise SparkMigrationError(f"Return value difference {snowpark_results} != {spark_results}", job_name, checkpoint_name, f"{snowpark_results} != {spark_results}")
+            raise SparkMigrationError(f"Return value difference:\n{snowpark_results} != {spark_results}", job_name, checkpoint_name, f"{snowpark_results} != {spark_results}")
         

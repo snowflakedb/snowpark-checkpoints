@@ -4,11 +4,17 @@ from typing import Callable, Optional, TypeVar
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from pyspark.sql import DataFrame as SparkDataFrame
 from snowflake.snowpark import DataFrame as SnowparkDataFrame
-import pandas
+from enum import Enum
+
+from snowflake.snowpark_checkpoints.snowpark_sampler import SamplingAdapter, SamplingStrategy
 fn = TypeVar("F", bound=Callable)
 
 class SparkMigrationError(Exception):
-    def __init__(self, message, job_name, checkpoint_name, data):
+    def __init__(self, 
+                 message, 
+                 job_name = None, 
+                 checkpoint_name = None, 
+                 data = None):
         super().__init__(f"Job: {job_name} Checkpoint: {checkpoint_name}\n{message}")
         self.data = data
         self.job_name = job_name
@@ -19,6 +25,7 @@ def check_with_spark(
     spark_function: fn,
     check_name: Optional[str] = None,
     sample: Optional[int] = 100,
+    sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
     check_dtypes: Optional[bool] = True,
     check_with_precision: Optional[float] = True,
 ) -> Callable[[fn], fn]:
@@ -38,21 +45,10 @@ def check_with_spark(
         if check_name == None:
             checkpoint_name = snowpark_fn.__name__
         def wrapper(*args,**kwargs):
-            input_args = args
-            snowpark_sample_args = []
-            pyspark_sample_args = []
-            # create the intermediate pandas
-            # data frame for the test data
-            for arg in input_args:
-                if isinstance(arg, SnowparkDataFrame):
-                    df_sample = arg.sample(n=sample).to_pandas()
-                    snowpark_df = job_context.snowpark_session.create_dataframe(df_sample)
-                    snowpark_sample_args.append(snowpark_df)
-                    pyspark_df = job_context.spark_session.createDataFrame(df_sample)
-                    pyspark_sample_args.append(pyspark_df)
-                else:
-                    snowpark_sample_args.append(arg)
-
+            sampler = SamplingAdapter(job_context, sample, sampling_strategy)
+            sampler.process_args(args)
+            snowpark_sample_args = sampler.get_sampled_snowpark_args()
+            pyspark_sample_args = sampler.get_sampled_spark_args()
             # Run the sampled data in snowpark
             snowpark_test_results = snowpark_fn(*snowpark_sample_args, **kwargs)
             spark_test_results = spark_function(*pyspark_sample_args, **kwargs)

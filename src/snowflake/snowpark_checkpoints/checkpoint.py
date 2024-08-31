@@ -1,0 +1,1 @@
+# Wrapper around pandera.readthedocs.io which logs to snowflake

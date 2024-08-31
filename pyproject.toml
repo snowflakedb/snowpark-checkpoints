@@ -1,0 +1,19 @@
+[tool.setuptools.packages.find]
+where = ["src/"]
+include = ["snowflake.snowpark_checkpoints"]
+
+[project]
+name = "snowpark-checkpoints"
+dynamic = ["version"]
+dependencies = [
+  "snowflake-snowpark-python",
+  "snowflake-connector-python",
+  "pyspark",
+]
+requires-python = ">= 3.9"
+authors = [
+  {name = "John Kew"},
+]
+description = "Migration tools for Snowpark"
+readme = "README.md"
+license = {file = "LICENSE"}

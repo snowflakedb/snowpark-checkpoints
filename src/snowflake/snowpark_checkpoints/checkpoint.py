@@ -2,6 +2,7 @@
 from typing import Optional
 from pandera import DataFrameSchema
 import pandas
+from snowflake.snowpark_checkpoints.errors import SchemaValidationError
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from snowflake.snowpark_checkpoints.snowpark_sampler import SamplingAdapter, SamplingStrategy
 
@@ -22,7 +23,11 @@ def check_output_with_pandera(pandera_schema:DataFrameSchema,
             pandas_sample_args = sampler.get_sampled_pandas_args()
             
             # Raises SchemaError on validation issues
-            pandera_schema.validate(pandas_sample_args[0])
+            try:
+                pandera_schema.validate(pandas_sample_args[0])
+                job_context.mark_pass(checkpoint_name)
+            except Exception as pandera_ex:
+                raise SchemaValidationError("Snowpark output schema validation error", job_context, checkpoint_name, pandera_ex)
             return snowpark_results
         return wrapper
     return check_output_with_pandera_decorator
@@ -45,7 +50,11 @@ def check_input_with_pandera(pandera_schema:DataFrameSchema,
             # Raises SchemaError on validation issues
             for arg in pandas_sample_args:
                 if isinstance(arg, pandas.DataFrame):
-                    pandera_schema.validate(arg)
+                    try:
+                        pandera_schema.validate(arg)
+                        job_context.mark_pass(checkpoint_name)
+                    except Exception as pandera_ex:
+                        raise SchemaValidationError("Snowpark schema input validation error", job_context, checkpoint_name, pandera_ex)
             return snowpark_fn(*args, **kwargs)
         return wrapper
     return check_input_with_pandera_decorator

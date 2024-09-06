@@ -11,7 +11,9 @@ def collect_pandera_input_schema(df:SparkDataFrame):
 def collect_pandera_output_schema(df:SparkDataFrame):
     pass
 
-def collect_pandera_df_schema(df:SparkDataFrame, checkpoint_name, sample=0.1):
+def collect_pandera_df_schema(df:SparkDataFrame, 
+                              checkpoint_name, 
+                              sample=0.1):
     describe_df = df.describe().toPandas().set_index('summary')
     # use infer schema on a sample to set most values
     # this may be error prone

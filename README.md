@@ -3,9 +3,46 @@ Snowpark Python / Spark Migration Testing Tools
 
 ## TODO
 - create a spark-pipeline side pandera schema collector
-- create a snowpark-pipeline side for using generated schemas from spark side
 - clearly distinguish between schema-validation mode and parallel execution mode
-- add the streamlit app 
+- add the streamlit app
+
+# Data Collection from Spark Pipelines
+The `snowpark-checkpoints-collector` package can collect
+schema and check information from a spark pipeline and
+record those results into a set of JSON files corresponding to different intermediate dataframes. These files can be inspected manually 
+and handed over to teams implementing the snowpark pipeline. The `snowpark-checkpoints-collector` package is designed to have minimal
+dependencies and the generated files are meant to be inspected by security
+teams.
+
+On the snowpark side the `snowpark-checkpoints` package can use these files to perform schema and data validation checks against snowpark dataframes at the same, intermediate logical "checkpoints".
+
+## collect_pandera_df_schema
+
+```
+from snowflake.snowpark_checkpoints_collector import collect_pandera_df_schema;
+collect_pandera_df_schema(df:SparkDataFrame, 
+                              checkpoint_name, 
+                              sample=0.1)
+```
+* df - the spark data frame to collect the schema from
+* checkpoint_name - the name of the "checkpoint". Generated JSON files
+will have the name "snowpark-[checkpoint_name]-schema.json"
+* sample - sample size of the spark data frame to use to generate the schema
+
+## collect_pandera_df_schema_file
+```
+check_pandera_df_schema_file(df:SnowparkDataFrame, 
+                            checkpoint_name:str,
+                            job_context:SnowparkJobContext = None,
+                            sample: Optional[int] = 100,
+                            sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE)
+```
+
+* df - snowpark data frame to compare against the file schema
+* checkpoint_name - the name of the "checkpoint". Generated JSON files
+will have the name "snowpark-[checkpoint_name]-schema.json"
+* job_context - used to record migration results in snowflake, if desired
+* sample, sampling_strategy - strategy used to sample the snowpark data frame
 
 ## check_with_spark Decorator
 The `check_with_spark` decorator will convert any Snowpark DataFrame

@@ -1,0 +1,18 @@
+[tool.setuptools.packages.find]
+where = ["src/"]
+include = ["snowflake.snowpark_checkpoints_collector"]
+
+[project]
+name = "snowpark-checkpoints-collector"
+dynamic = ["version"]
+dependencies = [
+  "pyspark",
+  "pandera[io]",
+]
+requires-python = ">= 3.9"
+authors = [
+  {name = "John Kew"},
+]
+description = "Snowpark column and table statistics collection"
+readme = "README.md"
+license = {file = "LICENSE"}

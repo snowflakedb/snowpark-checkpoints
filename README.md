@@ -1,6 +1,12 @@
 # snowpark-checkpoints
 Snowpark Python / Spark Migration Testing Tools
 
+## TODO
+- create a spark-pipeline side pandera schema collector
+- create a snowpark-pipeline side for using generated schemas from spark side
+- clearly distinguish between schema-validation mode and parallel execution mode
+- add the streamlit app 
+
 ## check_with_spark Decorator
 The `check_with_spark` decorator will convert any Snowpark DataFrame
 arguments to a function, sample, and convert them to PySpark DataFrames

@@ -54,7 +54,10 @@ def assert_return(snowpark_results, spark_results, job_context, checkpoint_name)
          isinstance(spark_results, SparkDataFrame)
         ):
         snowpark_df = snowpark_results.to_pandas()
+        snowpark_df.columns = snowpark_df.columns.str.upper()
         spark_df = spark_results.toPandas()
+        spark_df.columns = spark_df.columns.str.upper()
+
         cmp = spark_df.compare(snowpark_df, result_names=("left", "right"))
         if not cmp.empty:
             raise SparkMigrationError(f"DataFrame difference:\n{cmp.to_string()}", job_context, checkpoint_name, cmp)

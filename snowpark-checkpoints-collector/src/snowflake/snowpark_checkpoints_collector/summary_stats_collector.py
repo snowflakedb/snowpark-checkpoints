@@ -1,6 +1,7 @@
 
 from numpy import dtype
 import pandas
+import numpy as np
 from pyspark.sql import DataFrame as SparkDataFrame
 import pandera as pa
 from pandera import DataFrameSchema, Column, Check
@@ -17,12 +18,16 @@ def collect_pandera_df_schema(df:SparkDataFrame,
     describe_df = df.describe().toPandas().set_index('summary')
     # use infer schema on a sample to set most values
     # this may be error prone
-    sampled_df = df.sample(sample).toPandas().reset_index()
+
+    sampled_df = df.sample(sample).toPandas()
+    sampled_df.index = np.ones(sampled_df.count().iloc[0])
+
     schema = pa.infer_schema(sampled_df)
-    schema = schema.remove_columns(["index"])
     # fix up the min/max constraints
     for col in schema.columns:
         col_dtype=schema.columns[col].dtype.type
+        if col_dtype == 'empty':
+            continue
         if (col == "index"):
             schema.columns[col].checks = []
         elif (pandas.api.types.is_numeric_dtype(col_dtype)):

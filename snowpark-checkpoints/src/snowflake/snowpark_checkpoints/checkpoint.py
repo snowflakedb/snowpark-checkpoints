@@ -1,7 +1,8 @@
 # Wrapper around pandera which logs to snowflake
-from typing import Optional
+from typing import Any, Dict, Optional
 from pandera import DataFrameSchema
 import pandera as pa
+import numpy as np
 import pandas
 from snowflake.snowpark_checkpoints.errors import SchemaValidationError
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
@@ -25,9 +26,19 @@ def check_pandera_df_schema(df:SnowparkDataFrame,
                             sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE):
     sampler = SamplingAdapter(job_context, sample, sampling_strategy)
     sampler.process_args([df])
+    
+    # fix up the column casing
+    pandera_schema_upper = pandera_schema
+    new_columns:Dict[Any, Any] = {} 
+    for col in pandera_schema.columns:
+        new_columns[col.upper()] = pandera_schema.columns[col]
+    pandera_schema_upper= pandera_schema_upper.remove_columns(pandera_schema.columns)
+    pandera_schema_upper= pandera_schema_upper.add_columns(new_columns)
+    sample_df = sampler.get_sampled_pandas_args()[0]
+    sample_df.index = np.ones(sample_df.count().iloc[0])
     # Raises SchemaError on validation issues
     try:
-        pandera_schema.validate(sampler.get_sampled_pandas_args()[0])
+        pandera_schema_upper.validate(sample_df)
         if job_context is not None:
             job_context.mark_pass(checkpoint_name)
     except Exception as pandera_ex:

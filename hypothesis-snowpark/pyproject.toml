@@ -1,0 +1,19 @@
+[tool.setuptools.packages.find]
+where = ["src/"]
+include = ["snowflake.hypothesis_snowpark"]
+
+[project]
+name = "hypothesis-snowpark"
+dynamic = ["version"]
+dependencies = [
+    "snowflake-snowpark-python[localtest]",
+    "hypothesis",
+]
+requires-python = ">= 3.9"
+authors = [
+    { name = "Fabian Gonzalez" },
+    { name = "Kelvin Jimenez" },
+]
+description = "Hypothesis extension for generating Snowpark DataFrames"
+readme = "README.md"
+license = { file = "LICENSE" }

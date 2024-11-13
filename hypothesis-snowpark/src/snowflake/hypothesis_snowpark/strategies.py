@@ -34,7 +34,7 @@ def snowpark_dataframe(
     min_rows: int = 5,
     max_rows: int = 20,
     session: Optional[snowflake.snowpark.Session] = None,
-) -> DataFrame:
+):
     """
     Defines a hypothesis strategy to generate Snowpark :class:`snowflake.snowpark.DataFrame`.
 

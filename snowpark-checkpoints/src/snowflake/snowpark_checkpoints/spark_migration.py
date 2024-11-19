@@ -57,14 +57,18 @@ def assert_return(snowpark_results, spark_results, job_context, checkpoint_name)
         snowpark_df.columns = snowpark_df.columns.str.upper()
         spark_df = spark_results.toPandas()
         spark_df.columns = spark_df.columns.str.upper()
+        if spark_df.shape != snowpark_df.shape:
+            cmp = spark_df.merge(snowpark_df, indicator=True, how='left').loc[lambda x: x['_merge'] != 'both']
+            cmp = cmp.replace({'left_only': 'spark_only', 'right_only': 'snowpark_only'})
+        else:
+            cmp = spark_df.compare(snowpark_df, result_names=("spark", "snowpark"))
 
-        cmp = spark_df.compare(snowpark_df, result_names=("left", "right"))
         if not cmp.empty:
-            raise SparkMigrationError(f"DataFrame difference:\n{cmp.to_string()}", job_context, checkpoint_name, cmp)
+            raise SparkMigrationError(f"DataFrame difference:\n", job_context, checkpoint_name, cmp)
         job_context.mark_pass(checkpoint_name)
     else:
         if snowpark_results != spark_results:
-            raise SparkMigrationError(f"Return value difference:\n{snowpark_results} != {spark_results}", job_context, checkpoint_name, f"{snowpark_results} != {spark_results}")
+            raise SparkMigrationError(f"Return value difference:\n", job_context, checkpoint_name, f"{snowpark_results} != {spark_results}")
         job_context.mark_pass(checkpoint_name)
 
         

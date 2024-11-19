@@ -6,7 +6,7 @@ class SnowparkCheckpointError(Exception):
             job_context:SnowparkJobContext,
             checkpoint_name: str,
             data = None):
-        super().__init__(f"Job: {job_context.job_name} Checkpoint: {checkpoint_name}\n{message}")
+        super().__init__(f"Job: {job_context.job_name} Checkpoint: {checkpoint_name}\n{message} \n {data}")
         job_context.mark_fail(message, checkpoint_name, data)           
 
 class SparkMigrationError(SnowparkCheckpointError):

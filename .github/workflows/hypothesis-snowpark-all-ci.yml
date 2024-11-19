@@ -1,4 +1,4 @@
-name: Run all workflows for snowflake.core
+name: Run all workflows for hypothesis.snowpark
 
 on:
   push:

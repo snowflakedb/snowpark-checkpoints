@@ -71,13 +71,6 @@ def collect_pandera_df_schema(
                 )
             )
 
-            if not custom_checks[col]:
-                custom_checks[col] = []
-
-            custom_checks[col].append(
-                {"func": "check_mean", "args": {"mean": describe_df.loc["mean"][col]}}
-            )
-
         elif pandas.api.types.is_datetime64_any_dtype(col_dtype):
             append_min_and_max_to_schema(schema, df, col)
 

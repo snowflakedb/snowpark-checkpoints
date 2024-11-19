@@ -6,7 +6,9 @@ from snowflake.snowpark_checkpoints.checkpoint import check_pandera_df_schema_fi
 from snowflake.snowpark_checkpoints.spark_migration import check_with_spark
 
 session = Session.builder.getOrCreate()
-job_context = SnowparkJobContext(session, SparkSession.builder.getOrCreate(), "realdemo", True)
+job_context = SnowparkJobContext(
+    session, SparkSession.builder.getOrCreate(), "realdemo", True
+)
 
 df = session.create_dataframe(
     [
@@ -17,7 +19,7 @@ df = session.create_dataframe(
         ("kathy", 45),
         ("belle", 13),
         ("oona", 9),
-        ("jules", 12)
+        ("jules", 12),
     ],
     ["first_name", "age"],
 )
@@ -28,25 +30,30 @@ check_pandera_df_schema_file(df, "demo-initial-creation-checkpoint", job_context
 
 def original_spark_code_I_dont_understand(df):
     from pyspark.sql.functions import col, when
+
     ret = df.withColumn(
         "life_stage",
         when(col("age") < 13, "child")
         .when(col("age").between(13, 19), "teenager")
-            .otherwise("adult"),
+        .otherwise("adult"),
     )
     return ret
 
-@check_with_spark(job_context=job_context, 
-                  spark_function=original_spark_code_I_dont_understand)
+
+@check_with_spark(
+    job_context=job_context, spark_function=original_spark_code_I_dont_understand
+)
 def new_snowpark_code_I_do_understand(df):
     from snowflake.snowpark.functions import col, lit, when
+
     ret = df.with_column(
         "life_stage",
         when(col("age") < 43, lit("child"))
         .when(col("age").between(43, 19), lit("teenager"))
-            .otherwise(lit("adult")),
+        .otherwise(lit("adult")),
     )
     return ret
+
 
 df1 = new_snowpark_code_I_do_understand(df)
 

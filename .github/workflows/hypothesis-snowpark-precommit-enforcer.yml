@@ -1,0 +1,33 @@
+name: precommit-enforcer
+permissions: read-all
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "**"
+      - "!snowpark-checkpoints/**"
+      - "!snowpark-checkpoints-collector/**"
+    tags:
+      - "hypothesis.snowpark-v[0-9]+.[0-9]+.[0-9]+"
+  pull_request:
+    branches: "**"
+    paths:
+      - "**"
+      - "!snowpark-checkpoints/**"
+      - "!snowpark-checkpoints-collector/**"
+    types: [labeled, unlabeled, edited, opened, reopened, synchronize]
+
+jobs:
+  precommit-enforcer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+      - name: Precommit-Enforcer
+        uses: ./.github/actions/precommit-enforcer
+        with:
+          body: ${{ github.event.pull_request.body }}
+          gh_token: ${{ secrets.GITHUB_TOKEN }}
+          pr_number: ${{ github.event.pull_request.number }}

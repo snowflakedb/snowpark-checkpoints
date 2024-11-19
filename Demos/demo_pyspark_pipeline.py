@@ -1,6 +1,6 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, when
-from snowflake.snowpark_checkpoints_collector import collect_pandera_df_schema;
+from snowflake.snowpark_checkpoints_collector import collect_pandera_df_schema
 
 spark = SparkSession.builder.appName("demo").getOrCreate()
 
@@ -13,7 +13,7 @@ df = spark.createDataFrame(
         ("kathy", 45),
         ("belle", 13),
         ("oona", 9),
-        ("jules", 12)
+        ("jules", 12),
     ],
     ["first_name", "age"],
 )

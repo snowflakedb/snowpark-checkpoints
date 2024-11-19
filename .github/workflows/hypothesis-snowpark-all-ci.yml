@@ -1,0 +1,33 @@
+name: Run all workflows for snowflake.core
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+        - "**"
+        - "!snowpark-checkpoints/**"
+        - "!snowpark-checkpoints-collector/**"
+        - "!Demos/**"
+    tags:
+      - 'hypothesis.snowpark-v[0-9]+.[0-9]+.[0-9]+'
+  pull_request:
+    branches: '**'
+    paths:
+        - "**"
+        - "!snowpark-checkpoints/**"
+        - "!snowpark-checkpoints-collector/**"
+        - "!Demos/**"
+  workflow_call:
+
+jobs:
+  lint:
+    name: Static analysis and linting for hypothesis-snowpark
+    uses: ./.github/workflows/hypothesis-snowpark-lint.yml
+
+  build:
+    needs: lint
+    name: Build and test wheels for hypothesis-snowpark
+    uses: ./.github/workflows/hypothesis-snowpark-use-build-wheels.yml
+    with:
+      artifact-name: hypothesis-snowpark

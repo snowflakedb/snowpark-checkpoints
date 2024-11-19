@@ -4,6 +4,10 @@
     <content url="file://$MODULE_DIR$">
       <sourceFolder url="file://$MODULE_DIR$/hypothesis-snowpark/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/hypothesis-snowpark/test" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/snowpark-checkpoints/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/snowpark-checkpoints-collector/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/snowpark-checkpoints-collector/test" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/snowpark-checkpoints/test" isTestSource="true" />
     </content>
     <orderEntry type="jdk" jdkName="py311" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

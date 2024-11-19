@@ -1,3 +1,4 @@
+import os.path
 
 from numpy import dtype
 import pandas
@@ -14,7 +15,8 @@ def collect_pandera_output_schema(df:SparkDataFrame):
 
 def collect_pandera_df_schema(df:SparkDataFrame, 
                               checkpoint_name, 
-                              sample=0.1):
+                              sample=0.1,
+                              file_dir = None):
     describe_df = df.describe().toPandas().set_index('summary')
     # use infer schema on a sample to set most values
     # this may be error prone
@@ -33,7 +35,9 @@ def collect_pandera_df_schema(df:SparkDataFrame,
         elif (pandas.api.types.is_numeric_dtype(col_dtype)):
             schema.columns[col].checks = [Check.less_than_or_equal_to(float(describe_df.loc['max'][col])),
                                         Check.greater_than_or_equal_to(float(describe_df.loc['min'][col]))]
-            
-    f = open(f"snowpark-{checkpoint_name}-schema.json", "w")
+
+    file_name = f"snowpark-{checkpoint_name}-schema.json"
+    file_path = os.path.join(file_dir, file_name) if file_dir else file_name
+    f = open(file_path, "w")
     f.write(schema.to_json())
     f.close()

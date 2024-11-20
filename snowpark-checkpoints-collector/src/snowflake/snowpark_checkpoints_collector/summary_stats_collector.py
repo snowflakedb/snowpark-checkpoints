@@ -42,7 +42,6 @@ def collect_pandera_df_schema(
     sampled_df.index = np.ones(sampled_df.count().iloc[0])
 
     schema = pa.infer_schema(sampled_df)
-    custom_checks = {}
 
     for col in schema.columns:
         col_dtype = schema.columns[col].dtype.type
@@ -75,7 +74,7 @@ def collect_pandera_df_schema(
             append_min_and_max_to_schema(schema, df, col)
 
         elif pandas.api.types.is_object_dtype(col_dtype):
-            # * decimal is and object so we need to check if it is a decimal, binary, date or string
+            # * decimal is and object so we need to check if it is a decimal, bytes, date or string
 
             if isinstance(sampled_df[col].iloc[0], Decimal):
                 min_value = float(df.select(min(col)).head()[0])

@@ -26,5 +26,7 @@ jobs:
           hatch --version
 
       - name: Run lint checks
-        run: hatch run precommit:check
+        run: |
+          echo "Current working directory:" && pwd
+          hatch run precommit:check
         working-directory: ./hypothesis-snowpark

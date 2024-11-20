@@ -31,7 +31,11 @@ jobs:
         working-directory: ./hypothesis-snowpark
 
       - name: Show generated artifacts
-        run: ls -lha dist/
+        run: |
+          echo "GitHub workspace: $GITHUB_WORKSPACE"
+          echo "Current directory: $PWD"
+          echo "Runner workspace: $RUNNER_WORKSPACE"
+          ls -la dist
 
       - name: Verify build artifacts
         run: |

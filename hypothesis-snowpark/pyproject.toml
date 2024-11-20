@@ -118,6 +118,5 @@ check = [
   'pytest -v --junitxml=test/outcome/test-results.xml --cov=. --cov-report=xml:test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.xml {args:test} --cov-report=term --cov-report=json:test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.json',
 ]
 coverage = [
-  'echo {env:PYTHON_VERSION}'
   'cd test/outcome && pwd && ls -la',
 ]

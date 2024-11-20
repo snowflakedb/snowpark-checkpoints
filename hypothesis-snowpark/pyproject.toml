@@ -111,8 +111,5 @@ exclude_lines = [
 
 [tool.hatch.envs.precommit.scripts]
 check = [
-    'ruff check .',
-]
-fix = [
     'ruff check --fix .',
 ]

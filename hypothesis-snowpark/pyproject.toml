@@ -120,5 +120,5 @@ check = [
 coverage = [
   'echo {env:PYTHON_VERSION}'
   'cd test/outcome && pwd && ls -la',
-  'cd test/outcome && sed -n \'s/.*"totals": {[^}]*"percent_covered": \\([^,]*\\),.*/\\1/p\' coverage-*.json',
+  'sed -n "s/.*\\"totals\\": {[^}]*\\"percent_covered\\": \\([^,]*\\),.*/\\1/p" coverage-*.json',
 ]

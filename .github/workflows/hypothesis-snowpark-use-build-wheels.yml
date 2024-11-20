@@ -35,7 +35,7 @@ jobs:
         run: |
           echo "Current directory: $PWD"
           ls -la dist
-        working-directory: $RUNNER_WORKSPACE/hypothesis-snowpark
+        working-directory: ./hypothesis-snowpark
 
       - name: Verify build artifacts
         run: |

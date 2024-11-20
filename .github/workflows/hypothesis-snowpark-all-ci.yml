@@ -31,3 +31,9 @@ jobs:
     uses: ./.github/workflows/hypothesis-snowpark-use-build-wheels.yml
     with:
       artifact-name: hypothesis-snowpark
+
+  test:
+    needs: build
+    name: Run all tests for hypothesis-snowpark
+    uses: ./.github/workflows/hypothesis-snowpark-use-tests_all.yml
+    secrets: inherit

@@ -2,11 +2,19 @@ exclude: "^(.*egg.info.*|.*/parameters.py|docs/).*$"
 default_language_version:
   python: python3.9
 repos:
+  - repo: git@github.com:GitGuardian/ggshield.git
+    rev: v1.32.2
+    hooks:
+      - id: ggshield
+        language_version: python3
+        stages: [commit]
+
   - repo: https://github.com/asottile/pyupgrade
     rev: v2.31.1
     hooks:
       - id: pyupgrade
         args: [--py38-plus]
+  
   - repo: https://github.com/PyCQA/isort
     rev: 5.12.0
     hooks:
@@ -29,6 +37,7 @@ repos:
             "snowflake.snowpark",
             "--diff",
           ]
+
   - repo: https://github.com/psf/black
     rev: 22.3.0
     hooks:
@@ -36,6 +45,7 @@ repos:
         args:
           - --safe
         language_version: python3
+
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.1.0
     hooks:
@@ -59,6 +69,7 @@ repos:
           )$
       - id: debug-statements
       - id: check-ast
+
   - repo: https://github.com/Lucas-C/pre-commit-hooks.git
     rev: v1.1.13
     hooks:
@@ -78,6 +89,7 @@ repos:
         args:
           - --license-filepath
           - license_header.txt
+          
   - repo: https://github.com/pycqa/flake8.git
     rev: 6.1.0
     hooks:

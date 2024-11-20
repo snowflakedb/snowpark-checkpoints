@@ -25,6 +25,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install hatch
           pip list
+          hatch status
+          hatch env show
           hatch --version
 
       - name: Generate wheel and sdist
@@ -33,8 +35,7 @@ jobs:
 
       - name: Show generated artifacts
         run: |
-          echo "Current directory: $PWD"
-          ls -la dist
+          echo "Current directory: $PWD" && ls -la dist
         working-directory: ./hypothesis-snowpark
 
       - name: Verify build artifacts

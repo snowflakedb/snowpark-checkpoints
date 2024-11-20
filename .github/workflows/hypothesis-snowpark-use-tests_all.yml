@@ -1,0 +1,64 @@
+name: Run tests for hypothesis-snowpark
+
+on:
+  workflow_call:
+
+jobs:
+  test:
+    name: Test ${{ matrix.download_name }}-${{ matrix.python-version }}-${{ matrix.cloud-provider }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python-version:  "3.9"
+            cloud-provider: aws
+            download_name: linux
+          - os: macos-latest
+            python-version: "3.9"
+            cloud-provider: aws
+            download_name: macos
+          - os: windows-latest
+            python-version: "3.9"
+            cloud-provider: aws
+            download_name: windows
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Display Python version
+        run: |
+            python -c "import sys; print(sys.version)"
+
+      - name: Install required tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ".[development]"
+          pip install hatch
+          pip list
+
+
+      - name: Run tests
+        run: |
+            echo "Current working directory: $PWD"
+            hatch config set dirs.env.virtual .hatch
+            hatch --version
+            hatch status
+            hatch env show
+            hatch run test:check
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
+          cloud_provider: ${{ matrix.cloud-provider }}
+          PYTEST_ADDOPTS: --color=yes --tb=short -v
+          SNOWFLAKE_MONOREPO: 1
+        shell: bash
+        working-directory: ./hypothesis-snowpark

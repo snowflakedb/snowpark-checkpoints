@@ -119,7 +119,7 @@ check = [
 ]
 coverage = [
   'cd test/outcome && pwd && ls -la',
-  'value=$(sed -n "s/.*\\"totals\\": {[^}]*\\"percent_covered\\": \\([^,]*\\),.*/\\1/p" coverage-*.json)',
-  'echo "Coverage percent: $value"',
-  '[ "$(echo "$value >= 95" | bc)" -eq 1 ] || (echo "Coverage is below 95%! Exiting with error." && exit 1)',
+  'COVERAGE_VALUE=$(sed -n 's/.*"percent_covered": \([0-9.]*\).*/\1/p' coverage-*.json)'
+  'echo "Coverage percent: $COVERAGE_VALUE"',
+  '[ "$(echo "$COVERAGE_VALUE >= 95" | bc)" -eq 1 ] || (echo "Coverage is below 95%! Exiting with error." && exit 1)',
 ]

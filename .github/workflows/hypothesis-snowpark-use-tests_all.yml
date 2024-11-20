@@ -45,7 +45,7 @@ jobs:
           python -m pip install ".[development]"
           pip install hatch
           pip list
-
+        working-directory: ./hypothesis-snowpark
 
       - name: Run tests
         run: |

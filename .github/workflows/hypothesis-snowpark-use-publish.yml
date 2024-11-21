@@ -1,11 +1,11 @@
 name: Publish to PyPI [hypothesis.snowpark]
 
 on:
-  workflow_run:
-    workflows:
-      - "Publish artifact [hypothesis.snowpark]"
-    types:
-      - completed
+  workflow_call:
+    inputs:
+      artifact-name:
+        required: true
+        type: string
 
 jobs:
   download-and-publish:

@@ -38,10 +38,10 @@ jobs:
     uses: ./.github/workflows/hypothesis-snowpark-use-tests_all.yml
     secrets: inherit
 
-  publish:
-    needs: test
-    name: Publish package hypothesis-snowpark
-    uses: ./.github/workflows/hypothesis-snowpark-use-publish.yml
-    secrets: inherit
-    with:
-        artifact-name: hypothesis-snowpark
+  #publish:
+    #needs: test
+    #name: Publish package hypothesis-snowpark
+    #uses: ./.github/workflows/hypothesis-snowpark-use-publish.yml
+    #secrets: inherit
+    #with:
+        #artifact-name: hypothesis-snowpark

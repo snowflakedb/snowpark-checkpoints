@@ -23,10 +23,6 @@ jobs:
             python-version:  "3.11"
             cloud-provider: aws
             download_name: linux
-          - os: ubuntu-latest
-            python-version:  "3.12"
-            cloud-provider: aws
-            download_name: linux
           - os: macos-latest
             python-version: "3.9"
             cloud-provider: aws
@@ -37,10 +33,6 @@ jobs:
             download_name: macos
           - os: macos-latest
             python-version: "3.11"
-            cloud-provider: aws
-            download_name: macos
-          - os: macos-latest
-            python-version: "3.12"
             cloud-provider: aws
             download_name: macos
           - os: windows-latest

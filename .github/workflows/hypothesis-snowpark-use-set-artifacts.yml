@@ -8,8 +8,8 @@ on:
         type: string
 
 jobs:
-  lint:
-    name: Check linting
+  artifacts:
+    name: Create artifacts
     runs-on: ubuntu-latest
     env:
       ARTIFACT_NAME: ${{ inputs.artifact-name }}

@@ -7,11 +7,11 @@ from pyspark.sql.functions import min, max, count
 from pandera import Check
 
 
-def collect_pandera_input_schema(df: SparkDataFrame):
+def collect_input_schema(df: SparkDataFrame):
     pass
 
 
-def collect_pandera_output_schema(df: SparkDataFrame):
+def collect_output_schema(df: SparkDataFrame):
     pass
 
 
@@ -29,7 +29,7 @@ def convert_string_to_number(string_value):
         raise ValueError(f"Cannot convert {string_value} to a number")
 
 
-def collect_pandera_df_schema(
+def collect_df_schema(
     df: SparkDataFrame, checkpoint_name, sample=0.1, min_amnount_for_category=0.1
 ):
     describe_df = df.describe().toPandas().set_index("summary")

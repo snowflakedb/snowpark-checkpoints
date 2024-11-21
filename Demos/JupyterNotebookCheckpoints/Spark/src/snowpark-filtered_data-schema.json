@@ -1,0 +1,125 @@
+{
+    "add_missing_columns": false,
+    "checks": null,
+    "coerce": true,
+    "columns": {
+        "category": {
+            "checks": null,
+            "coerce": false,
+            "description": null,
+            "dtype": "object",
+            "nullable": false,
+            "regex": false,
+            "required": true,
+            "title": null,
+            "unique": false
+        },
+        "discount": {
+            "checks": {
+                "greater_than_or_equal_to": 113.0,
+                "less_than_or_equal_to": 114.0
+            },
+            "coerce": false,
+            "description": null,
+            "dtype": "float64",
+            "nullable": false,
+            "regex": false,
+            "required": true,
+            "title": null,
+            "unique": false
+        },
+        "id": {
+            "checks": {
+                "greater_than_or_equal_to": 1.0,
+                "less_than_or_equal_to": 999984.0
+            },
+            "coerce": false,
+            "description": null,
+            "dtype": "int32",
+            "nullable": false,
+            "regex": false,
+            "required": true,
+            "title": null,
+            "unique": false
+        },
+        "name": {
+            "checks": null,
+            "coerce": false,
+            "description": null,
+            "dtype": "object",
+            "nullable": false,
+            "regex": false,
+            "required": true,
+            "title": null,
+            "unique": false
+        },
+        "price": {
+            "checks": {
+                "greater_than_or_equal_to": 5.03,
+                "less_than_or_equal_to": 1499.97
+            },
+            "coerce": false,
+            "description": null,
+            "dtype": "float64",
+            "nullable": false,
+            "regex": false,
+            "required": true,
+            "title": null,
+            "unique": false
+        },
+        "quantity": {
+            "checks": {
+                "greater_than_or_equal_to": 1.0,
+                "less_than_or_equal_to": 100.0
+            },
+            "coerce": false,
+            "description": null,
+            "dtype": "int32",
+            "nullable": false,
+            "regex": false,
+            "required": true,
+            "title": null,
+            "unique": false
+        },
+        "two_items_discount": {
+            "checks": {
+                "greater_than_or_equal_to": 155.49,
+                "less_than_or_equal_to": 155.49
+            },
+            "coerce": false,
+            "description": null,
+            "dtype": "float64",
+            "nullable": false,
+            "regex": false,
+            "required": true,
+            "title": null,
+            "unique": false
+        }
+    },
+    "description": null,
+    "dtype": null,
+    "index": [
+        {
+            "checks": {
+                "greater_than_or_equal_to": 1.0,
+                "less_than_or_equal_to": 1.0
+            },
+            "coerce": false,
+            "description": null,
+            "dtype": "float64",
+            "name": null,
+            "nullable": false,
+            "title": null,
+            "unique": false
+        }
+    ],
+    "name": null,
+    "ordered": false,
+    "report_duplicates": "all",
+    "schema_type": "dataframe",
+    "strict": false,
+    "title": null,
+    "unique": null,
+    "unique_column_names": false,
+    "version": "0.20.4"
+}

@@ -5,7 +5,7 @@ from pandera import DataFrameSchema, Column, Check
 import pandera
 from snowflake.snowpark import DataFrame as SnowparkDataFrame
 
-from snowflake.snowpark_checkpoints.checkpoint import check_input_with_pandera, check_output_with_pandera
+from snowflake.snowpark_checkpoints.checkpoint import check_pandera_output_schema
 from snowflake.snowpark import Session
 from snowflake.snowpark.functions import lit 
 

@@ -1,0 +1,105 @@
+exclude: "^(.*egg.info.*|.*/parameters.py|docs/).*$"
+default_language_version:
+  python: python3.9
+repos:
+  - repo: git@github.com:GitGuardian/ggshield.git
+    rev: v1.32.2
+    hooks:
+      - id: ggshield
+        language_version: python3
+        stages: [commit]
+
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v2.31.1
+    hooks:
+      - id: pyupgrade
+        args: [--py38-plus]
+  
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        args:
+          [
+            "--multi-line",
+            "3",
+            "--trailing-comma",
+            "--force-grid-wrap",
+            "0",
+            "--use-parentheses",
+            "--ensure-newline-before-comments",
+            "--line-length",
+            "88",
+            "--combine-as",
+            "--project",
+            "snowflake.connector",
+            "--project",
+            "snowflake.snowpark",
+            "--diff",
+          ]
+
+  - repo: https://github.com/psf/black
+    rev: 22.3.0
+    hooks:
+      - id: black
+        args:
+          - --safe
+        language_version: python3
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.1.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: >
+          (?x)^(
+              .*\.md|
+              .*\.yaml
+          )$
+      - id: end-of-file-fixer
+        exclude: >
+          (?x)^(
+              license_header.txt|
+              tests/resources/.*|
+          )$
+      - id: check-yaml
+        exclude: >
+          (?x)^(
+              hypothesis-snowpark/recipe/meta.yaml|
+              .github/repo_meta.yaml|
+          )$
+      - id: debug-statements
+      - id: check-ast
+
+  - repo: https://github.com/Lucas-C/pre-commit-hooks.git
+    rev: v1.1.13
+    hooks:
+      - id: insert-license
+        name: insert-py-license
+        files: >
+          (?x)^(
+              hypothesis-snowpark/.*\.py|
+              snowpark-checkpoints/.*\.py|
+              snowpark-checkpoints-collector/.*\.py|
+              tests/.*\.py|
+          )$
+        exclude: >
+          (?x)^(
+              tests/resources/.*\.py|
+          )$
+        args:
+          - --license-filepath
+          - license_header.txt
+          
+  - repo: https://github.com/pycqa/flake8.git
+    rev: 6.1.0
+    hooks:
+      - id: flake8
+        additional_dependencies:
+          - flake8-bugbear
+          - flake8-init-return == 1.0.0
+          - flake8-print
+        args:
+          - --per-file-ignores=tests/*.py,.github/scripts/*.py:T201
+          - --per-file-ignores=tests/*.py,.github/scripts/*.py:T201
+          - --ignore=E501
+          - --max-line-length=120

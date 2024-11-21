@@ -1,4 +1,5 @@
 # Wrapper around pandera which logs to snowflake
+import os
 from typing import Any, Dict, Optional
 from pandera import DataFrameSchema
 import pandera as pa
@@ -10,11 +11,18 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import SamplingAdapter, Sam
 from snowflake.snowpark import DataFrame as SnowparkDataFrame
 
 def check_pandera_df_schema_file(df:SnowparkDataFrame, 
-                            checkpoint_name:str,
+                            checkpoint_name:str = None,
                             job_context:SnowparkJobContext = None,
                             sample: Optional[int] = 100,
-                            sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE):
-    schema_file = open(f"snowpark-{checkpoint_name}-schema.json", "r")
+                            sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
+                                 file_path: str=None):
+    file_name = f"snowpark-{checkpoint_name}-schema.json"
+    file_name = file_path if file_path else file_name
+
+    if not os.path.isfile(file_name):
+        raise Exception(f"checkpoint file {file_name} doesn't exist")
+
+    schema_file = open(file_name, "r")
     schema = pa.DataFrameSchema.from_json(schema_file)
     check_pandera_df_schema(df, schema, job_context, checkpoint_name, sample, sampling_strategy)
                             

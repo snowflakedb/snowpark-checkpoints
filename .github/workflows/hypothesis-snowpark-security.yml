@@ -21,9 +21,8 @@ jobs:
 
       - name: Run Snyk to check for vulnerabilities
         uses: snyk/actions@v2
-        run: |
-          cd hypothesis-snowpark && pwd && ls -la
-          snyk monitor
+        with:
+          args: monitor ./hypothesis-snowpark
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_GITHUB_INTEGRATION_TOKEN }}
           SNYK_ID: ${{ secrets.SNYK_ORG_ID }}
@@ -37,8 +36,8 @@ jobs:
 
       - name: Run Semgrep scan
         uses: returntocorp/semgrep-action@v1
-        run: |
-          cd hypothesis-snowpark && pwd && ls -la
-          semgrep --config=p/ci
+        with:
+          config: "p/ci"
+          scan_dir: "./hypothesis-snowpark"
         env:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}

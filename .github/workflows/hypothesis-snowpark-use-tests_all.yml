@@ -1,4 +1,4 @@
-name: Run tests for [hypothesis.snowpark]
+name: Run tests [hypothesis.snowpark]
 
 on:
   workflow_call:

@@ -1,4 +1,4 @@
-name: Build and test wheel artifacts [hypothesis.snowpark]
+name: Build wheels [hypothesis.snowpark]
 
 on: workflow_call
 

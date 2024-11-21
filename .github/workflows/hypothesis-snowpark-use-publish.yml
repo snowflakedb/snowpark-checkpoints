@@ -45,8 +45,9 @@ jobs:
       - name: Generate version with GitVersion
         id: gitversion
         run: |
+          version_info=$(dotnet gitversion /output json /showvariable InformationalVersion)
           version_output=$(dotnet gitversion /output json /showvariable MajorMinorPatch)
-          echo "Calculated Version: $version_output"
+          echo "Calculated Version: $version_output" && echo "Informational Version: $version_info"
           echo "version=$version_output" >> $GITHUB_OUTPUT
         env:
           DOTNET_ROOT: $HOME/.dotnet
@@ -58,4 +59,20 @@ jobs:
           grep "version = " pyproject.toml
         env:
           NEW_VERSION: ${{ steps.gitversion.outputs.version }}
+        working-directory: ./hypothesis-snowpark
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+
+      - name: Install required tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install hatch
+
+      - name: Generate wheel and sdist
+        run: |
+          hatch build
+          echo "Current directory: $PWD" && ls -la dist
         working-directory: ./hypothesis-snowpark

@@ -1,22 +1,25 @@
-
-
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from snowflake.snowpark import DataFrame as SnowparkDataFrame
 import pandas
 
+
 class SamplingStrategy:
     RANDOM_SAMPLE = 1
     LIMIT = 2
 
+
 class SamplingError(Exception):
     pass
 
+
 class SamplingAdapter:
-    def __init__(self, 
-                job_context:SnowparkJobContext,
-                sample_size:int = 100,
-                sampling_strategy:SamplingStrategy = SamplingStrategy.RANDOM_SAMPLE):
+    def __init__(
+        self,
+        job_context: SnowparkJobContext,
+        sample_size: float = 1,
+        sampling_strategy: SamplingStrategy = SamplingStrategy.RANDOM_SAMPLE,
+    ):
         self.pandas_sample_args = []
         self.job_context = job_context
         self.sample_size = sample_size
@@ -28,7 +31,7 @@ class SamplingAdapter:
         for arg in input_args:
             if isinstance(arg, SnowparkDataFrame):
                 if self.sampling_strategy == SamplingStrategy.RANDOM_SAMPLE:
-                    df_sample = arg.sample(n=self.sample_size).to_pandas()
+                    df_sample = arg.sample(self.sample_size).to_pandas()
                 else:
                     df_sample = arg.limit(self.sample_size).to_pandas()
                 self.pandas_sample_args.append(df_sample)
@@ -49,7 +52,7 @@ class SamplingAdapter:
             else:
                 snowpark_sample_args.append(arg)
         return snowpark_sample_args
-    
+
     def get_sampled_spark_args(self):
         if self.job_context == None:
             raise SamplingError("Need a job context to compare with spark")
@@ -61,4 +64,3 @@ class SamplingAdapter:
             else:
                 pyspark_sample_args.append(arg)
         return pyspark_sample_args
-    

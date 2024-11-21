@@ -22,12 +22,6 @@ jobs:
         with:
           node-version: "20.9.0"
 
-      - name: Run Snyk Test
-        run: snyk test
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-          SNYK_ID: ${{ secrets.SNYK_ORG_ID }}
-
       - name: Run Snyk Monitor
         uses: snyk/actions/node@master
         continue-on-error: false
@@ -47,6 +41,6 @@ jobs:
       - name: Run Semgrep scan
         uses: returntocorp/semgrep-action@v1
         with:
-          config: "p/ci"
+          scan_dir: "./hypothesis-snowpark"
         env:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}

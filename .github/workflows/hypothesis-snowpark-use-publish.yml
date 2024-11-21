@@ -1,0 +1,33 @@
+name: Publish package hypothesis-snowpark
+
+on:
+    workflow_call:
+      inputs:
+        artifact-name:
+          required: true
+          type: string
+
+jobs:
+  lint:
+    name: Check linting
+    runs-on: gittools/gitversion:5.12.0-ubuntu.18.04-6.0
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+        with:
+            fetch-depth: 0
+
+      - name: Get commit
+        id: get_commit_count
+        run: |
+            COMMIT_COUNT=$(git rev-list --count HEAD)
+            echo "COMMIT_COUNT=$COMMIT_COUNT" >> $GITHUB_ENV
+
+      - name: Update version
+        run: |
+          echo "Commit: ${COMMIT_COUNT}"
+        working-directory: ./hypothesis-snowpark
+        shell: bash
+        env:
+            COMMIT_COUNT: ${{ env.COMMIT_COUNT }}

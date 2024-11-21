@@ -5,6 +5,9 @@ on:
     branches:
       - "**"
 
+permissions:
+  contents: read
+
 jobs:
   snyk:
     runs-on: ubuntu-latest
@@ -19,8 +22,15 @@ jobs:
         with:
           node-version: "20.9.0"
 
-      - name: Run Snyk to check for vulnerabilities
-        uses: snyk/actions@v2
+      - name: Run Snyk Test
+        run: snyk test
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+          SNYK_ID: ${{ secrets.SNYK_ORG_ID }}
+
+      - name: Run Snyk Monitor
+        uses: snyk/actions/node@master
+        continue-on-error: false
         with:
           args: monitor ./hypothesis-snowpark
         env:
@@ -38,6 +48,5 @@ jobs:
         uses: returntocorp/semgrep-action@v1
         with:
           config: "p/ci"
-          scan_dir: "./hypothesis-snowpark"
         env:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}

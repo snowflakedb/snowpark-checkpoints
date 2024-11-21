@@ -129,7 +129,7 @@ The following will result in a pandera SchemaError:
 
 ### Steps
 
-1. Create a Python environment with Python 3.9 or higher.
+1. Create a Python environment with Python 3.9 or higher in the Demos dir.
 2. Build the Python snowpark-checkpoints and snowpark-checkpoints-collector packages. Learn more.
 
 ```cmd
@@ -139,7 +139,7 @@ python3 -m pip install --upgrade buildpython3 -m build
 python3 -m build
 ```
 
-3. In the root of the project, run:
+3. In Demos dir, run:
    pip install "snowflake-connector-python[pandas]"
 4. First, run the PySpark demo:
    python demo_pyspark_pipeline.py

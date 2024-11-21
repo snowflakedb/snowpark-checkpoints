@@ -1,9 +1,13 @@
+#
+# Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
+#
+
 from decimal import Decimal
 import pandas
 import numpy as np
 from pyspark.sql import DataFrame as SparkDataFrame
 import pandera as pa
-from pyspark.sql.functions import min, max, count
+from pyspark.sql.functions import min, max
 from pandera import Check
 
 

@@ -22,18 +22,18 @@ on:
 
 jobs:
   lint:
-    name: Static analysis and linting for hypothesis-snowpark
+    name: Static analysis and linting hypothesis-snowpark
     uses: ./.github/workflows/hypothesis-snowpark-lint.yml
 
   build:
     needs: lint
-    name: Build and test wheels for hypothesis-snowpark
+    name: Build wheels hypothesis-snowpark
     uses: ./.github/workflows/hypothesis-snowpark-use-build-wheels.yml
     secrets: inherit
 
   test:
     needs: build
-    name: Run all tests for hypothesis-snowpark
+    name: Run all tests hypothesis-snowpark
     uses: ./.github/workflows/hypothesis-snowpark-use-tests_all.yml
     secrets: inherit
 

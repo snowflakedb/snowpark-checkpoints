@@ -18,8 +18,12 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: hypothesis*
           path: dist/
+
+      - name: Verify package contents
+        run: |
+          echo "Current working directory: $PWD"
+          ls -la dist/
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -30,6 +34,3 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install build twine
-
-      - name: Verify package contents
-        run: ls dist/

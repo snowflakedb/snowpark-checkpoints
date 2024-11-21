@@ -1,11 +1,6 @@
 name: Build and test wheel artifacts for hypothesis-snowpark
 
-on:
-  workflow_call:
-    inputs:
-      artifact-name:
-        required: true
-        type: string
+on: workflow_call
 
 jobs:
   wheels:
@@ -46,8 +41,3 @@ jobs:
           wheelvenv/bin/pip list
           wheelvenv/bin/pip show hypothesis-snowpark
         working-directory: ./hypothesis-snowpark
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ inputs.artifact-name }}
-          path: ./hypothesis-snowpark/dist/*

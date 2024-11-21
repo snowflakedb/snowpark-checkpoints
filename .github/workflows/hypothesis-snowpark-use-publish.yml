@@ -76,3 +76,8 @@ jobs:
           hatch build
           echo "Current directory: $PWD" && ls -la dist
         working-directory: ./hypothesis-snowpark
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ./hypothesis-snowpark/dist/*

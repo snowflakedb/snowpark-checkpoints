@@ -119,6 +119,33 @@ The following will result in a pandera SchemaError:
     preprocessed_df = preprocessor(sp_df)
 ```
 
+## Run Demos
+
+### Requirements
+
+- Python >= 3.9
+- OpenJDK 21.0.2
+- Snow CLI: The default connection needs to have a database and a schema. After running the app, a table called SNOWPARK_CHECKPOINTS_REPORT will be created.
+
+### Steps
+
+1. Create a Python environment with Python 3.9 or higher.
+2. Build the Python snowpark-checkpoints and snowpark-checkpoints-collector packages. Learn more.
+
+```cmd
+cd package_dir
+pip install -e .
+python3 -m pip install --upgrade buildpython3 -m build
+python3 -m build
+```
+
+3. In the root of the project, run:
+   pip install "snowflake-connector-python[pandas]"
+4. First, run the PySpark demo:
+   python demo_pyspark_pipeline.py
+   This will generate the JSON schema files. Then, run the Snowpark demo:
+   python demo_snowpark_pipeline.py
+
 ## References
 
 - #spark-lift-and-shift

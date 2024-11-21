@@ -1,0 +1,53 @@
+name: Publish package hypothesis-snowpark
+
+on:
+    workflow_call:
+      inputs:
+        artifact-name:
+          required: true
+          type: string
+
+jobs:
+  lint:
+    name: Check linting
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+        with:
+            fetch-depth: 0
+
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v0
+        with:
+            versionSpec: '5.x'
+
+      - name: Determine Version
+        uses: gittools/actions/gitversion/execute@v0
+        with:
+            useConfigFile: false
+
+      - name: Display GitVersion outputs
+        run: |
+            echo "SemVer: ${{ steps.gitversion.outputs.semVer }}"
+            echo "Full SemVer: ${{ steps.gitversion.outputs.fullsemVer }}"
+
+      - name: Get commit
+        id: get_commit_count
+        run: |
+            COMMIT_COUNT=$(git rev-list --count HEAD)
+            echo "COMMIT_COUNT=$COMMIT_COUNT" >> $GITHUB_ENV
+
+      - name: Update version
+        run: |
+          echo "Commit: ${COMMIT_COUNT}" && echo "Version: ${{ steps.gitversion.outputs.semVer }}"
+          VERSION="${{ steps.gitversion.outputs.semVer }}"
+          sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" pyproject.toml
+          echo "Package Version updated:"
+          grep "version = " pyproject.toml
+        working-directory: ./hypothesis-snowpark
+        shell: bash
+        env:
+            COMMIT_COUNT: ${{ env.COMMIT_COUNT }}
+            VERSION: ${{ steps.gitversion.outputs.semVer }}

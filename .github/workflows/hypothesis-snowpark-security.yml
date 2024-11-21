@@ -30,6 +30,7 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_GITHUB_INTEGRATION_TOKEN }}
           SNYK_ID: ${{ secrets.SNYK_ORG_ID }}
+        secrets: inherit
 
   semgrep:
     runs-on: ubuntu-latest
@@ -44,3 +45,4 @@ jobs:
           scan_dir: "./hypothesis-snowpark"
         env:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+        secrets: inherit

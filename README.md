@@ -33,7 +33,7 @@ collect_df_schema(df:SparkDataFrame,
   will have the name "snowpark-[checkpoint_name]-schema.json"
 - sample - sample size of the spark data frame to use to generate the schema
 
-## collect_df_schema_file
+## check_df_schema_file
 
 ```
 check_df_schema_file(df:SnowparkDataFrame,

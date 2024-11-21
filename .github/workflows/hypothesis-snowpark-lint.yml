@@ -1,4 +1,4 @@
-name: Static analysis and linting for hypothesis-snowpark
+name: Static analysis and linting [hypothesis.snowpark]
 
 on: workflow_call
 

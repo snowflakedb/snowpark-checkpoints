@@ -1,4 +1,4 @@
-name: Run all workflows for hypothesis.snowpark
+name: Run all workflows [hypothesis.snowpark]
 
 on:
   push:
@@ -40,7 +40,7 @@ jobs:
   publish:
     needs: test
     name: Publish package hypothesis-snowpark
-    uses: ./.github/workflows/hypothesis-snowpark-use-publish.yml
+    uses: ./.github/workflows/hypothesis-snowpark-use-set-artifacts.yml
     secrets: inherit
     with:
         artifact-name: hypothesis-snowpark

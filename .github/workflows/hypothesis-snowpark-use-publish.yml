@@ -1,11 +1,11 @@
 name: Publish package hypothesis-snowpark
 
 on:
-    workflow_call:
-      inputs:
-        artifact-name:
-          required: true
-          type: string
+  workflow_call:
+    inputs:
+      artifact-name:
+        required: true
+        type: string
 
 jobs:
   lint:
@@ -16,18 +16,46 @@ jobs:
       - name: Check out the repository
         uses: actions/checkout@v4
         with:
-            fetch-depth: 0
+          fetch-depth: 0
 
-      - name: Get commit
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Set commit version
         id: get_commit_count
         run: |
-            COMMIT_COUNT=$(git rev-list --count HEAD)
-            echo "COMMIT_COUNT=$COMMIT_COUNT" >> $GITHUB_ENV
+          COMMIT_COUNT=$(git rev-list --count HEAD)
+          echo "COMMIT_COUNT=$COMMIT_COUNT" >> $GITHUB_ENV
 
-      - name: Update version
+      - name: Get commit version
         run: |
           echo "Commit: ${COMMIT_COUNT}"
         working-directory: ./hypothesis-snowpark
         shell: bash
         env:
-            COMMIT_COUNT: ${{ env.COMMIT_COUNT }}
+          COMMIT_COUNT: ${{ env.COMMIT_COUNT }}
+
+      - name: Install GitVersion.Tool
+        run: |
+          dotnet tool install --global GitVersion.Tool
+          echo "export PATH=\$PATH:\$HOME/.dotnet/tools" >> $GITHUB_ENV
+
+      - name: Generate version with GitVersion
+        id: gitversion
+        run: |
+          version_output=$(dotnet gitversion /output json /showvariable MajorMinorPatch)
+          echo "Calculated Version: $version_output"
+          echo "version=$version_output" >> $GITHUB_OUTPUT
+        env:
+          DOTNET_ROOT: $HOME/.dotnet
+
+      - name: Update Version
+        run: |
+          sed -i "s/^version = \".*\"/version = \"${NEW_VERSION}\"/" pyproject.toml
+          echo "Package Version updated:"
+          grep "version = " pyproject.toml
+        env:
+          NEW_VERSION: ${{ steps.gitversion.outputs.version }}
+        working-directory: ./hypothesis-snowpark

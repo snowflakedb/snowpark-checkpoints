@@ -60,6 +60,6 @@ jobs:
           PYTHON_VERSION: ${{ matrix.python-version }}
           cloud_provider: ${{ matrix.cloud-provider }}
           PYTEST_ADDOPTS: --color=yes --tb=short -v
-          SNOWFLAKE_MONOREPO: 1
+          COVERAGE_THRESHOLD: 95
         shell: bash
         working-directory: ./hypothesis-snowpark

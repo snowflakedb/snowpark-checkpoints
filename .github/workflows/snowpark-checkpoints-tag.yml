@@ -3,9 +3,6 @@ name: Create Repo Tag
 on:
   push:
     branches: [main]
-  # [DevOps] Remove this only for testing flow
-  pull_request:
-      branches: "**"
 
 permissions: write-all
 

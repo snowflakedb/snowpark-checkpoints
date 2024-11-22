@@ -1,4 +1,4 @@
-name: Run tests [hypothesis.snowpark]
+name: Run tests [snowpark_checkpoints_collector]
 
 on:
   workflow_call:
@@ -72,7 +72,7 @@ jobs:
           python -m pip install ".[development]"
           pip install hatch
           pip list
-        working-directory: ./hypothesis-snowpark
+        working-directory: ./snowpark-checkpoints-collector
 
       - name: Run tests
         run: |
@@ -89,4 +89,4 @@ jobs:
           PYTEST_ADDOPTS: --color=yes --tb=short -v
           COVERAGE_THRESHOLD: 95
         shell: bash
-        working-directory: ./hypothesis-snowpark
+        working-directory: ./snowpark-checkpoints-collector

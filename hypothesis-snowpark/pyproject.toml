@@ -121,5 +121,5 @@ check = [
 
 coverage = [
   'cd test/outcome && pwd && ls -la',
-  'python ../.github/scripts/validatetestcoverage.py test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.json --threshold={env:COVERAGE_THRESHOLD:95}',
+  'python ../.github/scripts/test_get_coverage.py test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.json --threshold={env:COVERAGE_THRESHOLD:95}',
 ]

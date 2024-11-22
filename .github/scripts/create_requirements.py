@@ -1,91 +1,89 @@
-# /// script
-# dependencies = [
-#   'tomli; python_version < "3.11"',
-# ]
-# ///
-
+import toml
+import os
 import argparse
-import operator
-import pathlib
-import sys
-import textwrap
-import typing
-
-from typing import Tuple
 
 
-if sys.version_info < (3, 11):
-    from tomli import load
-else:
-    from tomllib import load
-
-LIBS_DIR = pathlib.Path(__file__).absolute().parent.parent / "hypothesis-snowpark"
-NL = "\n"
-
-
-def get_lib_paths(lib_name: str) -> Tuple[pathlib.Path, pathlib.Path]:
-    """Get paths for the library directory and requirements file."""
-    lib_dir = LIBS_DIR / lib_name
-    req_file = lib_dir / "requirements.txt"
-    return lib_dir, req_file
+def find_pyproject_toml(directory):
+    """
+    Recursively searches for a file named 'pyproject.toml' in the given directory.
+    """
+    for root, _, files in os.walk(directory):
+        if "pyproject.toml" in files:
+            return os.path.join(root, "pyproject.toml")
+    return None
 
 
-def create_req_file(lib_name: str) -> int:
-    lib_dir, req_file = get_lib_paths(lib_name)
-
-    # Check if library exists
-    if not lib_dir.exists():
-        print(f"Error: Library directory '{lib_name}' not found in {LIBS_DIR}")
-        return 1
-
-    # Read pyproject.toml
-    pyproject_path = lib_dir / "pyproject.toml"
-    if not pyproject_path.exists():
-        print(f"Error: pyproject.toml not found in {lib_dir}")
-        return 1
-
-    with open(pyproject_path, "rb") as fp:
-        pyproject_content = load(fp)
-
+def create_requirements_from_pyproject(pyproject_path):
+    """
+    Reads the pyproject.toml file and generates a requirements.txt file in the same directory.
+    """
     try:
-        deps: typing.List[str] = pyproject_content["project"]["dependencies"]
-    except KeyError:
-        print(f"Error: No dependencies found in {pyproject_path}")
-        return 1
+        if not os.path.exists(pyproject_path):
+            raise FileNotFoundError(f"The file {pyproject_path} does not exist.")
 
-    deps_set = set(deps)
-    deps_str = NL.join(deps)
+        with open(pyproject_path, encoding="utf-8") as file:
+            pyproject_data = toml.load(file)
 
-    # Check existing requirements if file exists
-    if req_file.exists():
-        with open(req_file) as f:
-            existing_reqs_set = set(
-                map(operator.methodcaller("strip"), f.read().splitlines())
-            )
+        requirements = []
 
-        should_redump = deps_set != existing_reqs_set
-        if not should_redump:
-            print(f"Requirements haven't changed for {lib_name}")
-            return 0
+        if "dependencies" in pyproject_data.get("project", {}):
+            requirements.extend(pyproject_data["project"]["dependencies"])
 
-    print(
-        f"requirements.txt contents for {lib_name}:\n" + textwrap.indent(deps_str, "  ")
-    )
-    with open(req_file, "w") as f:
-        f.write(deps_str)
-    print(f"requirements.txt written for {lib_name}")
-    return 0
+        optional_dependencies = pyproject_data.get("project", {}).get(
+            "optional-dependencies", {}
+        )
+        if "development" in optional_dependencies:
+            requirements.extend(optional_dependencies["development"])
+
+        requirements = sorted(set(requirements))
+
+        output_file = os.path.join(os.path.dirname(pyproject_path), "requirements.txt")
+        with open(output_file, "w", encoding="utf-8") as file:
+            file.write("\n".join(requirements))
+
+        print(
+            f"File {output_file} successfully generated with {len(requirements)} dependencies."
+        )
+        return output_file
+    except Exception as e:
+        print(f"An error occurred while processing {pyproject_path}: {e}")
+        return None
+
+
+def display_requirements_file(file_path):
+    """
+    Displays the contents of the new requirements.txt file.
+    """
+    try:
+        print(f"\nContents of new file generated {file_path}:\n")
+        with open(file_path, encoding="utf-8") as file:
+            print(file.read())
+    except Exception as e:
+        print(f"An error occurred while reading this file {file_path}: {e}")
 
 
 def main():
+    """
+    Main function to parse arguments and execute the script.
+    """
     parser = argparse.ArgumentParser(
-        description="Create requirements.txt from pyproject.toml dependencies"
+        description="Generate a requirements.txt from a pyproject.toml file."
     )
-    parser.add_argument("lib_name", help="Name of the library in libs directory")
-
+    parser.add_argument(
+        "--directory",
+        help="Path to the directory where the script will search for a pyproject.toml file recursively.",
+    )
     args = parser.parse_args()
-    return create_req_file(args.lib_name)
+
+    pyproject_path = find_pyproject_toml(args.directory)
+    if pyproject_path:
+        print(f"Found pyproject.toml file: {pyproject_path}")
+        requirements_file = create_requirements_from_pyproject(pyproject_path)
+        if requirements_file:
+            display_requirements_file(requirements_file)
+    else:
+        print(f"No pyproject.toml file found in {args.directory}.")
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

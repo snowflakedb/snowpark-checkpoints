@@ -113,7 +113,6 @@ check = [
   'ruff check --fix .',
 ]
 
-
 [tool.hatch.envs.test.scripts]
 check = [
   'pytest -v --junitxml=test/outcome/test-results.xml --cov=. --cov-report=xml:test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.xml {args:test} --cov-report=term --cov-report=json:test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.json',
@@ -121,5 +120,5 @@ check = [
 
 coverage = [
   'cd test/outcome && pwd && ls -la',
-  'python ../.github/scripts/validatetestcoverage.py test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.json --threshold={env:COVERAGE_THRESHOLD:95}'
+  'python ../.github/scripts/validatetestcoverage.py test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.json --threshold={env:COVERAGE_THRESHOLD:95}',
 ]

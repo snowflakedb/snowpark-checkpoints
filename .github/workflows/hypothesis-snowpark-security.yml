@@ -22,6 +22,11 @@ jobs:
         with:
           node-version: "20.9.0"
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+
       - name: Install Snyk CLI
         run: |
           npm install -g snyk
@@ -32,3 +37,11 @@ jobs:
           snyk auth $SNYK_TOKEN
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_GITHUB_INTEGRATION_TOKEN }}
+
+      - name: Run Python Script Create Requirements
+        run: |
+          python ./.github/scripts/create_requirements.py --directory hypothesis-snowpark
+
+      - name: Run Snyk test
+        run: |
+          snyk test --all-projects --detection-depth=20

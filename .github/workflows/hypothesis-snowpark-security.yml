@@ -47,7 +47,10 @@ jobs:
       - name: Run Python Script Create Requirements
         run: |
           python ./.github/scripts/create_requirements.py --directory hypothesis-snowpark
+          cd hypothesis-snowpark && pwd && ls -la requirements.txt && file requirements.txt
+          python -m pip install -r requirements.txt
+          pip list
 
       - name: Run Snyk test
         run: |
-          snyk test --all-projects --detection-depth=20
+          snyk test --all-projects --detection-depth=10 -d

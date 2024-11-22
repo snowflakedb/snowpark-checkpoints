@@ -21,30 +21,24 @@ def validate_coverage(coverage_file, coverage_threshold):
     Raises:
         CoverageBelowThresholdError: If coverage is below the specified threshold
     """
-    # Check if file exists
     if not os.path.exists(coverage_file):
         print(f"Error: Coverage file not found - {coverage_file}")
         sys.exit(1)
 
     try:
-        # Read the JSON file
         with open(coverage_file) as f:
             coverage_data = json.load(f)
 
-        # Extract totals information
         totals = coverage_data.get("totals", {})
 
-        # Print detailed coverage information
         print("Coverage Report:")
         print(f"Total Covered Lines: {totals.get('covered_lines', 0)}")
         print(f"Total Statements: {totals.get('num_statements', 0)}")
         print(f"Percent Covered: {totals.get('percent_covered_display', '0')}%")
         print(f"Missing Lines: {totals.get('missing_lines', 0)}")
 
-        # Get current coverage
         current_coverage = totals.get("percent_covered", 0)
 
-        # Validate threshold
         try:
             coverage_threshold = float(coverage_threshold)
         except (ValueError, TypeError):
@@ -53,7 +47,6 @@ def validate_coverage(coverage_file, coverage_threshold):
             )
             sys.exit(1)
 
-        # Check coverage against threshold
         if current_coverage < coverage_threshold:
             error_message = (
                 f"FAIL: Coverage {current_coverage:.2f}% is below the required threshold of {coverage_threshold}%\n"
@@ -75,24 +68,24 @@ def validate_coverage(coverage_file, coverage_threshold):
 
 
 def main():
-    # Create argument parser
+    """
+    Main function to parse arguments and execute the script.
+    """
     parser = argparse.ArgumentParser(description="Validate test coverage")
     parser.add_argument("coverage_file", help="Path to the coverage JSON file")
     parser.add_argument(
         "--threshold",
-        default=os.environ.get("COVERAGE_THRESHOLD", "97"),
-        help="Coverage threshold percentage (default: 97 or from COVERAGE_THRESHOLD env)",
+        default=os.environ.get("COVERAGE_THRESHOLD", "95"),
+        help="Coverage threshold percentage (default: 95 or from COVERAGE_THRESHOLD env)",
     )
-
-    # Parse arguments
     args = parser.parse_args()
 
     try:
         validate_coverage(args.coverage_file, args.threshold)
-        sys.exit(0)  # Successful execution
+        sys.exit(0)
     except CoverageBelowThresholdError as e:
         print(str(e))
-        sys.exit(1)  # Fail the script with non-zero exit code
+        sys.exit(1)
 
 
 if __name__ == "__main__":

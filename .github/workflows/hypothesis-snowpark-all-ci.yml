@@ -5,19 +5,19 @@ on:
     branches:
       - main
     paths:
-        - "**"
-        - "!snowpark-checkpoints/**"
-        - "!snowpark-checkpoints-collector/**"
-        - "!Demos/**"
+      - "**"
+      - "!snowpark-checkpoints/**"
+      - "!snowpark-checkpoints-collector/**"
+      - "!Demos/**"
     tags:
-      - 'hypothesis.snowpark-v[0-9]+.[0-9]+.[0-9]+'
+      - "hypothesis.snowpark-v[0-9]+.[0-9]+.[0-9]+"
   pull_request:
-    branches: '**'
+    branches: "**"
     paths:
-        - "**"
-        - "!snowpark-checkpoints/**"
-        - "!snowpark-checkpoints-collector/**"
-        - "!Demos/**"
+      - "**"
+      - "!snowpark-checkpoints/**"
+      - "!snowpark-checkpoints-collector/**"
+      - "!Demos/**"
   workflow_call:
 
 jobs:
@@ -43,12 +43,13 @@ jobs:
     uses: ./.github/workflows/hypothesis-snowpark-use-set-artifacts.yml
     secrets: inherit
     with:
-        artifact-name: hypothesis-snowpark
+      artifact-name: hypothesis-snowpark
 
   publish:
     needs: artifact
+    if: ( github.event_name != 'pull_request' )
     name: Publish package hypothesis-snowpark
     uses: ./.github/workflows/hypothesis-snowpark-use-publish.yml
     secrets: inherit
     with:
-        artifact-name: hypothesis-snowpark
+      artifact-name: hypothesis-snowpark

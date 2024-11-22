@@ -51,6 +51,7 @@ development = [
   "hatchling==1.25.0",
   "pre-commit>=4.0.1",
   "setuptools>=70.0.0",
+  "pyarrow>=18.0.0",
 ]
 
 [project.urls]

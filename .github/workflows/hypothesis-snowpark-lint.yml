@@ -17,7 +17,7 @@ jobs:
           python-version: "3.9"
 
       - name: Display workflow environment
-        run: python .github/scripts/showenv.py
+        run: python .github/scripts/py_show_env.py
 
       - name: Setup Python environment
         run: |

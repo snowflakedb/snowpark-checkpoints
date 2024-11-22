@@ -10,7 +10,7 @@ PATH_PARTS = os.getenv("PATH").split(os.pathsep)
 
 
 parser = ArgumentParser(
-    prog="showenv.py",
+    prog="py_show_env.py",
     description="Show useful execution environment values",
 )
 args = parser.parse_args()

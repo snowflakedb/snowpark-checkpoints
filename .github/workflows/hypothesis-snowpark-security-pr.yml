@@ -1,9 +1,12 @@
-name: Run Security Scans [hypothesis.snowpark]
+name: Run Security Scans PR [hypothesis.snowpark]
 
 on:
   pull_request:
     branches:
       - "**"
+    paths:
+      - "**"
+      - "!Demos/**"
 
 permissions:
   contents: read
@@ -47,7 +50,7 @@ jobs:
 
       - name: Run Python Script Create Requirements
         run: |
-          python ./.github/scripts/create_requirements.py --directory hypothesis-snowpark
+          python ./.github/scripts/py_create_requirements.py --directory hypothesis-snowpark
           cd hypothesis-snowpark && pwd && ls -la requirements.txt && file requirements.txt
           python -m pip install -r requirements.txt
           pip list

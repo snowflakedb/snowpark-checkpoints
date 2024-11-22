@@ -85,7 +85,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: all-snowpark-checkpoints
-          path: dist/*
+          path: |
+            ./hypothesis-snowpark/dist/*
+            ./snowpark-checkpoints-collector/dist/*
 
   publish:
     name: Publish Packages
@@ -101,5 +103,5 @@ jobs:
 
       - name: Verify artifacts
         run: |
-          echo "Current working directory: $PWD"
-          ls -la dist/
+          cd ./dist && echo "Current working directory: $PWD"
+          find . -maxdepth 5 -exec ls -la {} \;

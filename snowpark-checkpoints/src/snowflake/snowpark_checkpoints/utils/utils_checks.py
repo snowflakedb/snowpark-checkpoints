@@ -12,8 +12,8 @@ from .supported_types import numeric_types, boolean_types, supported_types
 def add_numeric_checks(
     schema: DataFrameSchema, col: str, additional_check: Dict[str, Any]
 ):
-    mean = additional_check["mean"]
-    std = additional_check["std"]
+    mean = additional_check.get("mean", 0)
+    std = additional_check.get("std", 0)
 
     def check_mean(series):
         series_mean = series.mean()
@@ -25,9 +25,9 @@ def add_numeric_checks(
 def add_boolean_checks(
     schema: DataFrameSchema, col: str, additional_check: Dict[str, Any]
 ):
-    count_of_true = additional_check["count_of_true"]
-    count_of_false = additional_check["count_of_false"]
-    std = additional_check["std"]
+    count_of_true = additional_check.get("count_of_true", 0)
+    count_of_false = additional_check.get("count_of_false", 0)
+    std = additional_check.get("std", 0)
 
     schema.columns[col].checks.extend(
         [
@@ -57,8 +57,11 @@ def generate_schema(checkpoint_name: str) -> DataFrameSchema:
 
     if "additional_checks" in additional_checks_schema_json:
         for additional_check in additional_checks_schema_json.get("additional_checks"):
-            type = additional_check["type"]
-            col = additional_check["col"]
+            type = additional_check.get("type", None)
+            col = additional_check.get("col", None)
+
+            if col is None or type is None:
+                continue
 
             if type in supported_types:
 

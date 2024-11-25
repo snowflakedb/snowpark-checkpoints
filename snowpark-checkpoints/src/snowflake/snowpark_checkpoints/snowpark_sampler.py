@@ -54,11 +54,6 @@ class SamplingAdapter:
                 else:
                     df_sample = arg.limit(self.sample_n).to_pandas()
 
-                if df_sample.empty:
-                    raise SamplingError(
-                        "Sampled DataFrame is empty. Adjust the sample size or check the input DataFrame."
-                    )
-
                 self.pandas_sample_args.append(df_sample)
             else:
                 self.pandas_sample_args.append(arg)

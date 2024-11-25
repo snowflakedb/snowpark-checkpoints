@@ -1,0 +1,33 @@
+name: Static analysis and linting [snowpark_checkpoints_collector]
+
+on: workflow_call
+
+jobs:
+  lint:
+    name: Check linting
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+
+      - name: Display workflow environment
+        run: python .github/scripts/py_show_env.py
+
+      - name: Setup Python environment
+        run: |
+          python -m pip install --upgrade pip
+          pip install hatch flake8 black ruff
+          pip list
+          hatch --version
+
+      - name: Run lint checks
+        run: |
+          echo "Current working directory:" && pwd
+          hatch run precommit:check
+        working-directory: ./snowpark-checkpoints-collector

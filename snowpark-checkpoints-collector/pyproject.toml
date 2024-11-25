@@ -1,18 +1,126 @@
-[tool.setuptools.packages.find]
-where = ["src/"]
-include = ["snowflake.snowpark_checkpoints_collector"]
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
 
 [project]
-name = "snowpark-checkpoints-collector"
-dynamic = ["version"]
+authors = [{name = "Snowflake Inc."}]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Environment :: Other Environment",
+  "Intended Audience :: Developers",
+  'Intended Audience :: Education',
+  "Intended Audience :: Information Technology",
+  "Intended Audience :: System Administrators",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: SQL",
+  "Topic :: Database",
+  "Topic :: Software Development",
+  "Topic :: Software Development :: Libraries",
+  "Topic :: Software Development :: Libraries :: Application Frameworks",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+]
 dependencies = [
   "pyspark",
   "pandera[io]",
 ]
-requires-python = ">= 3.9"
-authors = [
-  {name = "John Kew"},
-]
 description = "Snowpark column and table statistics collection"
-readme = "README.md"
+keywords = [
+  'Snowflake',
+  'analytics',
+  'cloud',
+  'database',
+  'db',
+  'snowspark',
+]
 license = {file = "LICENSE"}
+name = "snowpark-checkpoints-collector"
+readme = "README.md"
+requires-python = ">=3.9"
+version = "0.0.0"
+
+[project.optional-dependencies]
+development = [
+  "pytest>=8.3.3",
+  "pytest-cov>=6.0.0",
+  "coverage>=7.6.7",
+  "twine==5.1.1",
+  "hatchling==1.25.0",
+  "pre-commit>=4.0.1",
+  "setuptools>=70.0.0",
+  "pyarrow>=18.0.0",
+]
+
+[project.urls]
+"Bug Tracker" = "https://github.com/snowflakedb/snowpark-checkpoints/issues"
+"Source code" = "https://github.com/snowflakedb/snowpark-checkpoints/"
+
+[tool.hatch.version]
+path = "snowpark-checkpoints-collector/__init__.py"
+pattern = '^__version__ = "(.*)"'
+source = "regex"
+
+[tool.setuptools.packages.find]
+include = ["snowflake.snowpark_checkpoints_collector"]
+where = ["src/"]
+
+[tool.hatch.build]
+dev-mode-dirs = ['src']
+directory = 'snowpark-checkpoints-collector'
+
+[tool.hatch.build.targets.wheel]
+directory = "dist"
+packages = ["snowpark-checkpoints-collector/src/snowflake/snowpark_checkpoints_collector"]
+
+[tool.hatch.build.targets.sdist]
+directory = "dist"
+exclude = ["/.github", "/.idea"]
+include = [
+  'snowpark-checkpoints-collector/src',
+  'README.md',
+  'LICENSE',
+  'test/',
+  'CHANGELOG.md',
+  'pyproject.toml',
+  'snowpark-testdf-schema.json',
+]
+
+[tool.hatch.envs.default]
+features = ["development"]
+python = "3.9"
+
+[[tool.hatch.envs.test_all.matrix]]
+python = ['3.9', '3.10', '3.11']
+
+[tool.hatch.envs.test_all]
+template = 'test'
+
+[tool.hatch.envs.test]
+python = '3.9'
+
+[tool.coverage.paths]
+src = ["src"]
+tests = ["test"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "if __name__ == .__main__.:",
+]
+
+[tool.hatch.envs.precommit.scripts]
+check = [
+  'ruff check --fix .',
+]
+
+[tool.hatch.envs.test.scripts]
+check = [
+  'pytest -v --junitxml=test/outcome/test-results.xml --cov=. --cov-config=test/.coveragerc --cov-report=xml:test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.xml {args:test} --cov-report=term --cov-report=json:test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.json',
+]
+
+coverage = [
+  'cd test/outcome && pwd && ls -la',
+  'python ../.github/scripts/test_get_coverage.py test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.json --threshold={env:COVERAGE_THRESHOLD:95}',
+]

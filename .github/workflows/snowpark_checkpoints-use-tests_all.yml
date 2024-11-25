@@ -12,15 +12,15 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            python-version: "3.9"
+            python-version: "3.10"
             cloud-provider: aws
             download_name: linux
           - os: macos-latest
-            python-version: "3.9"
+            python-version: "3.10"
             cloud-provider: aws
             download_name: macos
           - os: windows-latest
-            python-version: "3.9"
+            python-version: "3.10"
             cloud-provider: aws
             download_name: windows
 

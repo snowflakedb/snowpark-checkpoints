@@ -10,6 +10,7 @@ dependencies = [
   "snowflake-connector-python",
   "pyspark",
   "pandera",
+  "pandera-report",
 ]
 requires-python = ">= 3.9"
 authors = [

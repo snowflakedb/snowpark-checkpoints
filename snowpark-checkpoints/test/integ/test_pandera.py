@@ -1,3 +1,8 @@
+#
+# Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
+#
+
+import json
 from numpy import int8
 import pandas as pd
 from pandera import DataFrameSchema, Column, Check
@@ -107,9 +112,12 @@ def test_df_check_from_file():
             "COLUMN2": Column(float, Check(lambda x: x < -1.2)),
         }
     )
+
+    schema_data = {"pandera_schema": json.loads(schema.to_json()), "custom_data": {}}
+
     checkpoint_name = "testdf"
     output_file = open(f"snowpark-{checkpoint_name}-schema.json", "w")
-    output_file.write(schema.to_json())
+    output_file.write(json.dumps(schema_data))
     output_file.close()
 
     session = Session.builder.getOrCreate()

@@ -1,0 +1,96 @@
+name: Run tests [snowpark_checkpoints]
+
+on:
+  workflow_call:
+
+jobs:
+  test:
+    name: Test ${{ matrix.download_name }}-${{ matrix.python-version }}-${{ matrix.cloud-provider }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python-version: "3.9"
+            cloud-provider: aws
+            download_name: linux
+          - os: ubuntu-latest
+            python-version: "3.10"
+            cloud-provider: aws
+            download_name: linux
+          - os: ubuntu-latest
+            python-version: "3.11"
+            cloud-provider: aws
+            download_name: linux
+          - os: macos-latest
+            python-version: "3.9"
+            cloud-provider: aws
+            download_name: macos
+          - os: macos-latest
+            python-version: "3.10"
+            cloud-provider: aws
+            download_name: macos
+          - os: macos-latest
+            python-version: "3.11"
+            cloud-provider: aws
+            download_name: macos
+          - os: windows-latest
+            python-version: "3.9"
+            cloud-provider: aws
+            download_name: windows
+          - os: windows-latest
+            python-version: "3.10"
+            cloud-provider: aws
+            download_name: windows
+          - os: windows-latest
+            python-version: "3.11"
+            cloud-provider: aws
+            download_name: windows
+          - os: windows-latest
+            python-version: "3.12"
+            cloud-provider: aws
+            download_name: windows
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Display Python version
+        run: |
+          python -c "import sys; print(sys.version)"
+          python .github/scripts/py_show_env.py
+
+      - name: Install required tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ".[development]"
+          pip install hatch pyyaml frictionless
+          python .github/scripts/test_install_snow_3.py
+          snow --info && snow --version
+          pip list
+        shell: bash
+        working-directory: ./snowpark-checkpoints
+
+      - name: Run tests
+        run: |
+          echo "Current working directory: $PWD"
+          hatch config set dirs.env.virtual .hatch
+          hatch --version
+          hatch status
+          hatch env show
+          echo "[DevOps] TODO"
+          hatch run test:check
+          # hatch run test:coverage
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
+          cloud_provider: ${{ matrix.cloud-provider }}
+          PYTEST_ADDOPTS: --color=yes --tb=short -v
+          COVERAGE_THRESHOLD: 50
+        shell: bash
+        working-directory: ./snowpark-checkpoints

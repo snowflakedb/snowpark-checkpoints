@@ -1,0 +1,43 @@
+name: Build wheels [snowpark_checkpoints]
+
+on: workflow_call
+
+jobs:
+  wheels:
+    name: Build wheels
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+
+      - name: Install required tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install hatch
+          pip list
+          hatch status
+          hatch env show
+          hatch --version
+
+      - name: Generate wheel and sdist
+        run: hatch build
+        working-directory: ./snowpark-checkpoints
+
+      - name: Show generated artifacts
+        run: |
+          echo "Current directory: $PWD" && ls -la dist
+        working-directory: ./snowpark-checkpoints
+
+      - name: Verify build artifacts
+        run: |
+          python -m venv wheelvenv
+          wheelvenv/bin/pip install --upgrade pip
+          wheelvenv/bin/pip install dist/*.whl
+          wheelvenv/bin/pip list
+          wheelvenv/bin/pip show snowpark-checkpoints
+        working-directory: ./snowpark-checkpoints

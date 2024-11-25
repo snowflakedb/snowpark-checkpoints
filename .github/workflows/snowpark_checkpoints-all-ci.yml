@@ -1,4 +1,4 @@
-name: Run All workflows [snowpark_checkpoints_collector]
+name: Run All workflows [snowpark_checkpoints]
 
 on:
   push:
@@ -6,14 +6,14 @@ on:
       - main
     paths:
       - "**"
-      - "!snowpark-checkpoints/**"
+      - "!snowpark-checkpoints-collector/**"
       - "!hypothesis-snowpark/**"
       - "!Demos/**"
   pull_request:
     branches: "**"
     paths:
       - "**"
-      - "!snowpark-checkpoints/**"
+      - "!snowpark-checkpoints-collector/**"
       - "!hypothesis-snowpark/**"
       - "!Demos/**"
   workflow_call:
@@ -21,24 +21,24 @@ on:
 jobs:
   lint:
     name: Static analysis and linting snowpark-checkpoints-collector
-    uses: ./.github/workflows/snowpark_checkpoints_collector-lint.yml
+    uses: ./.github/workflows/snowpark_checkpoints-lint.yml
 
   build:
     needs: lint
     name: Build wheels snowpark-checkpoints-collector
-    uses: ./.github/workflows/snowpark_checkpoints_collector-use-build-wheels.yml
+    uses: ./.github/workflows/snowpark_checkpoints-use-build-wheels.yml
     secrets: inherit
 
   test:
     needs: build
     name: Run all tests snowpark-checkpoints-collector
-    uses: ./.github/workflows/snowpark_checkpoints_collector-use-tests_all.yml
+    uses: ./.github/workflows/snowpark_checkpoints-use-tests_all.yml
     secrets: inherit
 
   artifact:
     needs: test
     name: Artifact package snowpark-checkpoints-collector
-    uses: ./.github/workflows/snowpark_checkpoints_collector-use-set-artifacts.yml
+    uses: ./.github/workflows/snowpark_checkpoints-use-set-artifacts.yml
     secrets: inherit
     with:
-      artifact-name: snowpark-checkpoints-collector
+      artifact-name: snowpark-checkpoints

@@ -59,7 +59,7 @@ repos:
         exclude: >
           (?x)^(
               license_header.txt|
-              tests/resources/.*|
+              test/resources/.*|
           )$
       - id: check-yaml
         exclude: >
@@ -78,11 +78,11 @@ repos:
               hypothesis-snowpark/.*\.py|
               snowpark-checkpoints/.*\.py|
               snowpark-checkpoints-collector/.*\.py|
-              tests/.*\.py|
+              test/.*\.py|
           )$
         exclude: >
           (?x)^(
-              tests/resources/.*\.py|
+              test/resources/.*\.py|
           )$
         args:
           - --license-filepath

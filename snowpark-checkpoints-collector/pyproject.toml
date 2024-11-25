@@ -110,6 +110,7 @@ exclude_lines = [
   "if __name__ == .__main__.:",
 ]
 
+
 [tool.hatch.envs.linter.scripts]
 check = [
   'ruff check --fix .',

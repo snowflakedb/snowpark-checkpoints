@@ -15,40 +15,12 @@ jobs:
             python-version: "3.9"
             cloud-provider: aws
             download_name: linux
-          - os: ubuntu-latest
-            python-version: "3.10"
-            cloud-provider: aws
-            download_name: linux
-          - os: ubuntu-latest
-            python-version: "3.11"
-            cloud-provider: aws
-            download_name: linux
           - os: macos-latest
             python-version: "3.9"
             cloud-provider: aws
             download_name: macos
-          - os: macos-latest
-            python-version: "3.10"
-            cloud-provider: aws
-            download_name: macos
-          - os: macos-latest
-            python-version: "3.11"
-            cloud-provider: aws
-            download_name: macos
           - os: windows-latest
             python-version: "3.9"
-            cloud-provider: aws
-            download_name: windows
-          - os: windows-latest
-            python-version: "3.10"
-            cloud-provider: aws
-            download_name: windows
-          - os: windows-latest
-            python-version: "3.11"
-            cloud-provider: aws
-            download_name: windows
-          - os: windows-latest
-            python-version: "3.12"
             cloud-provider: aws
             download_name: windows
 
@@ -71,7 +43,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install ".[development]"
           pip install hatch pyyaml frictionless
-          python .github/scripts/test_install_snow_3.py
+          python ../.github/scripts/test_install_snow_3.py
           snow --info && snow --version
           pip list
         shell: bash

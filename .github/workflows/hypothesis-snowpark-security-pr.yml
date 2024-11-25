@@ -6,6 +6,8 @@ on:
       - "**"
     paths:
       - "**"
+      - "!snowpark-checkpoints/**"
+      - "!snowpark-checkpoints-collector/**"
       - "!Demos/**"
 
 permissions:
@@ -50,10 +52,12 @@ jobs:
 
       - name: Run Python Script Create Requirements
         run: |
-          python ./.github/scripts/py_create_requirements.py --directory hypothesis-snowpark
-          cd hypothesis-snowpark && pwd && ls -la requirements.txt && file requirements.txt
+          python ./.github/scripts/py_create_requirements.py --directory $DIR_NAME
+          cd $DIR_NAME && pwd && ls -la requirements.txt && file requirements.txt
           python -m pip install -r requirements.txt
           pip list
+        env:
+          DIR_NAME: "hypothesis-snowpark"
 
       - name: Run Snyk test
         run: |

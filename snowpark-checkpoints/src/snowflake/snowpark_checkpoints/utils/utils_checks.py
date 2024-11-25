@@ -1,13 +1,19 @@
+#
+# Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
+#
+
+import json
 from typing import Any, Dict
 from pandera import DataFrameSchema
 import pandera as pa
+from .supported_types import numeric_types, boolean_types, supported_types
 
 
 def add_numeric_checks(
     schema: DataFrameSchema, col: str, additional_check: Dict[str, Any]
 ):
-    mean = additional_check["mean"]
-    std = additional_check["std"]
+    mean = additional_check.get("mean", 0)
+    std = additional_check.get("std", 0)
 
     def check_mean(series):
         series_mean = series.mean()
@@ -19,9 +25,9 @@ def add_numeric_checks(
 def add_boolean_checks(
     schema: DataFrameSchema, col: str, additional_check: Dict[str, Any]
 ):
-    count_of_true = additional_check["count_of_true"]
-    count_of_false = additional_check["count_of_false"]
-    std = additional_check["std"]
+    count_of_true = additional_check.get("count_of_true", 0)
+    count_of_false = additional_check.get("count_of_false", 0)
+    std = additional_check.get("std", 0)
 
     schema.columns[col].checks.extend(
         [
@@ -37,3 +43,31 @@ def add_boolean_checks(
             ),
         ]
     )
+
+
+def generate_schema(checkpoint_name: str) -> DataFrameSchema:
+    additional_checks_schema = open(f"snowpark-{checkpoint_name}-schema.json")
+    additional_checks_schema_json = json.load(additional_checks_schema)
+
+    if "pandera_schema" in additional_checks_schema_json:
+        schema_dict = additional_checks_schema_json.get("pandera_schema")
+        schema = pa.DataFrameSchema.from_json(json.dumps(schema_dict))
+    else:
+        schema = pa.DataFrameSchema()
+
+    if "additional_checks" in additional_checks_schema_json:
+        for additional_check in additional_checks_schema_json.get("additional_checks"):
+            type = additional_check.get("type", None)
+            col = additional_check.get("col", None)
+
+            if col is None or type is None:
+                continue
+
+            if type in supported_types:
+
+                if type in numeric_types:
+                    add_numeric_checks(schema, col, additional_check)
+                elif type in boolean_types:
+                    add_boolean_checks(schema, col, additional_check)
+
+    return schema

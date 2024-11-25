@@ -1,4 +1,4 @@
-name: Publish artifact [hypothesis.snowpark]
+name: Publish artifact [snowpark_checkpoints_collector]
 
 on:
   workflow_call:
@@ -47,7 +47,7 @@ jobs:
           grep "version = " pyproject.toml
         env:
           NEW_VERSION: ${{ steps.gitversion.outputs.version }}
-        working-directory: ./hypothesis-snowpark
+        working-directory: ./snowpark-checkpoints-collector
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -63,11 +63,11 @@ jobs:
         run: |
           hatch build
           echo "Current directory: $PWD" && ls -la dist
-        working-directory: ./hypothesis-snowpark
+        working-directory: ./snowpark-checkpoints-collector
 
       - name: Upload PR Artifact
         if: ${{ github.event_name == 'pull_request' }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.artifact-name }}
-          path: ./hypothesis-snowpark/dist/*
+          path: ./snowpark-checkpoints-collector/dist/*

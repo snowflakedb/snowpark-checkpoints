@@ -1,0 +1,60 @@
+name: Create Repo Tag
+
+on:
+  push:
+    branches: [main]
+
+permissions: write-all
+
+jobs:
+  tag:
+    name: Tag Repository
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Install GitVersion
+        run: |
+          dotnet tool install --global GitVersion.Tool
+          echo "export PATH=\$PATH:\$HOME/.dotnet/tools" >> $GITHUB_ENV
+
+      - name: Generate Version
+        id: gitversion
+        run: |
+          version_info=$(dotnet gitversion /output json /showvariable InformationalVersion)
+          version_output=$(dotnet gitversion /output json /showvariable MajorMinorPatch)
+          echo "Calculated Version: $version_output" && echo "Informational Version: $version_info"
+          echo "version=$version_output" >> $GITHUB_OUTPUT
+        env:
+          DOTNET_ROOT: $HOME/.dotnet
+
+      - name: Repository Setup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin https://__token__:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git config --get remote.origin.url
+
+      - name: Repository Tag
+        run: |
+          git status
+          if git tag -d ${{ env.NEW_VERSION }} 2>/dev/null; then
+            echo "Tag ${{ env.NEW_VERSION }} deleted."
+          else
+            echo "Tag ${{ env.NEW_VERSION }} does not exist. Skipping deletion."
+          fi
+          git tag ${{ env.NEW_VERSION }}
+          git push origin ${{ env.NEW_VERSION }} -f --tags -v --progress
+          git for-each-ref refs/tags --sort=-authordate --format='%(refname)' --count=5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_VERSION: ${{ steps.gitversion.outputs.version }}

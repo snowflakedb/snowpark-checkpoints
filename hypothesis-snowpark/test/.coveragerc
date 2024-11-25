@@ -1,0 +1,12 @@
+[run]
+omit =
+    */__init__.py
+    **/__init__.py
+    */tests/*
+    */test/*
+    */.venv/*
+    */.env/*
+
+precision = 2
+
+show_missing = True

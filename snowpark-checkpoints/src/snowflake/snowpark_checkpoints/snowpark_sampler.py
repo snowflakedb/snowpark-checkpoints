@@ -1,4 +1,8 @@
-from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
+#
+# Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
+#
+
+from typing import Optional
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from snowflake.snowpark import DataFrame as SnowparkDataFrame
 import pandas
@@ -17,12 +21,19 @@ class SamplingAdapter:
     def __init__(
         self,
         job_context: SnowparkJobContext,
-        sample_size: float = 1,
+        sample_frac: Optional[float] = None,
+        sample_n: Optional[int] = None,
         sampling_strategy: SamplingStrategy = SamplingStrategy.RANDOM_SAMPLE,
     ):
         self.pandas_sample_args = []
         self.job_context = job_context
-        self.sample_size = sample_size
+        if sample_frac and not (0 <= sample_frac <= 1):
+            raise ValueError(
+                f"'sample_size' value {sample_frac} is out of range (0 <= sample_size <= 1)"
+            )
+
+        self.sample_frac = sample_frac
+        self.sample_n = sample_n
         self.sampling_strategy = sampling_strategy
 
     def process_args(self, input_args):
@@ -30,10 +41,24 @@ class SamplingAdapter:
         # data frame for the test data
         for arg in input_args:
             if isinstance(arg, SnowparkDataFrame):
+                if arg.count() == 0:
+                    raise SamplingError(
+                        "Input DataFrame is empty. Cannot sample from an empty DataFrame."
+                    )
+
                 if self.sampling_strategy == SamplingStrategy.RANDOM_SAMPLE:
-                    df_sample = arg.sample(self.sample_size).to_pandas()
+                    if self.sample_frac:
+                        df_sample = arg.sample(frac=self.sample_frac).to_pandas()
+                    else:
+                        df_sample = arg.sample(n=self.sample_n).to_pandas()
                 else:
-                    df_sample = arg.limit(self.sample_size).to_pandas()
+                    df_sample = arg.limit(self.sample_n).to_pandas()
+
+                if df_sample.empty:
+                    raise SamplingError(
+                        "Sampled DataFrame is empty. Adjust the sample size or check the input DataFrame."
+                    )
+
                 self.pandas_sample_args.append(df_sample)
             else:
                 self.pandas_sample_args.append(arg)
@@ -42,7 +67,7 @@ class SamplingAdapter:
         return self.pandas_sample_args
 
     def get_sampled_snowpark_args(self):
-        if self.job_context == None:
+        if self.job_context is None:
             raise SamplingError("Need a job context to compare with spark")
         snowpark_sample_args = []
         for arg in self.pandas_sample_args:
@@ -54,7 +79,7 @@ class SamplingAdapter:
         return snowpark_sample_args
 
     def get_sampled_spark_args(self):
-        if self.job_context == None:
+        if self.job_context is None:
             raise SamplingError("Need a job context to compare with spark")
         pyspark_sample_args = []
         for arg in self.pandas_sample_args:

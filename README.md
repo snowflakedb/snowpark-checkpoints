@@ -39,7 +39,8 @@ collect_df_schema(df:SparkDataFrame,
 check_df_schema_file(df:SnowparkDataFrame,
                             checkpoint_name:str,
                             job_context:SnowparkJobContext = None,
-                            sample: Optional[int] = 100,
+                            sample_frac: Optional[float] = 0.1,
+                            sample_n: Optional[int] = None,
                             sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE)
 ```
 
@@ -47,7 +48,7 @@ check_df_schema_file(df:SnowparkDataFrame,
 - checkpoint_name - the name of the "checkpoint". Generated JSON files
   will have the name "snowpark-[checkpoint_name]-schema.json"
 - job_context - used to record migration results in snowflake, if desired
-- sample, sampling_strategy - strategy used to sample the snowpark data frame
+- sample_frac, sample_n, sampling_strategy - strategy used to sample the snowpark data frame
 
 ## check_with_spark Decorator
 
@@ -135,7 +136,7 @@ The following will result in a pandera SchemaError:
 ```cmd
 cd package_dir
 pip install -e .
-python3 -m pip install --upgrade buildpython3 -m build
+python3 -m pip install --upgrade build
 python3 -m build
 ```
 

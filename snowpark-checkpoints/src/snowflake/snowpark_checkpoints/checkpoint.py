@@ -3,10 +3,8 @@
 #
 
 # Wrapper around pandera which logs to snowflake
-import json
 from typing import Any, Dict, Optional
 from pandera import DataFrameSchema
-import pandera as pa
 import numpy as np
 import pandas
 from pandera_report import DataFrameValidator
@@ -17,57 +15,15 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
     SamplingStrategy,
 )
 from snowflake.snowpark import DataFrame as SnowparkDataFrame
-from .utils.utils_checks import add_boolean_checks, add_numeric_checks
-
-numeric_types = {"byte", "short", "integer", "long", "float", "double", "decimal"}
-
-string_types = {"string"}
-
-binary_types = {"binary"}
-
-boolean_types = {"boolean"}
-
-date_types = {"date", "timestamp", "timestamp_ntz"}
-
-supported_types = {
-    *numeric_types,
-    *string_types,
-    *binary_types,
-    *boolean_types,
-    *date_types,
-}
-
-
-def generate_schema(checkpoint_name: str) -> DataFrameSchema:
-    additional_checks_schema = open(f"snowpark-{checkpoint_name}-schema.json")
-    additional_checks_schema_json = json.load(additional_checks_schema)
-
-    if "pandera_schema" in additional_checks_schema_json:
-        schema_dict = additional_checks_schema_json.get("pandera_schema")
-        schema = pa.DataFrameSchema.from_json(json.dumps(schema_dict))
-    else:
-        schema = pa.DataFrameSchema()
-
-    if "additional_checks" in additional_checks_schema_json:
-        for additional_check in additional_checks_schema_json.get("additional_checks"):
-            type = additional_check["type"]
-            col = additional_check["col"]
-
-            if type in supported_types:
-
-                if type in numeric_types:
-                    add_numeric_checks(schema, col, additional_check)
-                elif type in boolean_types:
-                    add_boolean_checks(schema, col, additional_check)
-
-    return schema
+from .utils.utils_checks import generate_schema
 
 
 def check_df_schema_file(
     df: SnowparkDataFrame,
     checkpoint_name: str,
     job_context: SnowparkJobContext = None,
-    sample: Optional[float] = 0.1,
+    sample_frac: Optional[float] = 0.1,
+    sample_n: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
 ):
     """
@@ -85,7 +41,15 @@ def check_df_schema_file(
     """
     schema = generate_schema(checkpoint_name)
 
-    check_df_schema(df, schema, job_context, checkpoint_name, sample, sampling_strategy)
+    check_df_schema(
+        df,
+        schema,
+        job_context,
+        checkpoint_name,
+        sample_frac,
+        sample_n,
+        sampling_strategy,
+    )
 
 
 def check_df_schema(
@@ -93,7 +57,8 @@ def check_df_schema(
     pandera_schema: DataFrameSchema,
     job_context: SnowparkJobContext = None,
     checkpoint_name: str = None,
-    sample: Optional[float] = 1,
+    sample_frac: Optional[float] = 0.1,
+    sample_n: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
 ):
     """
@@ -111,7 +76,7 @@ def check_df_schema(
 
     """
 
-    sampler = SamplingAdapter(job_context, sample, sampling_strategy)
+    sampler = SamplingAdapter(job_context, sample_frac, sample_n, sampling_strategy)
     sampler.process_args([df])
 
     # fix up the column casing
@@ -131,7 +96,7 @@ def check_df_schema(
     # Raises SchemaError on validation issues
     try:
         validator = DataFrameValidator()
-        validator.validate(pandera_schema_upper, df)
+        print(validator.validate(pandera_schema_upper, sample_df))
         if job_context is not None:
             job_context.mark_pass(checkpoint_name)
     except Exception as pandera_ex:
@@ -145,7 +110,8 @@ def check_df_schema(
 
 def check_output_schema(
     pandera_schema: DataFrameSchema,
-    sample: Optional[int] = 100,
+    sample_frac: Optional[float] = 0.1,
+    sample_n: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
     job_context: SnowparkJobContext = None,
     check_name: Optional[str] = None,
@@ -191,13 +157,16 @@ def check_output_schema(
             """
             # Run the sampled data in snowpark
             snowpark_results = snowpark_fn(*args, **kwargs)
-            sampler = SamplingAdapter(job_context, sample, sampling_strategy)
+            sampler = SamplingAdapter(
+                job_context, sample_frac, sample_n, sampling_strategy
+            )
             sampler.process_args([snowpark_results])
             pandas_sample_args = sampler.get_sampled_pandas_args()
 
             # Raises SchemaError on validation issues
             try:
-                pandera_schema.validate(pandas_sample_args[0])
+                validator = DataFrameValidator()
+                print(validator.validate(pandera_schema, pandas_sample_args[0]))
                 if job_context is not None:
                     job_context.mark_pass(checkpoint_name)
             except Exception as pandera_ex:
@@ -216,7 +185,8 @@ def check_output_schema(
 
 def check_input_schema(
     pandera_schema: DataFrameSchema,
-    sample: Optional[int] = 100,
+    sample_frac: Optional[float] = 0.1,
+    sample_n: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
     job_context: SnowparkJobContext = None,
     check_name: Optional[str] = None,
@@ -261,7 +231,9 @@ def check_input_schema(
                 Any: The result of the Snowpark function.
             """
             # Run the sampled data in snowpark
-            sampler = SamplingAdapter(job_context, sample, sampling_strategy)
+            sampler = SamplingAdapter(
+                job_context, sample_frac, sample_n, sampling_strategy
+            )
             sampler.process_args(args)
             pandas_sample_args = sampler.get_sampled_pandas_args()
 
@@ -269,7 +241,8 @@ def check_input_schema(
             for arg in pandas_sample_args:
                 if isinstance(arg, pandas.DataFrame):
                     try:
-                        pandera_schema.validate(arg)
+                        validator = DataFrameValidator()
+                        print(validator.validate(pandera_schema, arg))
                         if job_context is not None:
                             job_context.mark_pass(checkpoint_name)
                     except Exception as pandera_ex:

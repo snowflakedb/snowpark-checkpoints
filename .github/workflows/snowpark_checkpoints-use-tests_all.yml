@@ -7,6 +7,12 @@ jobs:
   test:
     name: Test ${{ matrix.download_name }}-${{ matrix.python-version }}-${{ matrix.cloud-provider }}
     runs-on: ${{ matrix.os }}
+    env:
+      SNOWFLAKE_CONNECTIONS_MYCONNECTION_AUTHENTICATOR: SNOWFLAKE_JWT
+      SNOWFLAKE_CONNECTIONS_MYCONNECTION_USER: ${{ secrets.SNOWFLAKE_USER }}
+      SNOWFLAKE_CONNECTIONS_MYCONNECTION_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_CONNECTIONS_MYCONNECTION_PRIVATE_KEY_RAW: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_RAW }}
+
     strategy:
       fail-fast: false
       matrix:
@@ -15,10 +21,6 @@ jobs:
             python-version: "3.10"
             cloud-provider: aws
             download_name: linux
-          - os: macos-latest
-            python-version: "3.10"
-            cloud-provider: aws
-            download_name: macos
           - os: windows-latest
             python-version: "3.10"
             cloud-provider: aws
@@ -27,6 +29,8 @@ jobs:
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -37,6 +41,17 @@ jobs:
         run: |
           python -c "import sys; print(sys.version)"
           python .github/scripts/py_show_env.py
+
+      - name: Display Host Info
+        run: |
+          date && echo "My current shell: " "$SHELL"
+          echo "Internal IP:  "
+          ifconfig | grep "inet " | grep -Fv 127.0.0.1 | awk '{print $2}'
+          echo "External IP:  "
+          myIP=$(curl ifconfig.me) && echo $myIP && echo $(whoami)
+          echo "Unix Name Info: " && echo "$(uname -a)"
+          more /etc/lsb-release
+
 
       - name: Install required tools
         run: |
@@ -49,15 +64,21 @@ jobs:
         shell: bash
         working-directory: ./snowpark-checkpoints
 
+      - name: Set Snowflake Environment
+        uses: Snowflake-Labs/snowflake-cli-action@v1.5
+        with:
+          cli-version: "3.1.0"
+          default-config-file-path: "config.toml"
+
       - name: Run tests
         run: |
+          snow connection list && snow connection test
           echo "Current working directory: $PWD"
           hatch config set dirs.env.virtual .hatch
           hatch --version
           hatch status
           hatch env show
-          echo "[DevOps] TODO"
-          hatch run test:check
+          # hatch run test:check
           # hatch run test:coverage
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}

@@ -45,7 +45,7 @@ jobs:
 
       - name: Display Host Info
         run: |
-          python ../.github/scripts/py_show_env.py
+          python ../.github/scripts/py_show_host.py
         shell: bash
         working-directory: ./snowpark-checkpoints
 

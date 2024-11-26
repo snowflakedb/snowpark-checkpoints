@@ -116,17 +116,6 @@ check = [
   'ruff check --fix .',
 ]
 
-[tool.lint]
-ignore = ["E501"]
-
-[tool.ruff]
-line-length = 120
-target-version = "py310"
-exclude = [
-  "test/",
-  "tests/"
-]
-
 [tool.hatch.envs.test.scripts]
 check = [
   'pytest -v --junitxml=test/outcome/test-results.xml --cov=. --cov-config=test/.coveragerc --cov-report=xml:test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.xml {args:test} --cov-report=term --cov-report=json:test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.json',

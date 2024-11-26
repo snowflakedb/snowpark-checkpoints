@@ -1,0 +1,32 @@
+line-length = 120
+extend-exclude = [
+    "**/test/",
+    "**/tests/"
+]
+
+[lint]
+select = [
+    'B',                        # flake8-bugbear
+    'D',                        # pydocstyle
+    'E',                        # pycodestyle
+    'F',                        # pyflakes
+    'I',                        # isort
+    'RUF100',                   # check for valid noqa directives
+    'UP',                       # pyupgrade
+    'W',                        # pycodestyle
+    'TID252',                   # relative-imports
+]
+ignore = [
+    'D100',                     # Missing docstring in public class
+    'D101',                     # Missing docstring in public class
+    'D102',                     # Missing docstring in public method
+    'D104',                     # Missing docstring in public package
+    'D105',                     # Missing docstring in magic method
+    'D107',                     # Missing docstring in `__init__`
+]
+
+[lint.isort]
+known-first-party = ['snowflake']
+lines-after-imports = 2
+lines-between-types = 1
+order-by-type = true

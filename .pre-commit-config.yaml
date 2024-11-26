@@ -92,9 +92,4 @@ repos:
     rev: v0.8.0
     hooks:
       - id: ruff
-        args:
-          [
-            "--exclude=test,tests",
-            "--line-length=120",
-            "--target-version=py310",
-          ]
+        args: [--config=ruff.toml] 

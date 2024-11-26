@@ -110,17 +110,6 @@ exclude_lines = [
   "if __name__ == .__main__.:",
 ]
 
-[tool.lint]
-ignore = ["E501"]
-
-[tool.ruff]
-line-length = 120
-target-version = "py310"
-exclude = [
-  "test/",
-  "tests/"
-]
-
 [tool.hatch.envs.linter.scripts]
 check = [
   'ruff check --fix .',

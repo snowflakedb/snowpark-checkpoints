@@ -7,10 +7,6 @@ jobs:
   test:
     name: Test ${{ matrix.download_name }}-${{ matrix.python-version }}-${{ matrix.cloud-provider }}
     runs-on: ${{ matrix.os }}
-    env:
-      SNOWFLAKE_CONNECTIONS_MYCONNECTION_AUTHENTICATOR: SNOWFLAKE_JWT
-      SNOWFLAKE_CONNECTIONS_MYCONNECTION_USER: ${{ secrets.SNOWFLAKE_USER }}
-      SNOWFLAKE_CONNECTIONS_MYCONNECTION_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
 
     strategy:
       fail-fast: false
@@ -53,14 +49,11 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install ".[development]"
           pip install hatch pyyaml frictionless
-          echo "Python version: $python-version"
-          python ../.github/scripts/test_install_snow_3.py --pythonVersion $python-version;
+          python ../.github/scripts/test_install_snow_3.py --pythonVersion ${{ matrix.python-version }}
           snow --info && snow --version
           pip list
         shell: bash
         working-directory: ./snowpark-checkpoints
-        with:
-          python-version: ${{ matrix.python-version }}
 
       - name: Run Tests
         run: |

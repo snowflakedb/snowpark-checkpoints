@@ -20,6 +20,10 @@ jobs:
             python-version: "3.9"
             cloud-provider: aws
             download_name: linux
+          - os: windows-latest
+            python-version: "3.10"
+            cloud-provider: aws
+            download_name: windows
 
     steps:
       - name: Check out the repository
@@ -35,18 +39,15 @@ jobs:
       - name: Display Python version
         run: |
           python -c "import sys; print(sys.version)"
-          python .github/scripts/py_show_env.py
+          python ../.github/scripts/py_show_env.py
+        shell: bash
+        working-directory: ./snowpark-checkpoints
 
       - name: Display Host Info
         run: |
-          date && echo "My current shell: " "$SHELL"
-          echo "Internal IP:  "
-          ifconfig | grep "inet " | grep -Fv 127.0.0.1 | awk '{print $2}'
-          echo "External IP:  "
-          myIP=$(curl ifconfig.me) && echo $myIP && echo $(whoami)
-          echo "Unix Name Info: " && echo "$(uname -a)"
-          more /etc/lsb-release
-
+          python ../.github/scripts/py_show_env.py
+        shell: bash
+        working-directory: ./snowpark-checkpoints
 
       - name: Install required tools
         run: |

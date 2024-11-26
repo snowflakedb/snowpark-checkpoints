@@ -11,7 +11,6 @@ jobs:
       SNOWFLAKE_CONNECTIONS_MYCONNECTION_AUTHENTICATOR: SNOWFLAKE_JWT
       SNOWFLAKE_CONNECTIONS_MYCONNECTION_USER: ${{ secrets.SNOWFLAKE_USER }}
       SNOWFLAKE_CONNECTIONS_MYCONNECTION_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
-      SNOWFLAKE_CONNECTIONS_MYCONNECTION_PRIVATE_KEY_RAW: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_RAW }}
 
     strategy:
       fail-fast: false
@@ -54,19 +53,16 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install ".[development]"
           pip install hatch pyyaml frictionless
-          python ../.github/scripts/test_install_snow_3.py
+          echo "Python version: $python-version"
+          python ../.github/scripts/test_install_snow_3.py --pythonVersion $python-version;
           snow --info && snow --version
           pip list
         shell: bash
         working-directory: ./snowpark-checkpoints
-
-      - name: Set Snowflake Environment
-        uses: Snowflake-Labs/snowflake-cli-action@v1.5
         with:
-          cli-version: "3.1.0"
-          default-config-file-path: "config.toml"
+          python-version: ${{ matrix.python-version }}
 
-      - name: Run tests
+      - name: Run Tests
         run: |
           snow connection list && snow connection test
           echo "Current working directory: $PWD"

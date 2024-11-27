@@ -7,6 +7,12 @@ jobs:
   test:
     name: Test ${{ matrix.download_name }}-${{ matrix.python-version }}-${{ matrix.cloud-provider }}
     runs-on: ${{ matrix.os }}
+    env:
+      TERM: unknown
+      SNOWFLAKE_CONNECTIONS_JWT_AUTHENTICATOR: SNOWFLAKE_JWT
+      SNOWFLAKE_CONNECTIONS_JWT_USER: ${{ secrets.SNOWFLAKE_USER }}
+      SNOWFLAKE_CONNECTIONS_JWT_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_CONNECTIONS_JWT_PRIVATE_KEY_RAW: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_RAW }}
 
     strategy:
       fail-fast: false
@@ -15,15 +21,33 @@ jobs:
           - os: ubuntu-latest
             python-version: "3.10"
             cloud-provider: aws
+            snow_cli_version: "3.2.0"
             download_name: linux
           - os: ubuntu-latest
-            python-version: "3.9"
+            python-version: "3.11"
             cloud-provider: aws
+            snow_cli_version: "3.2.0"
             download_name: linux
-          - os: windows-latest
+          - os: ubuntu-latest
+            python-version: "3.12"
+            cloud-provider: aws
+            snow_cli_version: "3.2.0"
+            download_name: linux
+          - os: macos-latest
             python-version: "3.10"
             cloud-provider: aws
-            download_name: windows
+            snow_cli_version: "3.2.0"
+            download_name: macos
+          - os: macos-latest
+            python-version: "3.11"
+            cloud-provider: aws
+            snow_cli_version: "3.2.0"
+            download_name: macos
+          - os: macos-latest
+            python-version: "3.12"
+            cloud-provider: aws
+            snow_cli_version: "3.2.0"
+            download_name: macos
 
     steps:
       - name: Check out the repository
@@ -51,13 +75,25 @@ jobs:
         shell: bash
         working-directory: ./snowpark-checkpoints
 
+      - name: Set up Snowflake CLI
+        uses: Snowflake-Labs/snowflake-cli-action@v1.5
+        with:
+          cli-version: ${{ matrix.snow_cli_version }}
+          default-config-file-path: "../.github/workflows/config/config.toml"
+        working-directory: ./snowpark-checkpoints
+
+      - name: Test Snowflake CLI
+        run: |
+          snow --info
+          snow --version
+          snow connection test -c jwt | grep Status
+          snow sql -q " Select current_organization_name(); select current_account_name();" -c jwt
+
       - name: Install required tools
         run: |
           python -m pip install --upgrade pip
           python -m pip install ".[development]"
           pip install hatch pyyaml frictionless requests
-          python ../.github/scripts/test_install_snow_3.py --pythonVersion ${{ matrix.python-version }}
-          snow --info && snow --version
           pip list
         shell: bash
         working-directory: ./snowpark-checkpoints

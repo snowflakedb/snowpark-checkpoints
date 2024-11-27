@@ -76,8 +76,6 @@ jobs:
           hatch --version
           hatch status
           hatch env show
-          # hatch run test:check
-          # hatch run test:coverage
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
           cloud_provider: ${{ matrix.cloud-provider }}

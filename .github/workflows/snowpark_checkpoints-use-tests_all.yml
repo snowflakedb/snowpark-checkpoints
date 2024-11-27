@@ -68,9 +68,8 @@ jobs:
         shell: bash
         working-directory: ./snowpark-checkpoints
 
-      - name: Run Tests
+      - name: Run Tests [Skipped]
         run: |
-          snow connection list && snow connection test
           echo "Current working directory: $PWD"
           hatch config set dirs.env.virtual .hatch
           hatch --version

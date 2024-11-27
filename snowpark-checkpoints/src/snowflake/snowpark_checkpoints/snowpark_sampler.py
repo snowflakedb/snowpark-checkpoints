@@ -3,9 +3,11 @@
 #
 
 from typing import Optional
-from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
-from snowflake.snowpark import DataFrame as SnowparkDataFrame
+
 import pandas
+
+from snowflake.snowpark import DataFrame as SnowparkDataFrame
+from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 
 
 class SamplingStrategy:
@@ -63,7 +65,7 @@ class SamplingAdapter:
 
     def get_sampled_snowpark_args(self):
         if self.job_context is None:
-            raise SamplingError("Need a job context to compare with spark")
+            raise SamplingError("Need a job context to compare with Spark")
         snowpark_sample_args = []
         for arg in self.pandas_sample_args:
             if isinstance(arg, pandas.DataFrame):
@@ -75,7 +77,7 @@ class SamplingAdapter:
 
     def get_sampled_spark_args(self):
         if self.job_context is None:
-            raise SamplingError("Need a job context to compare with spark")
+            raise SamplingError("Need a job context to compare with Spark")
         pyspark_sample_args = []
         for arg in self.pandas_sample_args:
             if isinstance(arg, pandas.DataFrame):

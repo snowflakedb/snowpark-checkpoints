@@ -3,15 +3,30 @@
 #
 
 import json
-from typing import Any, Dict
-from pandera import DataFrameSchema
+
+from typing import Any
+
 import pandera as pa
-from .supported_types import numeric_types, boolean_types, supported_types
+
+from pandera import DataFrameSchema
+
+from .supported_types import boolean_types, numeric_types, supported_types
 
 
 def add_numeric_checks(
-    schema: DataFrameSchema, col: str, additional_check: Dict[str, Any]
+    schema: DataFrameSchema, col: str, additional_check: dict[str, Any]
 ):
+    """Add statistical checks for numeric columns in a Pandera DataFrame schema.
+
+    This function adds a check to ensure the mean of a numeric column falls within
+    a specified range based on the provided mean and standard deviation.
+
+    Args:
+        schema (DataFrameSchema): The Pandera DataFrame schema to modify.
+        col (str): The name of the column to add checks to.
+        additional_check (Dict[str, Any]): A dictionary containing check parameters.
+
+    """
     mean = additional_check.get("mean", 0)
     std = additional_check.get("std", 0)
 
@@ -23,8 +38,19 @@ def add_numeric_checks(
 
 
 def add_boolean_checks(
-    schema: DataFrameSchema, col: str, additional_check: Dict[str, Any]
+    schema: DataFrameSchema, col: str, additional_check: dict[str, Any]
 ):
+    """Add statistical checks for boolean columns in a Pandera DataFrame schema.
+
+    This function adds checks to ensure the count of True and False values
+    in a boolean column falls within specified ranges.
+
+    Args:
+        schema (DataFrameSchema): The Pandera DataFrame schema to modify.
+        col (str): The name of the column to add checks to.
+        additional_check (Dict[str, Any]): A dictionary containing check parameters.
+
+    """
     count_of_true = additional_check.get("count_of_true", 0)
     count_of_false = additional_check.get("count_of_false", 0)
     std = additional_check.get("std", 0)
@@ -46,6 +72,19 @@ def add_boolean_checks(
 
 
 def generate_schema(checkpoint_name: str) -> DataFrameSchema:
+    """Generate a Pandera DataFrame schema based on a JSON configuration file.
+
+    This function reads a JSON schema configuration file and creates a Pandera
+    DataFrame schema with optional additional checks for specific column types.
+
+    Args:
+        checkpoint_name (str): The name of the checkpoint used to identify
+            the schema configuration file.
+
+    Returns:
+        DataFrameSchema: A Pandera DataFrame schema with optional additional checks.
+
+    """
     additional_checks_schema = open(f"snowpark-{checkpoint_name}-schema.json")
     additional_checks_schema_json = json.load(additional_checks_schema)
 

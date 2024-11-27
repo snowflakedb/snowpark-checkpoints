@@ -3,18 +3,22 @@
 #
 
 # Wrapper around pandera which logs to snowflake
-from typing import Any, Dict, Optional
-from pandera import DataFrameSchema
+from typing import Any, Optional
+
 import numpy as np
 import pandas
+
+from pandera import DataFrameSchema
 from pandera_report import DataFrameValidator
+
+from snowflake.snowpark import DataFrame as SnowparkDataFrame
 from snowflake.snowpark_checkpoints.errors import SchemaValidationError
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from snowflake.snowpark_checkpoints.snowpark_sampler import (
     SamplingAdapter,
     SamplingStrategy,
 )
-from snowflake.snowpark import DataFrame as SnowparkDataFrame
+
 from .utils.utils_checks import generate_schema
 
 
@@ -26,18 +30,23 @@ def check_df_schema_file(
     sample_n: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
 ):
-    """
-    Validates the schema of a Snowpark DataFrame against a predefined Pandera schema.
+    """Generate and checks the schema for a given DataFrame based on a checkpoint name.
 
     Args:
-        df (SnowparkDataFrame): The Snowpark DataFrame to be validated.
-        checkpoint_name (str): The name of the checkpoint to retrieve the schema.
-        job_context (SnowparkJobContext, optional): The job context for the Snowpark job. Defaults to None.
-        sample (Optional[float], optional): The fraction of the DataFrame to sample for validation. Defaults to 0.1.
-        sampling_strategy (Optional[SamplingStrategy], optional): The strategy to use for sampling. Defaults to SamplingStrategy.RANDOM_SAMPLE.
+       df (SnowparkDataFrame): The DataFrame to be validated.
+       checkpoint_name (str): The name of the checkpoint to retrieve the schema.
+       job_context (SnowparkJobContext, optional): Context for job-related operations.
+        Defaults to None.
+       sample_frac (float, optional): Fraction of data to sample.
+        Defaults to 0.1.
+       sample_n (int, optional): Number of rows to sample.
+        Defaults to None.
+       sampling_strategy (SamplingStrategy, optional): Strategy for sampling data.
+        Defaults to SamplingStrategy.RANDOM_SAMPLE.
 
-    Returns:
-        None
+    Raises:
+        SchemaValidationError: If the DataFrame fails schema validation.
+
     """
     schema = generate_schema(checkpoint_name)
 
@@ -61,27 +70,32 @@ def check_df_schema(
     sample_n: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
 ):
-    """
-    Validates the schema of a Snowpark DataFrame against a predefined Pandera schema.
+    """Validate a DataFrame against a given Pandera schema using sampling techniques.
 
     Args:
-        df (SnowparkDataFrame): The Snowpark DataFrame to be validated.
+        df (SnowparkDataFrame): The DataFrame to be validated.
         pandera_schema (DataFrameSchema): The Pandera schema to validate against.
-        job_context (SnowparkJobContext, optional): The job context for the Snowpark job. Defaults to None.
-        checkpoint_name (str, optional): The name of the checkpoint to retrieve the schema. Defaults to None.
-        sample (Optional[float], optional): The fraction of the DataFrame to sample for validation. Defaults to 1.
-        sampling_strategy (Optional[SamplingStrategy], optional): The strategy to use for sampling. Defaults to SamplingStrategy.RANDOM_SAMPLE.
+        job_context (SnowparkJobContext, optional): Context for job-related operations.
+            Defaults to None.
+        checkpoint_name (str, optional): The name of the checkpoint to retrieve the schema.
+            Defaults to None.
+        sample_frac (float, optional): Fraction of data to sample.
+            Defaults to 0.1.
+        sample_n (int, optional): Number of rows to sample.
+            Defaults to None.
+        sampling_strategy (SamplingStrategy, optional): Strategy for sampling data.
+            Defaults to SamplingStrategy.RANDOM_SAMPLE.
 
-    Returns:
+    Raises:
+        SchemaValidationError: If the DataFrame fails schema validation.
 
     """
-
     sampler = SamplingAdapter(job_context, sample_frac, sample_n, sampling_strategy)
     sampler.process_args([df])
 
     # fix up the column casing
     pandera_schema_upper = pandera_schema
-    new_columns: Dict[Any, Any] = {}
+    new_columns: dict[Any, Any] = {}
 
     # this can be updated the column names to be upper case
     # data.columns = map(str.lower, data.columns)
@@ -100,7 +114,7 @@ def check_df_schema(
         if job_context is not None:
             job_context.mark_pass(checkpoint_name)
     except Exception as pandera_ex:
-        raise SchemaValidationError(
+        raise SchemaValidationError from pandera_ex(
             "Snowpark output schema validation error",
             job_context,
             checkpoint_name,
@@ -116,37 +130,39 @@ def check_output_schema(
     job_context: SnowparkJobContext = None,
     check_name: Optional[str] = None,
 ):
-    """
-    Decorator to validate the schema of the output of a Snowpark function.
+    """Decorate to validate the schema of the output of a Snowpark function.
 
     Args:
         pandera_schema (DataFrameSchema): The Pandera schema to validate against.
-        sample (Optional[int], optional): The number of rows to sample for validation. Defaults to 100.
-        sampling_strategy (Optional[SamplingStrategy], optional): The strategy to use for sampling. Defaults to SamplingStrategy.RANDOM_SAMPLE.
-        job_context (SnowparkJobContext, optional): The job context for the Snowpark job. Defaults to None.
-        check_name (Optional[str], optional): The name of the checkpoint to retrieve the schema. Defaults to None.
+        sample_frac (Optional[float], optional): Fraction of data to sample.
+            Defaults to 0.1.
+        sample_n (Optional[int], optional): Number of rows to sample.
+            Defaults to None.
+        sampling_strategy (Optional[SamplingStrategy], optional): Strategy for sampling data.
+            Defaults to SamplingStrategy.RANDOM_SAMPLE.
+        job_context (SnowparkJobContext, optional): Context for job-related operations.
+            Defaults to None.
+        check_name (Optional[str], optional): The name of the checkpoint to retrieve the schema.
+            Defaults to None.
 
-    Returns:
-        function: The decorated function.
     """
 
     def check_output_with_decorator(snowpark_fn):
-        """
-        Decorator to validate the schema of the output of a Snowpark function.
+        """Decorate to validate the schema of the output of a Snowpark function.
 
         Args:
             snowpark_fn (function): The Snowpark function to validate.
 
         Returns:
             function: The decorated function.
+
         """
         checkpoint_name = check_name
         if check_name is None:
             checkpoint_name = snowpark_fn.__name__
 
         def wrapper(*args, **kwargs):
-            """
-            Wrapper function to validate the schema of the output of a Snowpark function.
+            """Wrapp a function to validate the schema of the output of a Snowpark function.
 
             Args:
                 *args: The arguments to the Snowpark function.
@@ -154,6 +170,7 @@ def check_output_schema(
 
             Returns:
                 Any: The result of the Snowpark function.
+
             """
             # Run the sampled data in snowpark
             snowpark_results = snowpark_fn(*args, **kwargs)
@@ -170,7 +187,7 @@ def check_output_schema(
                 if job_context is not None:
                     job_context.mark_pass(checkpoint_name)
             except Exception as pandera_ex:
-                raise SchemaValidationError(
+                raise SchemaValidationError from pandera_ex(
                     "Snowpark output schema validation error",
                     job_context,
                     checkpoint_name,
@@ -191,44 +208,49 @@ def check_input_schema(
     job_context: SnowparkJobContext = None,
     check_name: Optional[str] = None,
 ):
-    """
-    Decorator to validate the schema of the input of a Snowpark function.
+    """Decorate factory for validating input DataFrame schemas before function execution.
 
     Args:
         pandera_schema (DataFrameSchema): The Pandera schema to validate against.
-        sample (Optional[int], optional): The number of rows to sample for validation. Defaults to 100.
-        sampling_strategy (Optional[SamplingStrategy], optional): The strategy to use for sampling. Defaults to SamplingStrategy.RANDOM_SAMPLE.
-        job_context (SnowparkJobContext, optional): The job context for the Snowpark job. Defaults to None.
-        check_name (Optional[str], optional): The name of the checkpoint to retrieve the schema. Defaults to None.
+        sample_frac (Optional[float], optional): Fraction of data to sample.
+            Defaults to 0.1.
+        sample_n (Optional[int], optional): Number of rows to sample.
+            Defaults to None.
+        sampling_strategy (Optional[SamplingStrategy], optional): Strategy for sampling data.
+            Defaults to SamplingStrategy.RANDOM_SAMPLE.
+        job_context (SnowparkJobContext, optional): Context for job-related operations.
+            Defaults to None.
+        check_name (Optional[str], optional): The name of the checkpoint to retrieve the schema.
+            Defaults to None.
 
-    Returns:
-        function: The decorated function.
     """
 
     def check_input_with_decorator(snowpark_fn):
-        """
-        Decorator to validate the schema of the input of a Snowpark function.
+        """Decorate that validates input schemas for the decorated function.
 
         Args:
-            snowpark_fn (function): The Snowpark function to validate.
+            snowpark_fn (Callable): The function to be decorated with input schema validation.
+
+        Raises:
+            SchemaValidationError: If input data fails schema validation.
 
         Returns:
-            function: The decorated function.
+            Callable: A wrapper function that performs schema validation before executing the original function.
+
         """
         checkpoint_name = check_name
         if check_name is None:
             checkpoint_name = snowpark_fn.__name__
 
         def wrapper(*args, **kwargs):
-            """
-            Wrapper function to validate the schema of the input of a Snowpark function.
+            """Wrapp a function to validate the schema of the input of a Snowpark function.
 
-            Args:
-                *args: The arguments to the Snowpark function.
-                **kwargs: The keyword arguments to the Snowpark function.
+            Raises:
+                SchemaValidationError: If any input DataFrame fails schema validation.
 
             Returns:
-                Any: The result of the Snowpark function.
+                Any: The result of the original function after input validation.
+
             """
             # Run the sampled data in snowpark
             sampler = SamplingAdapter(
@@ -246,7 +268,7 @@ def check_input_schema(
                         if job_context is not None:
                             job_context.mark_pass(checkpoint_name)
                     except Exception as pandera_ex:
-                        raise SchemaValidationError(
+                        raise SchemaValidationError from pandera_ex(
                             "Snowpark schema input validation error",
                             job_context,
                             checkpoint_name,

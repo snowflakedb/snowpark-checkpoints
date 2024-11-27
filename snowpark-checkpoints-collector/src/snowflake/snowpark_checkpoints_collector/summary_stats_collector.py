@@ -3,23 +3,58 @@
 #
 
 from decimal import Decimal
-import pandas
+
 import numpy as np
-from pyspark.sql import DataFrame as SparkDataFrame
+import pandas
 import pandera as pa
-from pyspark.sql.functions import min, max
+
 from pandera import Check
+from pyspark.sql import DataFrame as SparkDataFrame
+from pyspark.sql.functions import max, min
 
 
 def collect_input_schema(df: SparkDataFrame):
+    """Collect and return the input schema of a Spark DataFrame.
+
+    Args:
+        df (SparkDataFrame): The input Spark DataFrame.
+
+    Returns:
+        Optional[StructType]: The schema of the input DataFrame, or None if no schema is available.
+
+    """
     pass
 
 
 def collect_output_schema(df: SparkDataFrame):
+    """Collect and return the output schema of a Spark DataFrame.
+
+    Args:
+        df (SparkDataFrame): The output Spark DataFrame.
+
+    Returns:
+        Optional[StructType]: The schema of the output DataFrame, or None if no schema is available.
+
+    """
     pass
 
 
 def convert_string_to_number(string_value):
+    """Convert a string representation to either an integer or a float.
+
+    This function attempts to convert a string to a number, preferring integer
+    conversion for whole numbers and float conversion for decimal numbers.
+
+    Args:
+        string_value (str): The string to be converted to a number.
+
+    Returns:
+        Union[int, float]: The converted numeric value.
+
+    Raises:
+        ValueError: If the string cannot be converted to a number.
+
+    """
     try:
         if "." in string_value:
             float_value = float(string_value)
@@ -29,13 +64,24 @@ def convert_string_to_number(string_value):
             int_value = int(string_value)
             return int_value
 
-    except ValueError:
-        raise ValueError(f"Cannot convert {string_value} to a number")
+    except ValueError as err:
+        raise ValueError(f"Cannot convert {string_value} to a number") from err
 
 
 def collect_df_schema(
     df: SparkDataFrame, checkpoint_name, sample=0.1, min_amnount_for_category=0.1
 ):
+    """Collect and infer a Pandera schema for a Spark DataFrame.
+
+    Args:
+        df (SparkDataFrame): The input Spark DataFrame to analyze.
+        checkpoint_name (str): The name of the checkpoint.
+        sample (float, optional): Fraction of DataFrame to sample for schema inference.
+            Defaults to 0.1.
+        min_amnount_for_category (float, optional): Minimum proportion of rows required.
+            Defaults to 0.1.
+
+    """
     describe_df = df.describe().toPandas().set_index("summary")
     min_amnount_for_category = df.count() * min_amnount_for_category
 
@@ -114,6 +160,14 @@ def collect_df_schema(
 
 
 def append_min_and_max_to_schema(schema, df, col):
+    """Append min and max value checks to a Pandera schema for a specific column.
+
+    Args:
+        schema (pa.DataFrameSchema): The Pandera schema to modify.
+        df (SparkDataFrame): The Spark DataFrame to extract min and max values from.
+        col (str): The column name to add min/max checks for.
+
+    """
     min_value = df.select(min(col)).head()[0]
     max_value = df.select(max(col)).head()[0]
     schema.columns[col].checks.append(

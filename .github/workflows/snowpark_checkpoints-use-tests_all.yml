@@ -82,6 +82,6 @@ jobs:
           PYTHON_VERSION: ${{ matrix.python-version }}
           cloud_provider: ${{ matrix.cloud-provider }}
           PYTEST_ADDOPTS: --color=yes --tb=short -v
-          COVERAGE_THRESHOLD: 50
+          COVERAGE_THRESHOLD: 83
         shell: bash
         working-directory: ./snowpark-checkpoints

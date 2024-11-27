@@ -20,7 +20,7 @@ def collect_input_schema(df: SparkDataFrame):
         df (SparkDataFrame): The input Spark DataFrame.
 
     Returns:
-        Optional[StructType]: The schema of the input DataFrame, or None if no schema is available.
+        Optional[StructType]: The schema of the input DataFrame.
 
     """
     pass
@@ -33,7 +33,7 @@ def collect_output_schema(df: SparkDataFrame):
         df (SparkDataFrame): The output Spark DataFrame.
 
     Returns:
-        Optional[StructType]: The schema of the output DataFrame, or None if no schema is available.
+        Optional[StructType]: The schema of the output DataFrame.
 
     """
     pass

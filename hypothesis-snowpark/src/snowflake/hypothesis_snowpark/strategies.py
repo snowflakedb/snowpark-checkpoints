@@ -80,29 +80,21 @@ def snowpark_dataframe(
 ):
     """Define a Hypothesis strategy to generate Snowpark DataFrames.
 
-    This strategy creates a Snowpark DataFrame with randomly generated data based on
-    the specified column types and constraints.
-
     Args:
-        draw (Callable): Special function that allows generating values from other strategies.
+        draw (Callable[[SearchStrategy], T]): A function that allows generating values from other strategies.
         columns (Sequence[StructField]): A sequence of Snowpark StructFields defining column schema.
-        min_rows (int, optional): Minimum number of rows in the generated DataFrame. Defaults to 5.
-        max_rows (int, optional): Maximum number of rows in the generated DataFrame. Defaults to 20.
+        min_rows (int, optional): Minimum number of rows in the generated DataFrame.
+             Defaults to 5.
+        max_rows (int, optional): Maximum number of rows in the generated DataFrame.
+            Defaults to 20.
         session (Optional[snowflake.snowpark.Session], optional): Snowpark session to create the DataFrame.
-            If not provided, a local testing session will be created.
-
-    Returns:
-        snowflake.snowpark.DataFrame: A Snowpark DataFrame with randomly generated data.
+            Defaults to None.
 
     Raises:
         Exception: If a strategy is not implemented for a specific column type.
 
-    Example:
-        columns = [
-            StructField("id", IntegerType()),
-            StructField("name", StringType())
-        ]
-        df = snowpark_dataframe(columns=columns).example()
+    Returns:
+        snowflake.snowpark.DataFrame: A Snowpark DataFrame with randomly generated data.
 
     """
     candidate_st = []

@@ -4,67 +4,96 @@
 
 import json
 
-from typing import Any
+from typing import Any, Optional
 
 import pandera as pa
 
 from pandera import DataFrameSchema
 
-from .supported_types import boolean_types, numeric_types, supported_types
+from .constant import (
+    CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT,
+    DATAFRAME_CUSTOM_DATA_KEY,
+    DATAFRAME_PANDERA_SCHEMA_KEY,
+    DECIMAL_PRECISION_KEY,
+    FALSE_COUNT_KEY,
+    MARGIN_ERROR_KEY,
+    MEAN_KEY,
+    NAME_KEY,
+    SKIP_ALL,
+    TRUE_COUNT_KEY,
+    TYPE_KEY,
+)
+from .supported_types import BooleanTypes, NumericTypes, SupportedTypes
 
 
 def add_numeric_checks(
     schema: DataFrameSchema, col: str, additional_check: dict[str, Any]
 ):
-    """Add statistical checks for numeric columns in a Pandera DataFrame schema.
-
-    This function adds a check to ensure the mean of a numeric column falls within
-    a specified range based on the provided mean and standard deviation.
+    """Add numeric checks to a specified column in a DataFrameSchema.
 
     Args:
-        schema (DataFrameSchema): The Pandera DataFrame schema to modify.
-        col (str): The name of the column to add checks to.
-        additional_check (Dict[str, Any]): A dictionary containing check parameters.
+        schema (DataFrameSchema): The schema to which the checks will be added.
+        col (str): The name of the column to which the checks will be applied.
+        additional_check (dict[str, Any]): A dictionary containing additional checks.
+            - MEAN_KEY (str): The key for the mean value to check against.
+            - MARGIN_ERROR_KEY (str): The key for the margin of error for the mean check.
+            - DECIMAL_PRECISION_KEY (str): The key for the maximum decimal precision allowed.
+
+    Returns:
+        None
 
     """
-    mean = additional_check.get("mean", 0)
-    std = additional_check.get("std", 0)
+    mean = additional_check.get(MEAN_KEY, 0)
+    std = additional_check.get(MARGIN_ERROR_KEY, 0)
 
     def check_mean(series):
         series_mean = series.mean()
         return mean - std <= series_mean <= mean + std
 
-    schema.columns[col].checks.append(pa.Check(check_mean, element_wise=True))
+    schema.columns[col].checks.append(pa.Check(check_mean, element_wise=False))
+
+    if DECIMAL_PRECISION_KEY in additional_check:
+        schema.columns[col].checks.append(
+            pa.Check(
+                lambda series: series.apply(
+                    lambda x: len(str(x).split(".")[1]) if "." in str(x) else 0
+                )
+                <= additional_check[DECIMAL_PRECISION_KEY]
+            )
+        )
 
 
 def add_boolean_checks(
     schema: DataFrameSchema, col: str, additional_check: dict[str, Any]
 ):
-    """Add statistical checks for boolean columns in a Pandera DataFrame schema.
-
-    This function adds checks to ensure the count of True and False values
-    in a boolean column falls within specified ranges.
+    """Add boolean checks to a specified column in a DataFrameSchema.
 
     Args:
-        schema (DataFrameSchema): The Pandera DataFrame schema to modify.
-        col (str): The name of the column to add checks to.
-        additional_check (Dict[str, Any]): A dictionary containing check parameters.
+        schema (DataFrameSchema): The schema to which the checks will be added.
+        col (str): The name of the column to which the checks will be applied.
+        additional_check (dict[str, Any]): A dictionary containing additional check parameters.
+            - TRUE_COUNT_KEY (int): Expected count of True values in the column.
+            - FALSE_COUNT_KEY (int): Expected count of False values in the column.
+            - MARGIN_ERROR_KEY (int): Margin of error allowed for the counts.
+
+    Returns:
+        None
 
     """
-    count_of_true = additional_check.get("count_of_true", 0)
-    count_of_false = additional_check.get("count_of_false", 0)
-    std = additional_check.get("std", 0)
+    count_of_true = additional_check.get(TRUE_COUNT_KEY, 0)
+    count_of_false = additional_check.get(FALSE_COUNT_KEY, 0)
+    std = additional_check.get(MARGIN_ERROR_KEY, 0)
 
     schema.columns[col].checks.extend(
         [
             pa.Check(
                 lambda series: count_of_true - std
-                <= series.value_counts()[True]
+                <= series.value_counts().get(True, 0)
                 <= count_of_true + std
             ),
             pa.Check(
                 lambda series: count_of_false - std
-                <= series.value_counts()[False]
+                <= series.value_counts().get(False, 0)
                 <= count_of_false + std
             ),
         ]
@@ -72,41 +101,82 @@ def add_boolean_checks(
 
 
 def generate_schema(checkpoint_name: str) -> DataFrameSchema:
-    """Generate a Pandera DataFrame schema based on a JSON configuration file.
+    """Generate a DataFrameSchema based on the checkpoint name provided.
 
-    This function reads a JSON schema configuration file and creates a Pandera
-    DataFrame schema with optional additional checks for specific column types.
+    This function reads a JSON file corresponding to the checkpoint name,
+    extracts schema information, and constructs a DataFrameSchema object.
+    It also adds custom checks for numeric and boolean types if specified
+    in the JSON file.
 
     Args:
-        checkpoint_name (str): The name of the checkpoint used to identify
-            the schema configuration file.
+        checkpoint_name (str): The name of the checkpoint used to locate
+                               the JSON file containing schema information.
 
-    Returns:
-        DataFrameSchema: A Pandera DataFrame schema with optional additional checks.
+        DataFrameSchema: A schema object representing the structure and
+                         constraints of the DataFrame.
+                         constraints of the DataFrame.
 
     """
-    additional_checks_schema = open(f"snowpark-{checkpoint_name}-schema.json")
-    additional_checks_schema_json = json.load(additional_checks_schema)
+    with open(
+        CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(checkpoint_name)
+    ) as additional_checks_schema:
 
-    if "pandera_schema" in additional_checks_schema_json:
-        schema_dict = additional_checks_schema_json.get("pandera_schema")
-        schema = pa.DataFrameSchema.from_json(json.dumps(schema_dict))
-    else:
-        schema = pa.DataFrameSchema()
+        additional_checks_schema_json = json.load(additional_checks_schema)
 
-    if "additional_checks" in additional_checks_schema_json:
-        for additional_check in additional_checks_schema_json.get("additional_checks"):
-            type = additional_check.get("type", None)
-            col = additional_check.get("col", None)
+        if DATAFRAME_PANDERA_SCHEMA_KEY in additional_checks_schema_json:
+            schema_dict = additional_checks_schema_json.get(
+                DATAFRAME_PANDERA_SCHEMA_KEY
+            )
+            schema_dict_str = json.dumps(schema_dict)
+            schema = pa.DataFrameSchema.from_json(schema_dict_str)
+        else:
+            schema = pa.DataFrameSchema()
 
-            if col is None or type is None:
-                continue
+        if DATAFRAME_CUSTOM_DATA_KEY in additional_checks_schema_json:
+            for additional_check in additional_checks_schema_json.get(
+                DATAFRAME_CUSTOM_DATA_KEY, []
+            ):
+                type = additional_check.get(TYPE_KEY, None)
+                name = additional_check.get(NAME_KEY, None)
 
-            if type in supported_types:
+                if name is None or type is None:
+                    continue
 
-                if type in numeric_types:
-                    add_numeric_checks(schema, col, additional_check)
-                elif type in boolean_types:
-                    add_boolean_checks(schema, col, additional_check)
+                if type in SupportedTypes:
 
-    return schema
+                    if type in NumericTypes:
+                        add_numeric_checks(schema, name, additional_check)
+                    elif type in BooleanTypes:
+                        add_boolean_checks(schema, name, additional_check)
+
+        return schema
+
+
+def skip_checks_on_schema(
+    pandera_schema: DataFrameSchema,
+    skip_checks: Optional[dict[Any, Any]] = None,
+):
+    """Modify a Pandera DataFrameSchema to skip specified checks on certain columns.
+
+    Args:
+        pandera_schema (DataFrameSchema): The Pandera DataFrameSchema object to modify.
+        skip_checks (Optional[dict[Any, Any]]): A dictionary where keys are column names
+                                                and values are lists of checks to skip for
+                                                those columns. If the list is empty, all
+                                                checks for the column will be removed.
+
+    Returns:
+        None
+
+    """
+    if skip_checks:
+        for col, checks_to_skip in skip_checks.items():
+            # TODo: check if the column is in the schema
+
+            if col in pandera_schema.columns:
+
+                if SKIP_ALL in checks_to_skip:
+                    pandera_schema.columns[col].checks = {}
+
+                elif checks_to_skip in pandera_schema.columns[col].checks:
+                    del pandera_schema.columns[col].checks[checks_to_skip]

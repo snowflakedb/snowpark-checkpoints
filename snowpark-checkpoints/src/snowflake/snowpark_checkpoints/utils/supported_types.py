@@ -2,33 +2,53 @@
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
 
-from typing import Literal
+from .constant import (
+    BINARY_TYPE,
+    BOOLEAN_TYPE,
+    BYTE_TYPE,
+    DATE_TYPE,
+    DECIMAL_TYPE,
+    DOUBLE_TYPE,
+    FLOAT_TYPE,
+    INTEGER_TYPE,
+    LONG_TYPE,
+    SHORT_TYPE,
+    STRING_TYPE,
+    TIMESTAMP_NTZ_TYPE,
+    TIMESTAMP_TYPE,
+)
 
 
-numeric_types = Literal[
-    "byte", "short", "integer", "long", "float", "double", "decimal"
+NumericTypes = [
+    BYTE_TYPE,
+    SHORT_TYPE,
+    INTEGER_TYPE,
+    LONG_TYPE,
+    FLOAT_TYPE,
+    DOUBLE_TYPE,
+    DECIMAL_TYPE,
 ]
 
-string_types = Literal["string"]
+StringTypes = [STRING_TYPE]
 
-binary_types = Literal["binary"]
+BinaryTypes = [BINARY_TYPE]
 
-boolean_types = Literal["boolean"]
+BooleanTypes = [BOOLEAN_TYPE]
 
-date_types = Literal["date", "timestamp", "timestamp_ntz"]
+DateTypes = [DATE_TYPE, TIMESTAMP_TYPE, TIMESTAMP_NTZ_TYPE]
 
-supported_types = Literal[
-    "byte",
-    "short",
-    "integer",
-    "long",
-    "float",
-    "double",
-    "decimal",
-    "string",
-    "binary",
-    "boolean",
-    "date",
-    "timestamp",
-    "timestamp_ntz",
+SupportedTypes = [
+    BYTE_TYPE,
+    SHORT_TYPE,
+    INTEGER_TYPE,
+    LONG_TYPE,
+    FLOAT_TYPE,
+    DOUBLE_TYPE,
+    DECIMAL_TYPE,
+    STRING_TYPE,
+    BINARY_TYPE,
+    BOOLEAN_TYPE,
+    DATE_TYPE,
+    TIMESTAMP_TYPE,
+    TIMESTAMP_NTZ_TYPE,
 ]

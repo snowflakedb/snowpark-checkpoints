@@ -18,7 +18,7 @@ from snowflake.snowpark.types import (
     TimestampType,
 )
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
-from snowflake.snowpark_checkpoints.checkpoint import check_df_schema_file
+from snowflake.snowpark_checkpoints.checkpoint import check_dataframe_schema_file
 from snowflake.snowpark_checkpoints.spark_migration import check_with_spark
 
 session = Session.builder.getOrCreate()
@@ -255,7 +255,7 @@ data = [
 df = session.create_dataframe(data, schema)
 
 # Check a schema/stats here!
-check_df_schema_file(df, "demo-initial-creation-checkpoint", job_context)
+check_dataframe_schema_file(df, "demo-initial-creation-checkpoint", job_context)
 
 
 def original_spark_code_I_dont_understand(df):
@@ -288,4 +288,4 @@ def new_snowpark_code_I_do_understand(df):
 df1 = new_snowpark_code_I_do_understand(df)
 
 # Check a schema/stats here!
-check_df_schema_file(df1, "demo-add-a-column", job_context)
+check_dataframe_schema_file(df1, "demo-add-a-column", job_context)

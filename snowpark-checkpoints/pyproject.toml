@@ -1,6 +1,6 @@
 [tool.setuptools.packages.find]
 where = ["src/"]
-include = ["snowflake.snowpark_checkpoints"]
+include = ["snowflake.snowpark_checkpoints", "snowflake.snowpark_checkpoints.utils"]
 
 [project]
 name = "snowpark-checkpoints"

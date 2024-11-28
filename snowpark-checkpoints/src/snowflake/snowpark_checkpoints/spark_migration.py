@@ -12,6 +12,7 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
     SamplingAdapter,
     SamplingStrategy,
 )
+from snowflake.snowpark_checkpoints.utils import TelemetryManager
 
 fn = TypeVar("F", bound=Callable)
 
@@ -64,6 +65,7 @@ def check_with_spark(
 
 
 def assert_return(snowpark_results, spark_results, job_context, checkpoint_name):
+    telemetry = TelemetryManager()
     if isinstance(snowpark_results, SnowparkDataFrame) and isinstance(
         spark_results, SparkDataFrame
     ):
@@ -82,16 +84,23 @@ def assert_return(snowpark_results, spark_results, job_context, checkpoint_name)
             cmp = spark_df.compare(snowpark_df, result_names=("spark", "snowpark"))
 
         if not cmp.empty:
+            telemetry.log_info("DataframeValidator", {"status": False})
             raise SparkMigrationError(
                 "DataFrame difference:\n", job_context, checkpoint_name, cmp
             )
+        else:
+            telemetry.log_info("DataframeValidator", {"status": True})
         job_context.mark_pass(checkpoint_name)
     else:
         if snowpark_results != spark_results:
+            telemetry.log_info("DataframeValidator", {"status": False})
             raise SparkMigrationError(
                 "Return value difference:\n",
                 job_context,
                 checkpoint_name,
                 f"{snowpark_results} != {spark_results}",
             )
+        else:
+            telemetry.log_info("DataframeValidator", {"status": True})
+
         job_context.mark_pass(checkpoint_name)

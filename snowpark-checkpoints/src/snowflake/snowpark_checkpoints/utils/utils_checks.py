@@ -26,7 +26,6 @@ from snowflake.snowpark_checkpoints.utils.constant import (
 from snowflake.snowpark_checkpoints.utils.supported_types import (
     BooleanTypes,
     NumericTypes,
-    SupportedTypes,
 )
 
 
@@ -146,13 +145,11 @@ def generate_schema(checkpoint_name: str) -> DataFrameSchema:
                 if name is None or type is None:
                     continue
 
-                if type in SupportedTypes:
+                if type in NumericTypes:
+                    add_numeric_checks(schema, name, additional_check)
 
-                    if type in NumericTypes:
-                        add_numeric_checks(schema, name, additional_check)
-
-                    elif type in BooleanTypes:
-                        add_boolean_checks(schema, name, additional_check)
+                elif type in BooleanTypes:
+                    add_boolean_checks(schema, name, additional_check)
 
         return schema
 

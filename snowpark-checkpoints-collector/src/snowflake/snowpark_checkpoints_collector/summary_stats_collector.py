@@ -99,6 +99,7 @@ def collect_dataframe_checkpoint(
                 continue
 
             pandera_column = pandera_infer_schema.columns[column]
+            pandera_column.checks = []
             column_pandera_checks_manager.add_checks_column(
                 column, column_type, pandas_df, pandera_column
             )

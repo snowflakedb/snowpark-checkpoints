@@ -18,12 +18,14 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
     SamplingAdapter,
     SamplingStrategy,
 )
-
-from .utils.constant import (
+from snowflake.snowpark_checkpoints.utils.constant import (
     COLUMN_NOT_FOUND_ERROR,
     SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR,
 )
-from .utils.utils_checks import generate_schema, skip_checks_on_schema
+from snowflake.snowpark_checkpoints.utils.utils_checks import (
+    generate_schema,
+    skip_checks_on_schema,
+)
 
 
 def check_dataframe_schema_file(

@@ -31,7 +31,7 @@ PANDAS_INTEGER_DTYPE = "int64"
 PANDAS_OBJECT_DTYPE = "object"
 PANDAS_TIMEDELTA_DTYPE = "timedelta64[ns]"
 
-# Shemas keys
+# Schemas keys
 COLUMNS_KEY = "columns"
 COUNT_KEY = "rows_count"
 DECIMAL_PRECISION_KEY = "decimal_precision"

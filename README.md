@@ -19,11 +19,11 @@ teams.
 
 On the snowpark side the `snowpark-checkpoints` package can use these files to perform schema and data validation checks against snowpark dataframes at the same, intermediate logical "checkpoints".
 
-## collect_df_schema
+## collect_dataframe_schema
 
 ```
-from snowflake.snowpark_checkpoints_collector import collect_df_schema;
-collect_df_schema(df:SparkDataFrame,
+from snowflake.snowpark_checkpoints_collector import collect_dataframe_schema;
+collect_dataframe_schema(df:SparkDataFrame,
                               checkpoint_name,
                               sample=0.1)
 ```
@@ -33,22 +33,28 @@ collect_df_schema(df:SparkDataFrame,
   will have the name "snowpark-[checkpoint_name]-schema.json"
 - sample - sample size of the spark data frame to use to generate the schema
 
-## check_df_schema_file
+## check_dataframe_schema_file
 
-```
-check_df_schema_file(df:SnowparkDataFrame,
-                            checkpoint_name:str,
-                            job_context:SnowparkJobContext = None,
+The `check_dataframe_schema_file` function can be used to validate a Snowpark DataFrame against a checkpoint schema file.
+
+```python
+check_dataframe_schema_file(df: SnowparkDataFrame,
+                            checkpoint_name: str,
+                            custom_checks: Optional[dict[Any, Any]] = None,
+                            skip_checks: Optional[dict[Any, Any]] = None,
+                            job_context: SnowparkJobContext = None,
                             sample_frac: Optional[float] = 0.1,
                             sample_n: Optional[int] = None,
                             sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE)
 ```
 
-- df - snowpark data frame to compare against the file schema
-- checkpoint_name - the name of the "checkpoint". Generated JSON files
-  will have the name "snowpark-[checkpoint_name]-schema.json"
-- job_context - used to record migration results in snowflake, if desired
-- sample_frac, sample_n, sampling_strategy - strategy used to sample the snowpark data frame
+- df - The DataFrame to be validated.
+- checkpoint_name - The name of the checkpoint to retrieve the schema.
+- skip_checks - Checks to be skipped.
+- job_context - Context for job-related operations.
+- sample_frac - Fraction of data to sample.
+- sample_n - Number of rows to sample.
+- sampling_strategy - Strategy for sampling data.
 
 ## check_with_spark Decorator
 
@@ -63,6 +69,25 @@ Assuming the spark function and snowpark functions are semantically
 identical this allows for verification of those functions on real,
 sampled data.
 
+```python
+check_with_spark(job_context: SnowparkJobContext,
+                 spark_function: Callable,
+                 check_name: Optional[str] = None,
+                 sample_n: Optional[int] = 100,
+                 sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
+                 check_dtypes: Optional[bool] = False,
+                 check_with_precision: Optional[bool] = False)
+
+```
+
+- job_context - The context for job-related operations.
+- spark_function - The function to be executed with PySpark.
+- check_name - The name of the checkpoint.
+- sample_n - Number of rows to sample from each Snowpark DataFrame.
+- sampling_strategy - Strategy for sampling data.
+- check_dtypes - Check data types.
+- check_with_precision - Check with precision.
+
 ### Usage
 
 ```
@@ -76,16 +101,6 @@ def mirrored_spark_fn(df:SnowparkDataFrame):
 def snowpark_fn(df:SnowparkDataFrame):
     ...
 ```
-
-### Arguments
-
-- `job_context`: SnowparkJobContext - contains
-- `spark_function`: fn - spark function which mirrors this function
-- `check_name`: Optional[str] = None - checkpoint name, defaults to function name
-- `sample`: Optional[int] = 100 - Number of rows to sample from each Snowpark DF
-- `sampling_strategy`: either SamplingStrategy.RANDOM_SAMPLE or SamplingStrategy.LIMIT, defaults to RANDOM_SAMPLE, but LIMIT may be faster
-- `check_dtypes`: Not Implemented
-- `check_with_precision`: Not Implemented
 
 ## Pandera Snowpark Decorators
 
@@ -115,9 +130,9 @@ The following will result in a pandera SchemaError:
         return dataframe.with_column("COLUMN1", lit('Some bad data yo'))
 
     session = Session.builder.getOrCreate()
-    sp_df = session.create_dataframe(df)
+    sp_dataframe = session.create_dataframe(df)
 
-    preprocessed_df = preprocessor(sp_df)
+    preprocessed_dataframe = preprocessor(sp_dataframe)
 ```
 
 ## Run Demos

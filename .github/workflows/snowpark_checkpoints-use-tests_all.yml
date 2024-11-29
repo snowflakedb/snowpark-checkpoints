@@ -33,6 +33,17 @@ jobs:
             snow_cli_version: "3.2.0"
             download_name: linux
 
+          - os: windows-latest
+            python-version: "3.10"
+            cloud-provider: aws
+            snow_cli_version: "3.2.0"
+            download_name: windows
+          - os: windows-latest
+            python-version: "3.11"
+            cloud-provider: aws
+            snow_cli_version: "3.2.0"
+            download_name: windows
+
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
@@ -110,6 +121,51 @@ jobs:
           cat "$SNOWFLAKE_CONFIG_PATH"
         shell: bash
 
+      - name: Set up key (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ParentDir = Split-Path -Parent ${{ github.workspace }}
+          $PrivateKeyFile = Join-Path $ParentDir '.ssh\key.p8'
+
+          New-Item -ItemType Directory -Force -Path "$ParentDir\.ssh" | Out-Null
+          Set-Content -Path $PrivateKeyFile -Value $Env:SNOWFLAKE_CONNECTIONS_MYCONNECTION_PRIVATE_KEY_RAW
+          Write-Host "Private key file created at: $PrivateKeyFile"
+
+          icacls $PrivateKeyFile /inheritance:r /grant:r "$($Env:USERNAME):(R,W)"
+          icacls $PrivateKeyFile /grant:r *S-1-5-32-544:RW
+
+      - name: Set up Connection Snowflake CLI (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $PARENT_DIR = Split-Path -Parent "${{ github.workspace }}"
+          $PRIVATE_KEY_FILE = (Join-Path (Join-Path $PARENT_DIR '.ssh') 'key.p8') -replace '\\', '\\\\'
+          $CONFIG_FILE=".github\workflows\config\config.toml"
+          $SNOWFLAKE_CONFIG_DIR = "$env:USERPROFILE\.snowflake"
+          $SNOWFLAKE_CONFIG_PATH = "$SNOWFLAKE_CONFIG_DIR\config.toml"
+
+          Write-Output "SNOWFLAKE_CONFIG_DIR:  $SNOWFLAKE_CONFIG_DIR"
+          Write-Output "SNOWFLAKE_CONFIG_PATH: $SNOWFLAKE_CONFIG_PATH"
+
+          New-Item -ItemType Directory -Force -Path $SNOWFLAKE_CONFIG_DIR
+
+          Set-Content -Path $CONFIG_FILE -Value "[connections.myconnection]"
+          Add-Content -Path $CONFIG_FILE -Value "authenticator = `"$env:SNOWFLAKE_CONNECTIONS_MYCONNECTION_AUTHENTICATOR`""
+          Add-Content -Path $CONFIG_FILE -Value "schema = `"$env:SNOWFLAKE_CONNECTIONS_MYCONNECTION_SCHEMA`""
+          Add-Content -Path $CONFIG_FILE -Value "account = `"$env:SNOWFLAKE_CONNECTIONS_MYCONNECTION_ACCOUNT`""
+          Add-Content -Path $CONFIG_FILE -Value "user = `"$env:SNOWFLAKE_CONNECTIONS_MYCONNECTION_USER`""
+          Add-Content -Path $CONFIG_FILE -Value "database = `"$env:SNOWFLAKE_CONNECTIONS_MYCONNECTION_DATABASE`""
+          Add-Content -Path $CONFIG_FILE -Value "warehouse = `"$env:SNOWFLAKE_CONNECTIONS_MYCONNECTION_WAREHOUSE`""
+          Add-Content -Path $CONFIG_FILE -Value "role = `"$env:SNOWFLAKE_CONNECTIONS_MYCONNECTION_ROLE`""
+          Add-Content -Path $CONFIG_FILE -Value "private_key_file = `"$PRIVATE_KEY_FILE`""
+
+          Copy-Item -Path $CONFIG_FILE -Destination $SNOWFLAKE_CONFIG_PATH
+          icacls $PRIVATE_KEY_FILE /inheritance:r /grant:r "$($env:USERNAME):(R)"
+          icacls $SNOWFLAKE_CONFIG_PATH /inheritance:r /grant:r "$($env:USERNAME):(R)"
+
+          Write-Output "Snowflake configuration at $SNOWFLAKE_CONFIG_PATH"
+          Get-Content $SNOWFLAKE_CONFIG_PATH
 
       - name: Test Snowflake CLI
         run: |

@@ -12,6 +12,7 @@ from snowflake.snowpark_checkpoints.utils.constant import (
     CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT,
     DATAFRAME_CUSTOM_DATA_KEY,
     FLOAT_TYPE,
+    NAME_KEY,
     TYPE_KEY,
 )
 from snowflake.snowpark_checkpoints.utils.utils_checks import generate_schema
@@ -82,8 +83,8 @@ def test_skip_specific_check():
     skip_checks = {"col1": ["greater_than"]}
     skip_checks_on_schema(schema, skip_checks)
 
-    assert len(schema.columns["col1"].checks) == 2
-    assert schema.columns["col1"].checks[0].name == "greater_than"
+    assert len(schema.columns["col1"].checks) == 1
+    assert schema.columns["col1"].checks[0].name == "less_than"
     assert len(schema.columns["col2"].checks) == 1
 
 
@@ -316,9 +317,14 @@ def test_generate_schema_with_custom_data(generate_json_schema_file):
 def test_generate_schema_no_pandera_schema_key():
     checkpoint_name = "test_checkpoint"
     schema_json = {
-        DATAFRAME_CUSTOM_DATA_KEY: {
-            "col1": {TYPE_KEY: "numeric", MEAN_KEY: 5.0, MARGIN_ERROR_KEY: 1.0}
-        }
+        DATAFRAME_CUSTOM_DATA_KEY: [
+            {
+                NAME_KEY: "col1",
+                TYPE_KEY: "numeric",
+                MEAN_KEY: 5.0,
+                MARGIN_ERROR_KEY: 1.0,
+            }
+        ]
     }
 
     with patch("builtins.open", mock_open(read_data=json.dumps(schema_json))):

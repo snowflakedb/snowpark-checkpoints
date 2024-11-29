@@ -146,6 +146,7 @@ def generate_schema(checkpoint_name: str) -> DataFrameSchema:
 
                     if type in NumericTypes:
                         add_numeric_checks(schema, name, additional_check)
+
                     elif type in BooleanTypes:
                         add_boolean_checks(schema, name, additional_check)
 
@@ -154,13 +155,13 @@ def generate_schema(checkpoint_name: str) -> DataFrameSchema:
 
 def skip_checks_on_schema(
     pandera_schema: DataFrameSchema,
-    skip_checks: Optional[dict[Any, Any]] = None,
+    skip_checks: Optional[dict[str, list[str]]] = None,
 ):
     """Modify a Pandera DataFrameSchema to skip specified checks on certain columns.
 
     Args:
         pandera_schema (DataFrameSchema): The Pandera DataFrameSchema object to modify.
-        skip_checks (Optional[dict[Any, Any]]): A dictionary where keys are column names
+        skip_checks (Optional[dict[str, list[str]]]): A dictionary where keys are column names
                                                 and values are lists of checks to skip for
                                                 those columns. If the list is empty, all
                                                 checks for the column will be removed.
@@ -171,12 +172,15 @@ def skip_checks_on_schema(
     """
     if skip_checks:
         for col, checks_to_skip in skip_checks.items():
-            # TODo: check if the column is in the schema
 
             if col in pandera_schema.columns:
 
                 if SKIP_ALL in checks_to_skip:
                     pandera_schema.columns[col].checks = {}
 
-                elif checks_to_skip in pandera_schema.columns[col].checks:
-                    del pandera_schema.columns[col].checks[checks_to_skip]
+                else:
+                    pandera_schema.columns[col].checks = [
+                        check
+                        for check in pandera_schema.columns[col].checks
+                        if check.name not in checks_to_skip
+                    ]

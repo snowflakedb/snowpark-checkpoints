@@ -50,9 +50,10 @@ TYPE_KEY = "type"
 DATAFRAME_CUSTOM_DATA_KEY = "custom_data"
 DATAFRAME_PANDERA_SCHEMA_KEY = "pandera_schema"
 
-# Format constants
-BETWEEN_CHECK_ERROR_MESSAGE_FORMAT = "Value must be between {} and {}"
-CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT = "snowpark-{}-schema-contract.json"
+# File name
+CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT = "{}.json"
 
 # Error messages
 SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR = "Snowpark output schema validation error"
+COLUMN_NOT_FOUND_ERROR = "Column {} not found in schema"
+BETWEEN_CHECK_ERROR_MESSAGE_FORMAT_ERROR = "Value must be between {} and {}"

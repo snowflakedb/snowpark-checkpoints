@@ -3,16 +3,18 @@
 #
 
 from typing import Callable, Optional, TypeVar
+
+from pyspark.sql import DataFrame as SparkDataFrame
+
+from snowflake.snowpark import DataFrame as SnowparkDataFrame
 from snowflake.snowpark_checkpoints.errors import SparkMigrationError
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
-from pyspark.sql import DataFrame as SparkDataFrame
-from snowflake.snowpark import DataFrame as SnowparkDataFrame
-
 from snowflake.snowpark_checkpoints.snowpark_sampler import (
     SamplingAdapter,
     SamplingStrategy,
 )
 from snowflake.snowpark_checkpoints.utils import TelemetryManager
+
 
 fn = TypeVar("F", bound=Callable)
 
@@ -26,16 +28,28 @@ def check_with_spark(
     check_dtypes: Optional[bool] = True,
     check_with_precision: Optional[float] = True,
 ) -> Callable[[fn], fn]:
-    """Validate function output with spark instance.
+    """Validate function output with Spark instance.
 
     Will take the input snowpark dataframe of this function, sample data, convert
-    it to a spark dataframe and then execute `spark_function`. Subsequently
+    it to a Spark dataframe and then execute `spark_function`. Subsequently
     the output of that function will be compared to the output of this function
     for the same sample of data.
 
-    :param sample: validate a random sample of n rows. Rows overlapping
-        with `head` or `tail` are de-duplicated.
-    :returns: wrapped function
+    Args:
+        job_context (SnowparkJobContext): The job context containing configuration and details for the validation.
+        spark_function (fn): The equivalent PySpark function to compare against the Snowpark implementation.
+        check_name (Optional[str], optional): A name for the checkpoint. Defaults to None.
+        sample_n (Optional[int], optional): The number of rows for validation. Defaults to 100.
+        sampling_strategy (Optional[SamplingStrategy], optional): The strategy used for sampling data.
+            Defaults to SamplingStrategy.RANDOM_SAMPLE.
+        check_dtypes (Optional[bool], optional): Enable data type consistency checks between Snowpark and PySpark.
+            Defaults to True.
+        check_with_precision (Optional[float], optional): Precision value to control numerical comparison precision.
+            Defaults to True.
+
+    Returns:
+        Callable[[fn], fn]: A decorator that wraps the original Snowpark function with validation logic.
+
     """
 
     def check_with_spark_decorator(snowpark_fn):
@@ -65,6 +79,19 @@ def check_with_spark(
 
 
 def assert_return(snowpark_results, spark_results, job_context, checkpoint_name):
+    """Assert and validate the results from Snowpark and Spark transformations.
+
+    Args:
+        snowpark_results (Any): Results from the Snowpark transformation.
+        spark_results (Any): Results from the Spark transformation to compare against.
+        job_context (Any): Additional context about the job. Defaults to None.
+        checkpoint_name (Any): Name of the checkpoint for logging. Defaults to None.
+
+    Raises:
+        AssertionError: If the Snowpark and Spark results do not match.
+        TypeError: If the results cannot be compared.
+
+    """
     telemetry = TelemetryManager()
     if isinstance(snowpark_results, SnowparkDataFrame) and isinstance(
         spark_results, SparkDataFrame
@@ -81,7 +108,7 @@ def assert_return(snowpark_results, spark_results, job_context, checkpoint_name)
                 {"left_only": "spark_only", "right_only": "snowpark_only"}
             )
         else:
-            cmp = spark_df.compare(snowpark_df, result_names=("spark", "snowpark"))
+            cmp = spark_df.compare(snowpark_df, result_names=("Spark", "snowpark"))
 
         if not cmp.empty:
             telemetry.log_info("DataframeValidator", {"status": False})

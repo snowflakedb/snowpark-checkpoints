@@ -3,5 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="py311" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="py311" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.11 virtualenv at ~/Documents/git-repos/CHECKPOINTS/snowpark-checkpoints/venv" project-jdk-type="Python SDK" />
 </project>

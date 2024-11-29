@@ -34,7 +34,7 @@ keywords = [
   'cloud',
   'database',
   'db',
-  'snowspark',
+  'Snowpark',
 ]
 license = {file = "LICENSE"}
 name = "snowpark-checkpoints-collector"
@@ -110,7 +110,8 @@ exclude_lines = [
   "if __name__ == .__main__.:",
 ]
 
-[tool.hatch.envs.precommit.scripts]
+
+[tool.hatch.envs.linter.scripts]
 check = [
   'ruff check --fix .',
 ]

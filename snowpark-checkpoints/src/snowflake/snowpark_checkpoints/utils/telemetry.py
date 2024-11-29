@@ -4,21 +4,24 @@
 
 import datetime
 import hashlib
-from sys import platform
-from platform import python_version
-from os import path, makedirs, remove
 import json
+
+from os import getcwd, makedirs, path
+from pathlib import Path
+from platform import python_version
+from sys import platform
+from uuid import getnode
+
+import yaml
+
 from snowflake.connector import (
-    SnowflakeConnection,
     SNOWFLAKE_CONNECTOR_VERSION,
+    SnowflakeConnection,
     time_util,
 )
 from snowflake.connector.constants import DIRS as snowflake_DIRS
-from os import getcwd
-from pathlib import Path
-import yaml
 from snowflake.snowpark.session import Session
-from uuid import getnode
+
 
 log_batch = []
 
@@ -72,9 +75,13 @@ class TelemetryManager(metaclass=Singleton):
             self._write_telemetry(to_sent)
             return False
         body = {"logs": to_sent}
-        ret = {
-            "success": False,
-        }  # self.conn.rest.request(self.sf_path_telemetry, body=body, method="post", client=None, timeout=5, )
+        ret = self.conn.rest.request(
+            self.sf_path_telemetry,
+            body=body,
+            method="post",
+            client=None,
+            timeout=5,
+        )
         if not ret.get("success"):
             self._write_telemetry(to_sent)
             return False
@@ -106,15 +113,16 @@ class TelemetryManager(metaclass=Singleton):
         batch = []
         for file in Path(self.folder_path).glob("*.json"):
             with open(file) as json_file:
-                try:
-                    data_dict = json.load(json_file)
-                    batch.append(data_dict)
-                except:
-                    continue
+                data_dict = json.load(json_file)
+                batch.append(data_dict)
         body = {"logs": batch}
-        ret = {
-            "success": True,
-        }  # self.conn.rest.request(self.sf_path_telemetry, body=body, method="post", client=None, timeout=5, )
+        ret = self.conn.rest.request(
+            self.sf_path_telemetry,
+            body=body,
+            method="post",
+            client=None,
+            timeout=5,
+        )
         if ret.get("False"):
             for file in Path(self.folder_path).glob("*.json"):
                 file.unlink()

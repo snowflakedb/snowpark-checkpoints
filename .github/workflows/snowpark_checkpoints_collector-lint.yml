@@ -29,5 +29,5 @@ jobs:
       - name: Run lint checks
         run: |
           echo "Current working directory:" && pwd
-          hatch run precommit:check
+          hatch run linter:check
         working-directory: ./snowpark-checkpoints-collector

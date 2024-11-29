@@ -1,127 +1,173 @@
 #
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
+import json
+import os
 
-from decimal import Decimal
-import pandas
-import numpy as np
-from pyspark.sql import DataFrame as SparkDataFrame
 import pandera as pa
-from pyspark.sql.functions import min, max
-from pandera import Check
+
+from pyspark.sql import DataFrame as SparkDataFrame
+
+from snowflake.snowpark_checkpoints_collector.collection_common import (
+    CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT,
+    COLUMNS_KEY,
+    DATAFRAME_CUSTOM_DATA_KEY,
+    DATAFRAME_PANDERA_SCHEMA_KEY,
+    EMPTY_DATAFRAME_WITHOUT_SCHEMA_ERROR_MESSAGE,
+    SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
+    STRING_COLUMN_TYPE,
+)
+from snowflake.snowpark_checkpoints_collector.column_collection import (
+    ColumnCollectorManager,
+)
+from snowflake.snowpark_checkpoints_collector.column_pandera_checks import (
+    PanderaColumnChecksManager,
+)
 
 
-def collect_input_schema(df: SparkDataFrame):
+def collect_input_schema(df: SparkDataFrame) -> None:
+    """Collect and return the input schema of a Spark DataFrame.
+
+    Args:
+        df (SparkDataFrame): The input Spark DataFrame.
+
+    Returns:
+        Optional[StructType]: The schema of the input DataFrame.
+
+    """
     pass
 
 
-def collect_output_schema(df: SparkDataFrame):
+def collect_output_schema(df: SparkDataFrame) -> None:
+    """Collect and return the output schema of a Spark DataFrame.
+
+    Args:
+        df (SparkDataFrame): The output Spark DataFrame.
+
+    Returns:
+        Optional[StructType]: The schema of the output DataFrame.
+
+    """
     pass
 
 
-def convert_string_to_number(string_value):
+def collect_dataframe_checkpoint(
+    df: SparkDataFrame, checkpoint_name, sample=1.0
+) -> None:
+    """Collect a DataFrame checkpoint.
+
+    Args:
+        df (SparkDataFrame): The input Spark DataFrame to collect.
+        checkpoint_name (str): The name of the checkpoint.
+        sample (float, optional): Fraction of DataFrame to sample for schema inference.
+            Defaults to 1.0.
+
+    Raises:
+        Exception: It is not possible to collect a empty DataFrame without schema.
+
+    """
     try:
-        if "." in string_value:
-            float_value = float(string_value)
-            return float_value
-        else:
+        if _is_empty_dataframe_without_schema(df):
+            raise Exception(EMPTY_DATAFRAME_WITHOUT_SCHEMA_ERROR_MESSAGE)
 
-            int_value = int(string_value)
-            return int_value
+        is_empty_df_with_string_column = _is_empty_dataframe_with_string_column(df)
 
-    except ValueError:
-        raise ValueError(f"Cannot convert {string_value} to a number")
+        column_type_dict = _get_spark_column_types(df)
+        column_name_collection = df.schema.names
+        source_df = df.sample(sample)
 
+        if source_df.isEmpty():
+            source_df = df
 
-def collect_df_schema(
-    df: SparkDataFrame, checkpoint_name, sample=0.1, min_amnount_for_category=0.1
-):
-    describe_df = df.describe().toPandas().set_index("summary")
-    min_amnount_for_category = df.count() * min_amnount_for_category
+        pandas_df = source_df.toPandas()
+        pandera_infer_schema = (
+            pa.infer_schema(pandas_df) if not is_empty_df_with_string_column else {}
+        )
+        column_custom_data_collection = []
+        column_collector_manager = ColumnCollectorManager()
+        column_pandera_checks_manager = PanderaColumnChecksManager()
 
-    # use infer schema on a sample to set most values
-    # this may be error prone
+        for column in column_name_collection:
+            column_type = column_type_dict[column]
+            column_has_data = len(pandas_df[column]) > 0
 
-    sampled_df = df.sample(sample).toPandas()
-    sampled_df.index = np.ones(sampled_df.count().iloc[0])
-
-    schema = pa.infer_schema(sampled_df)
-
-    for col in schema.columns:
-        col_dtype = schema.columns[col].dtype.type
-        schema.columns[col].checks = []
-
-        if col_dtype == "empty":
-            continue
-
-        if col == "index":
-            pass
-
-        elif pandas.api.types.is_bool_dtype(col_dtype):
-            schema.columns[col].checks.extend([Check.isin([True, False])])
-
-        elif pandas.api.types.is_numeric_dtype(col_dtype):
-            min_value = convert_string_to_number(describe_df.loc["min"][col])
-            max_value = convert_string_to_number(describe_df.loc["max"][col])
-
-            schema.columns[col].checks.append(
-                Check.between(
-                    min_value=min_value,
-                    max_value=max_value,
-                    include_min=True,
-                    include_max=True,
-                    title=f"Value should be between {describe_df.loc['min'][col]} and {describe_df.loc['max'][col]}",
+            if not column_has_data:
+                custom_data = column_collector_manager.collect_empty_custom_data(
+                    column, column_type, pandas_df[column]
                 )
+                column_custom_data_collection.append(custom_data)
+                continue
+
+            pandera_column = pandera_infer_schema.columns[column]
+            column_pandera_checks_manager.add_checks_column(
+                column, column_type, pandas_df, pandera_column
             )
 
-        elif pandas.api.types.is_datetime64_any_dtype(col_dtype):
-            append_min_and_max_to_schema(schema, df, col)
+            custom_data = column_collector_manager.collect_column(
+                column, column_type, pandas_df[column]
+            )
+            column_custom_data_collection.append(custom_data)
 
-        elif pandas.api.types.is_object_dtype(col_dtype):
-            # * decimal is and object so we need to check if it is a decimal, bytes, date or string
-
-            if isinstance(sampled_df[col].iloc[0], Decimal):
-                min_value = float(df.select(min(col)).head()[0])
-                max_value = float(df.select(max(col)).head()[0])
-                schema.columns[col].checks.append(
-                    Check.between(
-                        min_value=min_value,
-                        max_value=max_value,
-                        include_max=True,
-                        include_min=True,
-                        title=f"Value should be between {min_value} and {max_value}",
-                    )
-                )
-
-            elif isinstance(sampled_df[col].iloc[0], bytes):
-                append_min_and_max_to_schema(schema, df, col)
-
-            elif isinstance(sampled_df[col].iloc[0], np.datetime64):
-                append_min_and_max_to_schema(schema, df, col)
-
-            elif isinstance(sampled_df[col].iloc[0], str):
-
-                unique_values = df.groupBy(col).count().orderBy("count")
-
-                if unique_values.head()[1] > min_amnount_for_category:
-                    schema.columns[col].checks.append(
-                        Check.isin(unique_values.select(col).toPandas()[col].to_list())
-                    )
-
-    f = open(f"snowpark-{checkpoint_name}-schema.json", "w")
-    f.write(schema.to_json())
-    f.close()
-
-
-def append_min_and_max_to_schema(schema, df, col):
-    min_value = df.select(min(col)).head()[0]
-    max_value = df.select(max(col)).head()[0]
-    schema.columns[col].checks.append(
-        Check.between(
-            min_value=min_value,
-            max_value=max_value,
-            include_max=True,
-            include_min=True,
-            title=f"Value should be between {min_value} and {max_value}",
+        pandera_infer_schema_dict = (
+            json.loads(pandera_infer_schema.to_json())
+            if not is_empty_df_with_string_column
+            else {}
         )
+        dataframe_custom_column_data = {COLUMNS_KEY: column_custom_data_collection}
+
+        dataframe_schema_contract = {
+            DATAFRAME_PANDERA_SCHEMA_KEY: pandera_infer_schema_dict,
+            DATAFRAME_CUSTOM_DATA_KEY: dataframe_custom_column_data,
+        }
+
+        dataframe_schema_contract_json = json.dumps(dataframe_schema_contract)
+
+        _generate_json_checkpoint_file(checkpoint_name, dataframe_schema_contract_json)
+
+    except Exception as err:
+        error_message = str(err)
+        raise Exception(error_message) from None
+
+
+def _get_spark_column_types(df: SparkDataFrame) -> dict[str, any]:
+    schema = df.schema
+    column_type_collection = {}
+    for field in schema.fields:
+        column_name = field.name
+        type_name = field.dataType.typeName()
+        column_type_collection[column_name] = type_name
+    return column_type_collection
+
+
+def _is_empty_dataframe_without_schema(df: SparkDataFrame) -> bool:
+    is_empty = df.isEmpty()
+    has_schema = len(df.schema.fields) > 0
+    return is_empty and not has_schema
+
+
+def _is_empty_dataframe_with_string_column(df: SparkDataFrame):
+    is_empty = df.isEmpty()
+    if not is_empty:
+        return False
+
+    for field in df.schema.fields:
+        if field.dataType.typeName() == STRING_COLUMN_TYPE:
+            return True
+
+    return False
+
+
+def _generate_json_checkpoint_file(checkpoint_name, dataframe_schema_contract) -> None:
+    current_directory_path = os.getcwd()
+    output_directory_path = os.path.join(
+        current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME
     )
+    if not os.path.exists(output_directory_path):
+        os.makedirs(output_directory_path)
+
+    checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
+        checkpoint_name
+    )
+    checkpoint_file_path = os.path.join(output_directory_path, checkpoint_file_name)
+    f = open(checkpoint_file_path, "w")
+    f.write(dataframe_schema_contract)

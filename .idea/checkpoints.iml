@@ -9,7 +9,7 @@
       <sourceFolder url="file://$MODULE_DIR$/snowpark-checkpoints-collector/test" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/snowpark-checkpoints/test" isTestSource="true" />
     </content>
-    <orderEntry type="jdk" jdkName="py311" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.11 virtualenv at ~/Documents/git-repos/CHECKPOINTS/snowpark-checkpoints/venv" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="TestRunnerService">

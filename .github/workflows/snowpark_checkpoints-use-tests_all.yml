@@ -7,6 +7,16 @@ jobs:
   test:
     name: Test ${{ matrix.download_name }}-${{ matrix.python-version }}-${{ matrix.cloud-provider }}
     runs-on: ${{ matrix.os }}
+    env:
+      TERM: unknown
+      SNOWFLAKE_CONNECTIONS_MYCONNECTION_AUTHENTICATOR: SNOWFLAKE_JWT
+      SNOWFLAKE_CONNECTIONS_MYCONNECTION_DATABASE: CHECKPOINTS_DEMO
+      SNOWFLAKE_CONNECTIONS_MYCONNECTION_SCHEMA: DEMO
+      SNOWFLAKE_CONNECTIONS_MYCONNECTION_WAREHOUSE: XSMALL_WH
+      SNOWFLAKE_CONNECTIONS_MYCONNECTION_ROLE: CHECKPOINT_ROLE
+      SNOWFLAKE_CONNECTIONS_MYCONNECTION_USER: ${{ secrets.SNOWFLAKE_USER }}
+      SNOWFLAKE_CONNECTIONS_MYCONNECTION_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_CONNECTIONS_MYCONNECTION_PRIVATE_KEY_RAW: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_RAW }}
 
     strategy:
       fail-fast: false
@@ -15,15 +25,13 @@ jobs:
           - os: ubuntu-latest
             python-version: "3.10"
             cloud-provider: aws
+            snow_cli_version: "3.2.0"
             download_name: linux
           - os: ubuntu-latest
-            python-version: "3.9"
+            python-version: "3.11"
             cloud-provider: aws
+            snow_cli_version: "3.2.0"
             download_name: linux
-          - os: windows-latest
-            python-version: "3.10"
-            cloud-provider: aws
-            download_name: windows
 
     steps:
       - name: Check out the repository
@@ -51,13 +59,71 @@ jobs:
         shell: bash
         working-directory: ./snowpark-checkpoints
 
+      - name: Set up Snowflake CLI
+        uses: Snowflake-Labs/snowflake-cli-action@main
+        with:
+          cli-version: ${{ matrix.snow_cli_version }}
+          default-config-file-path: ".github/config/config.toml"
+
+      - name: Set up key (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          PARENT_DIR=$(dirname "${{ github.workspace }}")
+          PRIVATE_KEY_FILE=$PARENT_DIR/.ssh/key.p8
+          echo "PARENT_DIR=$PARENT_DIR" >> $GITHUB_ENV
+          echo "PRIVATE_KEY_FILE=$PRIVATE_KEY_FILE" >> $GITHUB_ENV
+
+          mkdir -v $PARENT_DIR/.ssh && ls -la $PARENT_DIR && pwd
+          echo "${SNOWFLAKE_CONNECTIONS_MYCONNECTION_PRIVATE_KEY_RAW}" > $PRIVATE_KEY_FILE
+          sudo chmod 600 $PRIVATE_KEY_FILE
+          file $PRIVATE_KEY_FILE && ls -la $PRIVATE_KEY_FILE
+        env:
+          SNOWFLAKE_CONNECTIONS_MYCONNECTION_PRIVATE_KEY_RAW: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_RAW }}
+
+      - name: Set up Connection Snowflake CLI (Linux)
+        if: runner.os == 'Linux'
+        run: |
+
+          PARENT_DIR=$(dirname "${{ github.workspace }}")
+          PRIVATE_KEY_FILE=$PARENT_DIR/.ssh/key.p8
+          CONFIG_FILE=".github/config/config.toml"
+          SNOWFLAKE_CONFIG_DIR="/home/runner/.snowflake"
+          SNOWFLAKE_CONFIG_PATH="$SNOWFLAKE_CONFIG_DIR/config.toml"
+
+          mkdir -p "$SNOWFLAKE_CONFIG_DIR"
+
+          echo "[connections.myconnection]" > "$CONFIG_FILE"
+          echo "authenticator = \"$SNOWFLAKE_CONNECTIONS_MYCONNECTION_AUTHENTICATOR\"" >> "$CONFIG_FILE"
+          echo "schema = \"$SNOWFLAKE_CONNECTIONS_MYCONNECTION_SCHEMA\"" >> "$CONFIG_FILE"
+          echo "account = \"$SNOWFLAKE_CONNECTIONS_MYCONNECTION_ACCOUNT\"" >> "$CONFIG_FILE"
+          echo "user = \"$SNOWFLAKE_CONNECTIONS_MYCONNECTION_USER\"" >> "$CONFIG_FILE"
+          echo "database = \"$SNOWFLAKE_CONNECTIONS_MYCONNECTION_DATABASE\"" >> "$CONFIG_FILE"
+          echo "warehouse = \"$SNOWFLAKE_CONNECTIONS_MYCONNECTION_WAREHOUSE\"" >> "$CONFIG_FILE"
+          echo "role = \"$SNOWFLAKE_CONNECTIONS_MYCONNECTION_ROLE\"" >> "$CONFIG_FILE"
+          echo "private_key_file = \"$PRIVATE_KEY_FILE\"" >> "$CONFIG_FILE"
+
+          cp "$CONFIG_FILE" "$SNOWFLAKE_CONFIG_PATH"
+          chmod 600 "$PRIVATE_KEY_FILE"
+          chmod 600 "$SNOWFLAKE_CONFIG_PATH"
+
+          echo "Snowflake configuration at $SNOWFLAKE_CONFIG_PATH:"
+          cat "$SNOWFLAKE_CONFIG_PATH"
+        shell: bash
+
+
+      - name: Test Snowflake CLI
+        run: |
+          snow --info && snow --version
+          snow connection test -c myconnection
+          snow sql -q " Select current_organization_name(); select current_account_name();" -c myconnection
+          snow connection set-default myconnection
+          snow connection list
+
       - name: Install required tools
         run: |
           python -m pip install --upgrade pip
           python -m pip install ".[development]"
           pip install hatch pyyaml frictionless requests
-          python ../.github/scripts/test_install_snow_3.py --pythonVersion ${{ matrix.python-version }}
-          snow --info && snow --version
           pip list
         shell: bash
         working-directory: ./snowpark-checkpoints
@@ -68,17 +134,15 @@ jobs:
         shell: bash
         working-directory: ./snowpark-checkpoints
 
-      - name: Run Tests [Skipped]
+      - name: Run Tests
         run: |
           echo "Current working directory: $PWD"
           hatch config set dirs.env.virtual .hatch
-          hatch --version
-          hatch status
-          hatch env show
+          hatch status && hatch env show
+          hatch run test:check
+          hatch run test:coverage
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
-          cloud_provider: ${{ matrix.cloud-provider }}
           PYTEST_ADDOPTS: --color=yes --tb=short -v
-          COVERAGE_THRESHOLD: 83
         shell: bash
         working-directory: ./snowpark-checkpoints

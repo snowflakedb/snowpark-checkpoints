@@ -38,11 +38,6 @@ jobs:
             cloud-provider: aws
             snow_cli_version: "3.2.0"
             download_name: windows
-          - os: windows-latest
-            python-version: "3.11"
-            cloud-provider: aws
-            snow_cli_version: "3.2.0"
-            download_name: windows
 
     steps:
       - name: Check out the repository
@@ -141,7 +136,7 @@ jobs:
         run: |
           $PARENT_DIR = Split-Path -Parent "${{ github.workspace }}"
           $PRIVATE_KEY_FILE = (Join-Path (Join-Path $PARENT_DIR '.ssh') 'key.p8') -replace '\\', '\\\\'
-          $CONFIG_FILE=".github\workflows\config\config.toml"
+          $CONFIG_FILE=".github\config\config.toml"
           $SNOWFLAKE_CONFIG_DIR = "$env:USERPROFILE\.snowflake"
           $SNOWFLAKE_CONFIG_PATH = "$SNOWFLAKE_CONFIG_DIR\config.toml"
 

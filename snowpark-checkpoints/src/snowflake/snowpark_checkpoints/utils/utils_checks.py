@@ -10,7 +10,7 @@ import pandera as pa
 
 from pandera import DataFrameSchema
 
-from .constant import (
+from snowflake.snowpark_checkpoints.utils.constant import (
     CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT,
     DATAFRAME_CUSTOM_DATA_KEY,
     DATAFRAME_PANDERA_SCHEMA_KEY,
@@ -23,7 +23,11 @@ from .constant import (
     TRUE_COUNT_KEY,
     TYPE_KEY,
 )
-from .supported_types import BooleanTypes, NumericTypes, SupportedTypes
+from snowflake.snowpark_checkpoints.utils.supported_types import (
+    BooleanTypes,
+    NumericTypes,
+    SupportedTypes,
+)
 
 
 def add_numeric_checks(

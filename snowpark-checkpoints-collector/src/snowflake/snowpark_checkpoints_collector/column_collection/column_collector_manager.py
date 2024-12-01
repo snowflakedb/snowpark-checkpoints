@@ -6,6 +6,7 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
     BYTE_COLUMN_TYPE,
     DATE_COLUMN_TYPE,
     DAYTIMEINTERVAL_COLUMN_TYPE,
+    DECIMAL_COLUMN_TYPE,
     DOUBLE_COLUMN_TYPE,
     FLOAT_COLUMN_TYPE,
     INTEGER_COLUMN_TYPE,
@@ -19,6 +20,7 @@ from snowflake.snowpark_checkpoints_collector.column_collection.model import (
     BooleanColumnCollector,
     DateColumnCollector,
     DayTimeIntervalColumnCollector,
+    DecimalColumnCollector,
     EmptyColumnCollector,
     NumericColumnCollector,
     StringColumnCollector,
@@ -99,6 +101,14 @@ class ColumnCollectorManager:
         self, clm_name, clm_type, values
     ) -> dict[str, any]:
         column_collector = DayTimeIntervalColumnCollector(clm_name, clm_type, values)
+        collected_data = column_collector.get_data()
+        return collected_data
+
+    @column_register(DECIMAL_COLUMN_TYPE)
+    def _collect_decimal_type_custom_data(
+        self, clm_name, clm_type, values
+    ) -> dict[str, any]:
+        column_collector = DecimalColumnCollector(clm_name, clm_type, values)
         collected_data = column_collector.get_data()
         return collected_data
 

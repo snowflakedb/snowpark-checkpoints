@@ -8,6 +8,7 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
     BOOLEAN_COLUMN_TYPE,
     DATE_COLUMN_TYPE,
     DAYTIMEINTERVAL_COLUMN_TYPE,
+    DECIMAL_COLUMN_TYPE,
     INTEGER_COLUMN_TYPE,
     STRING_COLUMN_TYPE,
     TIMESTAMP_COLUMN_TYPE,
@@ -18,6 +19,7 @@ from snowflake.snowpark_checkpoints_collector.column_collection.model import (
     BooleanColumnCollector,
     DateColumnCollector,
     DayTimeIntervalColumnCollector,
+    DecimalColumnCollector,
     EmptyColumnCollector,
     NumericColumnCollector,
     StringColumnCollector,
@@ -39,6 +41,12 @@ DAY_TIME_INTERVAL_DATA_COLLECT_EXPECTED = (
     '{"name": "clmTest", "type": "daytimeinterval", "rows_count": 4, "rows_not_null_count": 4, '
     '"rows_null_count": 0, "min": "13 days 00:00:00", "max": "13 days '
     '00:00:00"}'
+)
+
+DECIMAL_DATA_COLLECT_EXPECTED = (
+    '{"name": "clmTest", "type": "decimal", "rows_count": 4, "rows_not_null_count": 4, '
+    '"rows_null_count": 0, "min": "0.000000000", "max": "0.000000000", "mean": "4", '
+    '"decimal_precision": 31}'
 )
 
 EMPTY_DATA_COLLECT_EXPECTED = (
@@ -129,6 +137,28 @@ def test_day_time_interval_column_collection():
 
     data_collected_json = json.dumps(data_collected)
     assert data_collected_json == DAY_TIME_INTERVAL_DATA_COLLECT_EXPECTED
+
+
+def test_decimal_column_collection():
+    clm_name = "clmTest"
+    series_mock = MagicMock()
+    numpy_mock = MagicMock()
+
+    series_mock.__len__.return_value = 4
+    series_mock.count.return_value = numpy_mock
+    numpy_mock.item.return_value = 4
+
+    decimal_str = "0.000000000"
+    series_mock.min.return_value = numpy_mock
+    series_mock.max.return_value = numpy_mock
+    series_mock.mean.return_value = numpy_mock
+    numpy_mock.__str__.return_value = decimal_str
+
+    collector = DecimalColumnCollector(clm_name, DECIMAL_COLUMN_TYPE, series_mock)
+    data_collected = collector.get_data()
+
+    data_collected_json = json.dumps(data_collected)
+    assert data_collected_json == DECIMAL_DATA_COLLECT_EXPECTED
 
 
 def test_empty_column_collection():

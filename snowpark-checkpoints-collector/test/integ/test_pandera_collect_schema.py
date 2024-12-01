@@ -1,7 +1,7 @@
 #
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
-
+import decimal
 import json
 import os
 import shutil
@@ -16,6 +16,7 @@ from pyspark.sql.types import (
     BooleanType,
     ByteType,
     DateType,
+    DecimalType,
     DoubleType,
     FloatType,
     IntegerType,
@@ -74,12 +75,7 @@ def test_collect_dataframe(spark_session):
         pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size
     )
 
-    schema_contract_output = get_output_schema_contract(checkpoint_file_name)
-    schema_contract_expected = get_expected_schema_contract(checkpoint_file_name)
-
-    assert schema_contract_output == schema_contract_expected
-
-    remove_output_directory()
+    validate_checkpoint_file_output(checkpoint_file_name)
 
 
 def test_collect_dataframe_all_column_types(spark_session):
@@ -91,6 +87,7 @@ def test_collect_dataframe_all_column_types(spark_session):
 
     day_time_interval_data = timedelta(days=13)
     date_data = date(2000, 1, 1)
+    decimal_data = decimal.Decimal("3.141516171819")
     timestamp_data = datetime(2000, 1, 1, 12, 0, 0)
     timestamp_ntz_data = datetime(2000, 1, 1, 12, 53, 0, tzinfo=timezone.utc)
 
@@ -108,6 +105,7 @@ def test_collect_dataframe_all_column_types(spark_session):
             "string1",
             timestamp_data,
             timestamp_ntz_data,
+            decimal_data,
         ],
         [
             False,
@@ -122,6 +120,7 @@ def test_collect_dataframe_all_column_types(spark_session):
             "string2",
             timestamp_data,
             timestamp_ntz_data,
+            decimal_data,
         ],
         [
             True,
@@ -136,6 +135,7 @@ def test_collect_dataframe_all_column_types(spark_session):
             "string3",
             timestamp_data,
             timestamp_ntz_data,
+            decimal_data,
         ],
     ]
 
@@ -153,6 +153,7 @@ def test_collect_dataframe_all_column_types(spark_session):
             StructField("j", StringType(), False),
             StructField("m", TimestampType(), False),
             StructField("n", TimestampNTZType(), False),
+            StructField("o", DecimalType(15, 13), False),
         ]
     )
 
@@ -161,12 +162,105 @@ def test_collect_dataframe_all_column_types(spark_session):
         pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size
     )
 
-    schema_contract_output = get_output_schema_contract(checkpoint_file_name)
-    schema_contract_expected = get_expected_schema_contract(checkpoint_file_name)
+    validate_checkpoint_file_output(checkpoint_file_name)
 
-    assert schema_contract_output == schema_contract_expected
 
-    remove_output_directory()
+def test_collect_empty_dataframe_with_schema(spark_session):
+    sample_size = 1.0
+    checkpoint_name = "test_empty_df_with_schema"
+    checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
+        checkpoint_name
+    )
+
+    data = []
+    columns = StructType(
+        [
+            StructField("Code", LongType(), True),
+            StructField("Active", BooleanType(), True),
+        ]
+    )
+
+    pyspark_df = spark_session.createDataFrame(data=data, schema=columns)
+    collect_dataframe_checkpoint(
+        pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size
+    )
+
+    validate_checkpoint_file_output(checkpoint_file_name)
+
+
+def test_collect_empty_dataframe_with_string_column(spark_session):
+    sample_size = 1.0
+    checkpoint_name = "test_empty_df_with_string_column"
+    checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
+        checkpoint_name
+    )
+    data = []
+    columns = StructType(
+        [
+            StructField("Name", StringType(), True),
+            StructField("Active", BooleanType(), True),
+        ]
+    )
+
+    pyspark_df = spark_session.createDataFrame(data=data, schema=columns)
+    collect_dataframe_checkpoint(
+        pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size
+    )
+
+    validate_checkpoint_file_output(checkpoint_file_name)
+
+
+def test_collect_dataframe_with_unsupported_pandera_column_type(spark_session):
+    sample_size = 1.0
+    checkpoint_name = "test_dataframe_with_unsupported_pandera_column_type"
+    checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
+        checkpoint_name
+    )
+    data = [
+        ["A1", decimal.Decimal("1.123456789")],
+        ["A2", decimal.Decimal("2.12345678")],
+        ["A3", decimal.Decimal("3.1234567")],
+        ["A4", decimal.Decimal("4.123456")],
+        ["A5", decimal.Decimal("5.12345")],
+    ]
+    columns = StructType(
+        [
+            StructField("Name", StringType(), True),
+            StructField("Value", DecimalType(10, 9), True),
+        ]
+    )
+
+    pyspark_df = spark_session.createDataFrame(data=data, schema=columns)
+    collect_dataframe_checkpoint(
+        pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size
+    )
+
+    validate_checkpoint_file_output(checkpoint_file_name)
+
+
+def test_collect_dataframe_with_null_values(spark_session):
+    sample_size = 1.0
+    checkpoint_name = "test_df_with_null_values"
+    checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
+        checkpoint_name
+    )
+
+    pyspark_df = spark_session.createDataFrame(
+        [
+            ("Raul", None, True),
+            ("John", 23, False),
+            ("Rose", 51, False),
+            ("Sienna", 35, True),
+            (None, None, None),
+        ],
+        schema="name string, age integer, active boolean",
+    )
+
+    collect_dataframe_checkpoint(
+        pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size
+    )
+
+    validate_checkpoint_file_output(checkpoint_file_name)
 
 
 def test_collect_sampled_dataframe(spark_session):
@@ -254,61 +348,6 @@ def test_collect_sampled_dataframe(spark_session):
     remove_output_directory()
 
 
-def test_collect_empty_dataframe_with_schema(spark_session):
-    sample_size = 1.0
-    checkpoint_name = "test_empty_df_with_schema"
-    checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
-        checkpoint_name
-    )
-
-    data = []
-    columns = StructType(
-        [
-            StructField("Code", LongType(), True),
-            StructField("Active", BooleanType(), True),
-        ]
-    )
-
-    pyspark_df = spark_session.createDataFrame(data=data, schema=columns)
-    collect_dataframe_checkpoint(
-        pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size
-    )
-
-    schema_contract_output = get_output_schema_contract(checkpoint_file_name)
-    schema_contract_expected = get_expected_schema_contract(checkpoint_file_name)
-
-    assert schema_contract_output == schema_contract_expected
-
-    remove_output_directory()
-
-
-def test_collect_empty_dataframe_with_string_column(spark_session):
-    sample_size = 1.0
-    checkpoint_name = "test_empty_df_with_string_column"
-    checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
-        checkpoint_name
-    )
-    data = []
-    columns = StructType(
-        [
-            StructField("Name", StringType(), True),
-            StructField("Active", BooleanType(), True),
-        ]
-    )
-
-    pyspark_df = spark_session.createDataFrame(data=data, schema=columns)
-    collect_dataframe_checkpoint(
-        pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size
-    )
-
-    schema_contract_output = get_output_schema_contract(checkpoint_file_name)
-    schema_contract_expected = get_expected_schema_contract(checkpoint_file_name)
-
-    assert schema_contract_output == schema_contract_expected
-
-    remove_output_directory()
-
-
 def test_collect_empty_dataframe_without_schema(spark_session):
     data = []
     columns = StructType()
@@ -317,6 +356,13 @@ def test_collect_empty_dataframe_without_schema(spark_session):
     with pytest.raises(Exception) as ex_info:
         collect_dataframe_checkpoint(pyspark_df, checkpoint_name="")
     assert EMPTY_DATAFRAME_WITHOUT_SCHEMA_ERROR_MESSAGE == str(ex_info.value)
+
+
+def validate_checkpoint_file_output(checkpoint_file_name) -> None:
+    schema_contract_output = get_output_schema_contract(checkpoint_file_name)
+    schema_contract_expected = get_expected_schema_contract(checkpoint_file_name)
+    assert schema_contract_output == schema_contract_expected
+    remove_output_directory()
 
 
 def get_output_schema_contract(checkpoint_file_name) -> str:

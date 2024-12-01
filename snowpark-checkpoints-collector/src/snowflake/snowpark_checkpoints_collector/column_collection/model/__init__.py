@@ -7,6 +7,7 @@ __all__ = [
     "ColumnCollectorBase",
     "DateColumnCollector",
     "DayTimeIntervalColumnCollector",
+    "DecimalColumnCollector",
     "EmptyColumnCollector",
     "NumericColumnCollector",
     "StringColumnCollector",
@@ -25,6 +26,9 @@ from snowflake.snowpark_checkpoints_collector.column_collection.model.date_colum
 )
 from snowflake.snowpark_checkpoints_collector.column_collection.model.dayTimeInterval_column_collector import (
     DayTimeIntervalColumnCollector,
+)
+from snowflake.snowpark_checkpoints_collector.column_collection.model.decimal_column_collector import (
+    DecimalColumnCollector,
 )
 from snowflake.snowpark_checkpoints_collector.column_collection.model.empty_column_collector import (
     EmptyColumnCollector,

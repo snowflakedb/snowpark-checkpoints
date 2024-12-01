@@ -13,6 +13,7 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
     COLUMNS_KEY,
     DATAFRAME_CUSTOM_DATA_KEY,
     DATAFRAME_PANDERA_SCHEMA_KEY,
+    DECIMAL_COLUMN_TYPE,
     EMPTY_DATAFRAME_WITHOUT_SCHEMA_ERROR_MESSAGE,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
     STRING_COLUMN_TYPE,
@@ -70,28 +71,34 @@ def collect_dataframe_checkpoint(
         if _is_empty_dataframe_without_schema(df):
             raise Exception(EMPTY_DATAFRAME_WITHOUT_SCHEMA_ERROR_MESSAGE)
 
-        is_empty_df_with_string_column = _is_empty_dataframe_with_string_column(df)
-
-        column_type_dict = _get_spark_column_types(df)
-        column_name_collection = df.schema.names
         source_df = df.sample(sample)
-
         if source_df.isEmpty():
             source_df = df
-
         pandas_df = source_df.toPandas()
+
+        is_empty_df_with_string_column = _is_empty_dataframe_with_string_column(df)
         pandera_infer_schema = (
             pa.infer_schema(pandas_df) if not is_empty_df_with_string_column else {}
         )
+
+        column_type_dict = _get_spark_column_types(df)
+        column_name_collection = df.schema.names
+        columns_to_remove_from_pandera_schema_collection = []
         column_custom_data_collection = []
         column_collector_manager = ColumnCollectorManager()
         column_pandera_checks_manager = PanderaColumnChecksManager()
 
         for column in column_name_collection:
             column_type = column_type_dict[column]
-            column_has_data = len(pandas_df[column]) > 0
+            is_empty_column = len(pandas_df[column]) == 0
+            is_column_to_remove_from_pandera_schema = (
+                _is_column_to_remove_from_pandera_schema(column_type)
+            )
 
-            if not column_has_data:
+            if is_column_to_remove_from_pandera_schema:
+                columns_to_remove_from_pandera_schema_collection.append(column)
+
+            if is_empty_column:
                 custom_data = column_collector_manager.collect_empty_custom_data(
                     column, column_type, pandas_df[column]
                 )
@@ -109,10 +116,10 @@ def collect_dataframe_checkpoint(
             )
             column_custom_data_collection.append(custom_data)
 
-        pandera_infer_schema_dict = (
-            json.loads(pandera_infer_schema.to_json())
-            if not is_empty_df_with_string_column
-            else {}
+        pandera_infer_schema_dict = _get_pandera_infer_schema_as_dict(
+            pandera_infer_schema,
+            is_empty_df_with_string_column,
+            columns_to_remove_from_pandera_schema_collection,
         )
         dataframe_custom_column_data = {COLUMNS_KEY: column_custom_data_collection}
 
@@ -156,6 +163,24 @@ def _is_empty_dataframe_with_string_column(df: SparkDataFrame):
             return True
 
     return False
+
+
+def _is_column_to_remove_from_pandera_schema(column_type) -> bool:
+    is_decimal_type = column_type == DECIMAL_COLUMN_TYPE
+    return is_decimal_type
+
+
+def _get_pandera_infer_schema_as_dict(
+    pandera_infer_schema, is_empty_df_with_string_column, columns_to_remove_collection
+) -> dict[str, any]:
+    if is_empty_df_with_string_column:
+        return {}
+
+    pandera_infer_schema_dict = json.loads(pandera_infer_schema.to_json())
+    for column in columns_to_remove_collection:
+        del pandera_infer_schema_dict[COLUMNS_KEY][column]
+
+    return pandera_infer_schema_dict
 
 
 def _generate_json_checkpoint_file(checkpoint_name, dataframe_schema_contract) -> None:

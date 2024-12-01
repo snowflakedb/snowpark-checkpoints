@@ -1,6 +1,6 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, when
-from snowflake.snowpark_checkpoints_collector import collect_df_schema
+from snowflake.snowpark_checkpoints_collector import collect_dataframe_checkpoint
 from pyspark.sql import Row
 from pyspark.sql.types import (
     StructType,
@@ -251,7 +251,7 @@ data = [
 df = spark.createDataFrame(data, schema)
 
 # Collect a schema/stats here!
-collect_df_schema(df, "demo-initial-creation-checkpoint", sample=0.5)
+collect_dataframe_checkpoint(df, "demo-initial-creation-checkpoint", sample=0.5)
 
 df1 = df.withColumn(
     "life_stage",
@@ -261,4 +261,4 @@ df1 = df.withColumn(
 )
 
 # Collect a schema/stats here!
-collect_df_schema(df1, "demo-add-a-column", sample=0.5)
+collect_dataframe_checkpoint(df1, "demo-add-a-column", sample=0.5)

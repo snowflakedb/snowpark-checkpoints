@@ -46,7 +46,7 @@ DAY_TIME_INTERVAL_DATA_COLLECT_EXPECTED = (
 DECIMAL_DATA_COLLECT_EXPECTED = (
     '{"name": "clmTest", "type": "decimal", "rows_count": 4, "rows_not_null_count": 4, '
     '"rows_null_count": 0, "min": "0.000000000", "max": "0.000000000", "mean": "4", '
-    '"decimal_precision": 31}'
+    '"decimal_precision": 10}'
 )
 
 EMPTY_DATA_COLLECT_EXPECTED = (
@@ -56,7 +56,7 @@ EMPTY_DATA_COLLECT_EXPECTED = (
 
 NUMERIC_DATA_COLLECT_EXPECTED = (
     '{"name": "clmTest", "type": "integer", "rows_count": 4, "rows_not_null_count": 4, "rows_null_count": 0, '
-    '"min": 4, "max": 4, "mean": 4, "decimal_precision": 0, "margin_error": 4}'
+    '"min": 4, "max": 4, "mean": 4, "decimal_precision": 10, "margin_error": 4}'
 )
 
 STRING_DATA_COLLECT_EXPECTED = (
@@ -155,6 +155,7 @@ def test_decimal_column_collection():
     numpy_mock.__str__.return_value = decimal_str
 
     collector = DecimalColumnCollector(clm_name, DECIMAL_COLUMN_TYPE, series_mock)
+    DecimalColumnCollector.compute_decimal_precision = MagicMock(return_value=10)
     data_collected = collector.get_data()
 
     data_collected_json = json.dumps(data_collected)
@@ -192,6 +193,7 @@ def test_numeric_column_collection():
     series_mock.std.return_value = numpy_mock
 
     collector = NumericColumnCollector(clm_name, INTEGER_COLUMN_TYPE, series_mock)
+    NumericColumnCollector.compute_decimal_precision = MagicMock(return_value=10)
     data_collected = collector.get_data()
 
     data_collected_json = json.dumps(data_collected)

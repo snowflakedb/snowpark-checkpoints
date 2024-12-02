@@ -36,6 +36,17 @@ def test_dataframe_strategy_none_session():
     assert "Session cannot be None." in str(exc_info)
 
 
+def test_dataframe_strategy_invalid_json_file(local_session: Session):
+    with pytest.raises(ValueError) as exc_info:
+        dataframe_strategy(
+            json_schema="resources/invalid_json.json", session=local_session
+        )
+    assert (
+        "Invalid JSON schema. The JSON schema must contain 'pandera_schema' and 'custom_data' keys."
+        in str(exc_info)
+    )
+
+
 @given(data=st.data())
 @settings(deadline=None)
 def test_dataframe_strategy_non_nullable_columns(
@@ -111,8 +122,6 @@ def test_dataframe_strategy_nullable_column(
         f"but got {actual_non_null_count}. "
         f"Actual rows: {null_counts}"
     )
-
-    df.show()
 
 
 @given(data=st.data())

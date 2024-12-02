@@ -25,26 +25,23 @@ from snowflake.snowpark.types import (
 
 
 def test_dataframe_strategy_none_schema(local_session: Session):
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(ValueError, match="JSON schema cannot be None."):
         dataframe_strategy(json_schema=None, session=local_session)
-    assert "JSON schema cannot be None." in str(exc_info)
 
 
 def test_dataframe_strategy_none_session():
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(ValueError, match="Session cannot be None."):
         dataframe_strategy(json_schema="schema.json", session=None)
-    assert "Session cannot be None." in str(exc_info)
 
 
 def test_dataframe_strategy_invalid_json_file(local_session: Session):
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(
+        ValueError,
+        match="Invalid JSON schema. The JSON schema must contain 'pandera_schema' and 'custom_data' keys.",
+    ):
         dataframe_strategy(
             json_schema="resources/invalid_json.json", session=local_session
         )
-    assert (
-        "Invalid JSON schema. The JSON schema must contain 'pandera_schema' and 'custom_data' keys."
-        in str(exc_info)
-    )
 
 
 @given(data=st.data())

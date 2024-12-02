@@ -2,121 +2,73 @@
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
 
-from collections.abc import Sequence
-from typing import Callable, Optional, TypeVar
+import json
 
-from hypothesis import strategies as st
-from hypothesis.strategies import SearchStrategy
+from typing import Final, Optional
 
-import snowflake.snowpark
+import pandera as pa
 
-from snowflake.hypothesis_snowpark.strategy_register import register
-from snowflake.hypothesis_snowpark.strategy_register import (
-    snowpark_strategies as snowpark_st,
+from hypothesis.strategies import DrawFn, SearchStrategy, composite
+
+from snowflake.hypothesis_snowpark.strategies_utils import (
+    apply_null_values,
+    generate_snowpark_dataframe,
+    load_json_schema,
 )
-from snowflake.snowpark import Session
-from snowflake.snowpark.types import (
-    BooleanType,
-    IntegerType,
-    StringType,
-    StructField,
-    StructType,
-)
+from snowflake.snowpark import DataFrame, Session
 
 
-T = TypeVar("T")
+PANDERA_SCHEMA_KEY: Final[str] = "pandera_schema"
+CUSTOM_DATA_KEY: Final[str] = "custom_data"
 
 
-@register(BooleanType)
-def boolean(draw):
-    """Generate a boolean value using Hypothesis strategy.
+def dataframe_strategy(
+    json_schema: str, session: Session, size: Optional[int] = None
+) -> SearchStrategy[DataFrame]:
+    """Create a Hypothesis strategy for generating Snowpark DataFrames based on a Pandera JSON schema.
 
     Args:
-        draw (Callable): Hypothesis draw function for generating values.
+        json_schema: The path to the JSON schema file.
+        session: The Snowpark session to use for creating the DataFrames.
+        size: The number of rows to generate. If not specified, the strategy will generate an arbitrary number of rows.
+
+    Examples:
+        >>> from hypothesis import given
+        >>> from snowflake.hypothesis_snowpark import dataframe_strategy
+        >>> from snowflake.snowpark import DataFrame, Session
+        >>> @given(df=dataframe_strategy(json_schema="schema.json", session=Session.builder.getOrCreate(), size=10))
+        >>> def test_my_function(df: DataFrame):
+        >>>     ...
 
     Returns:
-        bool: A randomly generated boolean value.
+        A Hypothesis strategy that generates Snowpark DataFrames.
 
     """
-    return draw(st.booleans())
+    if not json_schema:
+        raise ValueError("JSON schema cannot be None.")
 
+    if not session:
+        raise ValueError("Session cannot be None.")
 
-@register(IntegerType)
-def integers(draw):
-    """Generate an integer value using Hypothesis strategy.
+    json_schema_dict = load_json_schema(json_schema)
+    pandera_schema = json_schema_dict.get(PANDERA_SCHEMA_KEY)
+    custom_data = json_schema_dict.get(CUSTOM_DATA_KEY)
 
-    Args:
-        draw (Callable): Hypothesis draw function for generating values.
+    if not pandera_schema or not custom_data:
+        raise ValueError(
+            f"Invalid JSON schema. The JSON schema must contain '{PANDERA_SCHEMA_KEY}' and '{CUSTOM_DATA_KEY}' keys."
+        )
 
-    Returns:
-        int: A randomly generated integer value.
+    df_schema = pa.DataFrameSchema.from_json(json.dumps(pandera_schema))
 
-    """
-    return draw(st.integers())
+    @composite
+    def _dataframe_strategy(draw: DrawFn) -> DataFrame:
+        pandas_strategy = df_schema.strategy(size=size)
+        pandas_df = draw(pandas_strategy)
+        processed_pandas_df = apply_null_values(pandas_df, custom_data)
+        snowpark_df = generate_snowpark_dataframe(
+            processed_pandas_df, session, df_schema, custom_data
+        )
+        return snowpark_df
 
-
-@register(StringType)
-def text(draw):
-    """Generate a text string using Hypothesis strategy.
-
-    Args:
-        draw (Callable): Hypothesis draw function for generating values.
-
-    Returns:
-        str: A randomly generated text string.
-
-    """
-    return draw(st.text())
-
-
-@st.composite
-def snowpark_dataframe(
-    draw: Callable[[SearchStrategy], T],
-    *,
-    columns: Sequence[StructField],
-    min_rows: int = 5,
-    max_rows: int = 20,
-    session: Optional[snowflake.snowpark.Session] = None,
-):
-    """Define a Hypothesis strategy to generate Snowpark DataFrames.
-
-    Args:
-        draw (Callable[[SearchStrategy], T]): A function that allows generating values from other strategies.
-        columns (Sequence[StructField]): A sequence of Snowpark StructFields defining column schema.
-        min_rows (int, optional): Minimum number of rows in the generated DataFrame.
-             Defaults to 5.
-        max_rows (int, optional): Maximum number of rows in the generated DataFrame.
-            Defaults to 20.
-        session (Optional[snowflake.snowpark.Session], optional): Snowpark session to create the DataFrame.
-            Defaults to None.
-
-    Raises:
-        Exception: If a strategy is not implemented for a specific column type.
-
-    Returns:
-        snowflake.snowpark.DataFrame: A Snowpark DataFrame with randomly generated data.
-
-    """
-    candidate_st = []
-    for col in columns:
-        if type(col.datatype) in snowpark_st:
-            col_strategy = snowpark_st[type(col.datatype)]
-            candidate_st.append(col_strategy)
-        else:
-            raise Exception(
-                f"Not Implemented SearchStrategy for column {col.name} of type {col.datatype}"
-            )
-
-    data = draw(
-        st.lists((st.tuples(*candidate_st)), min_size=min_rows, max_size=max_rows)
-    )
-
-    session = (
-        Session.builder.config("local_testing", True).create()
-        if session is None
-        else session
-    )
-
-    df = session.create_dataframe(data, schema=StructType([*columns]))
-
-    return df
+    return _dataframe_strategy()

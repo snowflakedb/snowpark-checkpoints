@@ -1,6 +1,8 @@
 #
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
+from pandas import Series
+
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     BOOLEAN_COLUMN_TYPE,
     BYTE_COLUMN_TYPE,
@@ -30,7 +32,7 @@ from snowflake.snowpark_checkpoints_collector.column_collection.model import (
 
 
 def collector_register(cls):
-    """Decorate a class.
+    """Decorate a class with the collection type mechanism.
 
     Args:
         cls: The class to decorate.
@@ -50,10 +52,10 @@ def collector_register(cls):
 
 
 def column_register(*args):
-    """Decorate a method.
+    """Decorate a method to register it in the collection mechanism based on column type.
 
     Args:
-        args: The decorator arguments.
+        args: the column type to register.
 
     Returns:
         The wrapper.
@@ -71,7 +73,23 @@ def column_register(*args):
 
 @collector_register
 class ColumnCollectorManager:
-    def collect_column(self, clm_name, clm_type, values) -> dict[str, any]:
+
+    """Manage class for column collector based on type."""
+
+    def collect_column(
+        self, clm_name: str, clm_type: str, values: Series
+    ) -> dict[str, any]:
+        """Collect the data of the column based on the column type.
+
+        Args:
+            clm_name (str): the name of the column.
+            clm_type (str): the type of the column.
+            values (pandas.Series): the column values as Pandas.Series.
+
+        Returns:
+            dict[str, any]: The data collected.
+
+        """
         if clm_type not in self._collectors:
             return {}
 
@@ -84,7 +102,7 @@ class ColumnCollectorManager:
     def _collect_boolean_type_custom_data(
         self, clm_name, clm_type, values
     ) -> dict[str, any]:
-        column_collector = BooleanColumnCollector(clm_name, clm_type, values)
+        column_collector = BooleanColumnCollector(clm_name, values)
         collected_data = column_collector.get_data()
         return collected_data
 
@@ -92,7 +110,7 @@ class ColumnCollectorManager:
     def _collect_date_type_custom_data(
         self, clm_name, clm_type, values
     ) -> dict[str, any]:
-        column_collector = DateColumnCollector(clm_name, clm_type, values)
+        column_collector = DateColumnCollector(clm_name, values)
         collected_data = column_collector.get_data()
         return collected_data
 
@@ -100,7 +118,7 @@ class ColumnCollectorManager:
     def _collect_dayTimeInterval_type_custom_data(
         self, clm_name, clm_type, values
     ) -> dict[str, any]:
-        column_collector = DayTimeIntervalColumnCollector(clm_name, clm_type, values)
+        column_collector = DayTimeIntervalColumnCollector(clm_name, values)
         collected_data = column_collector.get_data()
         return collected_data
 
@@ -108,7 +126,7 @@ class ColumnCollectorManager:
     def _collect_decimal_type_custom_data(
         self, clm_name, clm_type, values
     ) -> dict[str, any]:
-        column_collector = DecimalColumnCollector(clm_name, clm_type, values)
+        column_collector = DecimalColumnCollector(clm_name, values)
         collected_data = column_collector.get_data()
         return collected_data
 
@@ -131,7 +149,7 @@ class ColumnCollectorManager:
     def _collect_string_type_custom_data(
         self, clm_name, clm_type, values
     ) -> dict[str, any]:
-        column_collector = StringColumnCollector(clm_name, clm_type, values)
+        column_collector = StringColumnCollector(clm_name, values)
         collected_data = column_collector.get_data()
         return collected_data
 
@@ -139,7 +157,7 @@ class ColumnCollectorManager:
     def _collect_timestamp_type_custom_data(
         self, clm_name, clm_type, values
     ) -> dict[str, any]:
-        column_collector = TimestampColumnCollector(clm_name, clm_type, values)
+        column_collector = TimestampColumnCollector(clm_name, values)
         collected_data = column_collector.get_data()
         return collected_data
 
@@ -147,11 +165,22 @@ class ColumnCollectorManager:
     def _collect_timestampntz_type_custom_data(
         self, clm_name, clm_type, values
     ) -> dict[str, any]:
-        column_collector = TimestampNTZColumnCollector(clm_name, clm_type, values)
+        column_collector = TimestampNTZColumnCollector(clm_name, values)
         collected_data = column_collector.get_data()
         return collected_data
 
     def collect_empty_custom_data(self, clm_name, clm_type, values) -> dict[str, any]:
+        """Collect the data of a empty column.
+
+        Args:
+            clm_name (str): the name of the column.
+            clm_type (str): the type of the column.
+            values (pandas.Series): the column values as Pandas.Series.
+
+        Returns:
+            dict[str, any]: The data collected.
+
+        """
         column_collector = EmptyColumnCollector(clm_name, clm_type, values)
         collected_data = column_collector.get_data()
         return collected_data

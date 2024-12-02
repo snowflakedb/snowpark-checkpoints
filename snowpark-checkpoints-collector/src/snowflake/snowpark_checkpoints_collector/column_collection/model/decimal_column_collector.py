@@ -2,11 +2,14 @@
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
 
+from pandas import Series
+
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     COLUMN_DECIMAL_PRECISION_KEY,
     COLUMN_MAX_KEY,
     COLUMN_MEAN_KEY,
     COLUMN_MIN_KEY,
+    DECIMAL_COLUMN_TYPE,
     get_decimal_token,
 )
 from snowflake.snowpark_checkpoints_collector.column_collection.model import (
@@ -15,14 +18,30 @@ from snowflake.snowpark_checkpoints_collector.column_collection.model import (
 
 
 class DecimalColumnCollector(ColumnCollectorBase):
-    def __init__(self, clm_name, clm_type, clm_values) -> None:
-        super().__init__(clm_name, clm_type, clm_values)
+
+    """Class for collect a decimal type column.
+
+    Attributes:
+        name (str): the name of the column.
+        values (pandas.Series): the column values as Pandas.Series.
+
+    """
+
+    def __init__(self, clm_name: str, clm_values: Series) -> None:
+        """Init DecimalColumnCollector.
+
+        Args:
+            clm_name (str): the name of the column.
+            clm_values (pandas.Series): the column values as Pandas.Series.
+
+        """
+        super().__init__(clm_name, DECIMAL_COLUMN_TYPE, clm_values)
 
     def get_custom_data(self) -> dict[str, any]:
         min_value = str(self.values.min())
         max_value = str(self.values.max())
         mean_value = str(self.values.mean().item())
-        decimal_precision = self.compute_decimal_precision()
+        decimal_precision = self._compute_decimal_precision()
 
         custom_data_dict = {
             COLUMN_MIN_KEY: min_value,
@@ -33,7 +52,7 @@ class DecimalColumnCollector(ColumnCollectorBase):
 
         return custom_data_dict
 
-    def compute_decimal_precision(self) -> int:
+    def _compute_decimal_precision(self) -> int:
         decimal_part_index = 1
         decimal_token = get_decimal_token()
         value = self.values[0]

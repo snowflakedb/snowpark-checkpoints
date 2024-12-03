@@ -79,12 +79,28 @@ jobs:
           echo "Current directory: $PWD" && ls -la dist
         working-directory: ./snowpark-checkpoints-collector
 
+      - name: Update Version [snowpark-checkpoints]
+        run: |
+          sed -i "s/^version = \".*\"/version = \"${NEW_VERSION}\"/" pyproject.toml
+          echo "Package Version updated:"
+          grep "version = " pyproject.toml
+        env:
+          NEW_VERSION: ${{ steps.gitversion.outputs.version }}
+        working-directory: ./snowpark-checkpoints
+
+      - name: Generate Package [snowpark-checkpoints]
+        run: |
+          hatch build
+          echo "Current directory: $PWD" && ls -la dist
+        working-directory: ./snowpark-checkpoints
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: all-snowpark-checkpoints
           path: |
             ./hypothesis-snowpark/dist/*
+            ./snowpark-checkpoints/dist/*
             ./snowpark-checkpoints-collector/dist/*
 
   publish:

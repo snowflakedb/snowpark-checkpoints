@@ -2,14 +2,20 @@
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
 
+import copy
 import json
 
+from datetime import datetime
 from typing import Final, Optional
 
 import pandera as pa
 
+from dateutil import parser
 from hypothesis.strategies import DrawFn, SearchStrategy, composite
 
+from snowflake.hypothesis_snowpark.checks import (
+    dates_in_range,  # noqa: F401 Import required to register the custom checks
+)
 from snowflake.hypothesis_snowpark.strategies_utils import (
     apply_null_values,
     generate_snowpark_dataframe,
@@ -60,6 +66,7 @@ def dataframe_strategy(
         )
 
     df_schema = pa.DataFrameSchema.from_json(json.dumps(pandera_schema))
+    df_schema = _process_dataframe_schema(df_schema, custom_data)
 
     @composite
     def _dataframe_strategy(draw: DrawFn) -> DataFrame:
@@ -72,3 +79,55 @@ def dataframe_strategy(
         return snowpark_df
 
     return _dataframe_strategy()
+
+
+def _process_dataframe_schema(
+    df_schema: pa.DataFrameSchema, custom_data: dict
+) -> pa.DataFrameSchema:
+    processed_df_schema = copy.copy(df_schema)
+
+    for column_name, column_obj in processed_df_schema.columns.items():
+        if type(column_obj.dtype) is pa.engines.pandas_engine.Date:
+            # Data generation for date type is currently unsupported by Pandera. As a workaround, we can change the data
+            # type to DateTime to avoid an exception and manually generate the dates.
+            column_obj.dtype = pa.DateTime
+
+            in_range_check = next(
+                (check for check in column_obj.checks if check.name == "in_range"), None
+            )
+
+            if in_range_check is None:
+                # Generate the values as DateTime and let Snowpark handle the conversion to Date.
+                continue
+
+            min_value = in_range_check.statistics.get("min_value")
+            max_value = in_range_check.statistics.get("max_value")
+            include_min = in_range_check.statistics.get("include_min", True)
+            include_max = in_range_check.statistics.get("include_max", True)
+            format = next(
+                (
+                    column.get("format")
+                    for column in custom_data.get("columns", [])
+                    if column.get("name") == column_name
+                ),
+                None,
+            )
+
+            if format is not None:
+                min_value_obj = datetime.strptime(min_value, format).date()
+                max_value_obj = datetime.strptime(max_value, format).date()
+            else:
+                min_value_obj = parser.parse(min_value).date()
+                max_value_obj = parser.parse(max_value).date()
+
+            # Replace the previous checks with the new date range check.
+            column_obj.checks = [
+                pa.Check.dates_in_range(
+                    min_value=min_value_obj,
+                    max_value=max_value_obj,
+                    include_min=include_min,
+                    include_max=include_max,
+                )
+            ]
+
+    return processed_df_schema

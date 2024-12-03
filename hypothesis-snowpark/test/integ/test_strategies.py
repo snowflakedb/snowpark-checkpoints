@@ -2,7 +2,7 @@
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
 
-from datetime import datetime
+from datetime import datetime, date
 
 import hypothesis.strategies as st
 import pytest
@@ -14,6 +14,7 @@ from snowflake.snowpark import DataFrame, Session
 from snowflake.snowpark.functions import col, count, when
 from snowflake.snowpark.types import (
     BooleanType,
+    DateType,
     DoubleType,
     LongType,
     StringType,
@@ -138,6 +139,7 @@ def test_dataframe_strategy_generated_schema(
         [
             StructField("boolean_column", BooleanType(), False),
             StructField("byte_column", LongType(), False),
+            StructField("date_column", DateType(), False),
             StructField("double_column", DoubleType(), False),
             StructField("float_column", DoubleType(), False),
             StructField("integer_column", LongType(), False),
@@ -164,6 +166,10 @@ def test_dataframe_strategy_generated_values(
     expected_constraints = {
         "BOOLEAN_COLUMN": {"type": "bool", "allowed_values": [True, False]},
         "BYTE_COLUMN": {"type": "numeric", "range": (-128, 127)},
+        "DATE_COLUMN": {
+            "type": "datetime",
+            "range": (date(2020, 1, 16), date(2024, 11, 1)),
+        },
         "DOUBLE_COLUMN": {
             "type": "numeric",
             "range": (-2.6692257258090617, 2.5378806273606926),
@@ -184,7 +190,7 @@ def test_dataframe_strategy_generated_values(
             ),
         },
         "TIMESTAMPNTZ_COLUMN": {
-            "type": "time",
+            "type": "datetime",
             "range": (
                 datetime(2020, 1, 1, 6, 29, 59, 768559),
                 datetime(2024, 11, 7, 14, 24, 40, 338141),
@@ -211,7 +217,7 @@ def test_dataframe_strategy_generated_values(
                 f"Expected values: {allowed_values}. "
                 f"Found values: {column_values}"
             )
-        elif constraints["type"] in ("numeric", "time"):
+        elif constraints["type"] == "datetime":
             min_val, max_val = constraints["range"]
             assert all(min_val <= value <= max_val for value in column_values), (
                 f"Values in column '{column_name}' are out of range. "

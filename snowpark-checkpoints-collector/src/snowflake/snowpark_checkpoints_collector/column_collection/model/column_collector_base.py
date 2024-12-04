@@ -4,6 +4,8 @@
 
 from abc import ABC, abstractmethod
 
+from pandas import Series
+
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     COLUMN_COUNT_KEY,
     COLUMN_NAME_KEY,
@@ -14,16 +16,40 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
 
 
 class ColumnCollectorBase(ABC):
-    def __init__(self, clm_name, clm_type, clm_values) -> None:
+
+    """Base class for column collector based on type.
+
+    Attributes:
+        name (str): the name of the column.
+        type (str): the type of the column.
+        values (pandas.Series): the column values as Pandas.Series.
+
+    """
+
+    def __init__(self, clm_name: str, clm_type: str, clm_values: Series) -> None:
+        """Init ColumnCollectorBase.
+
+        Args:
+            clm_name (str): the name of the column.
+            clm_type (str): the type of the column.
+            clm_values (pandas.Series): the column values as Pandas.Series.
+
+        """
         self.name = clm_name
         self.type = clm_type
         self.values = clm_values
 
     @abstractmethod
     def get_custom_data(self) -> dict[str, any]:
+        """Get the custom data of the column.
+
+        Returns:
+            dict[str, any]: The data collected.
+
+        """
         pass
 
-    def get_common_data(self) -> dict[str, any]:
+    def _get_common_data(self) -> dict[str, any]:
         column_size = len(self.values)
         rows_not_null_count = self.values.count().item()
         rows_null_count = column_size - rows_not_null_count
@@ -39,7 +65,13 @@ class ColumnCollectorBase(ABC):
         return common_data_dict
 
     def get_data(self) -> dict[str, any]:
-        common_data = self.get_common_data()
+        """Get the data collected of the column.
+
+        Returns:
+            dict[str, any]: The data collected.
+
+        """
+        common_data = self._get_common_data()
         custom_data = self.get_custom_data()
         column_data = dict(common_data | custom_data)
         return column_data

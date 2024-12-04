@@ -8,6 +8,7 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
     BOOLEAN_COLUMN_TYPE,
     DATE_COLUMN_TYPE,
     DAYTIMEINTERVAL_COLUMN_TYPE,
+    DECIMAL_COLUMN_TYPE,
     INTEGER_COLUMN_TYPE,
     STRING_COLUMN_TYPE,
     TIMESTAMP_COLUMN_TYPE,
@@ -18,6 +19,7 @@ from snowflake.snowpark_checkpoints_collector.column_collection.model import (
     BooleanColumnCollector,
     DateColumnCollector,
     DayTimeIntervalColumnCollector,
+    DecimalColumnCollector,
     EmptyColumnCollector,
     NumericColumnCollector,
     StringColumnCollector,
@@ -41,6 +43,12 @@ DAY_TIME_INTERVAL_DATA_COLLECT_EXPECTED = (
     '00:00:00"}'
 )
 
+DECIMAL_DATA_COLLECT_EXPECTED = (
+    '{"name": "clmTest", "type": "decimal", "rows_count": 4, "rows_not_null_count": 4, '
+    '"rows_null_count": 0, "min": "0.000000000", "max": "0.000000000", "mean": "4", '
+    '"decimal_precision": 10}'
+)
+
 EMPTY_DATA_COLLECT_EXPECTED = (
     '{"name": "clmTest", "type": "integer", "rows_count": 0, "rows_not_null_count": 0, '
     '"rows_null_count": 0}'
@@ -48,7 +56,7 @@ EMPTY_DATA_COLLECT_EXPECTED = (
 
 NUMERIC_DATA_COLLECT_EXPECTED = (
     '{"name": "clmTest", "type": "integer", "rows_count": 4, "rows_not_null_count": 4, "rows_null_count": 0, '
-    '"min": 4, "max": 4, "mean": 4, "decimal_precision": 0, "margin_error": 4}'
+    '"min": 4, "max": 4, "mean": 4, "decimal_precision": 10, "margin_error": 4}'
 )
 
 STRING_DATA_COLLECT_EXPECTED = (
@@ -80,7 +88,7 @@ def test_boolean_column_collection():
     series_mock.count.return_value = numpy_mock
     numpy_mock.item.return_value = 4
 
-    collector = BooleanColumnCollector(clm_name, BOOLEAN_COLUMN_TYPE, series_mock)
+    collector = BooleanColumnCollector(clm_name, series_mock)
     data_collected = collector.get_data()
 
     data_collected_json = json.dumps(data_collected)
@@ -101,7 +109,7 @@ def test_date_column_collection():
     series_mock.max.return_value = numpy_mock
     numpy_mock.__str__.return_value = date_str
 
-    collector = DateColumnCollector(clm_name, DATE_COLUMN_TYPE, series_mock)
+    collector = DateColumnCollector(clm_name, series_mock)
     data_collected = collector.get_data()
 
     data_collected_json = json.dumps(data_collected)
@@ -122,13 +130,34 @@ def test_day_time_interval_column_collection():
     series_mock.max.return_value = numpy_mock
     numpy_mock.__str__.return_value = dayTimeInterval_str
 
-    collector = DayTimeIntervalColumnCollector(
-        clm_name, DAYTIMEINTERVAL_COLUMN_TYPE, series_mock
-    )
+    collector = DayTimeIntervalColumnCollector(clm_name, series_mock)
     data_collected = collector.get_data()
 
     data_collected_json = json.dumps(data_collected)
     assert data_collected_json == DAY_TIME_INTERVAL_DATA_COLLECT_EXPECTED
+
+
+def test_decimal_column_collection():
+    clm_name = "clmTest"
+    series_mock = MagicMock()
+    numpy_mock = MagicMock()
+
+    series_mock.__len__.return_value = 4
+    series_mock.count.return_value = numpy_mock
+    numpy_mock.item.return_value = 4
+
+    decimal_str = "0.000000000"
+    series_mock.min.return_value = numpy_mock
+    series_mock.max.return_value = numpy_mock
+    series_mock.mean.return_value = numpy_mock
+    numpy_mock.__str__.return_value = decimal_str
+
+    collector = DecimalColumnCollector(clm_name, series_mock)
+    DecimalColumnCollector._compute_decimal_precision = MagicMock(return_value=10)
+    data_collected = collector.get_data()
+
+    data_collected_json = json.dumps(data_collected)
+    assert data_collected_json == DECIMAL_DATA_COLLECT_EXPECTED
 
 
 def test_empty_column_collection():
@@ -162,6 +191,7 @@ def test_numeric_column_collection():
     series_mock.std.return_value = numpy_mock
 
     collector = NumericColumnCollector(clm_name, INTEGER_COLUMN_TYPE, series_mock)
+    NumericColumnCollector._compute_decimal_precision = MagicMock(return_value=10)
     data_collected = collector.get_data()
 
     data_collected_json = json.dumps(data_collected)
@@ -177,7 +207,7 @@ def test_string_column_collection():
     series_mock.count.return_value = numpy_mock
     numpy_mock.item.return_value = 4
 
-    collector = StringColumnCollector(clm_name, STRING_COLUMN_TYPE, series_mock)
+    collector = StringColumnCollector(clm_name, series_mock)
     data_collected = collector.get_data()
 
     data_collected_json = json.dumps(data_collected)
@@ -198,7 +228,7 @@ def test_timestamp_column_collection():
     series_mock.max.return_value = numpy_mock
     numpy_mock.__str__.return_value = date_str
 
-    collector = TimestampColumnCollector(clm_name, TIMESTAMP_COLUMN_TYPE, series_mock)
+    collector = TimestampColumnCollector(clm_name, series_mock)
     data_collected = collector.get_data()
 
     data_collected_json = json.dumps(data_collected)
@@ -219,9 +249,7 @@ def test_timestamp_ntz_column_collection():
     series_mock.max.return_value = numpy_mock
     numpy_mock.__str__.return_value = date_str
 
-    collector = TimestampNTZColumnCollector(
-        clm_name, TIMESTAMP_NTZ_COLUMN_TYPE, series_mock
-    )
+    collector = TimestampNTZColumnCollector(clm_name, series_mock)
     data_collected = collector.get_data()
 
     data_collected_json = json.dumps(data_collected)

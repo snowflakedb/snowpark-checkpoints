@@ -2,6 +2,8 @@
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
 
+from pandas import Series
+
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     COLUMN_DECIMAL_PRECISION_KEY,
     COLUMN_MARGIN_ERROR_KEY,
@@ -17,7 +19,26 @@ from snowflake.snowpark_checkpoints_collector.column_collection.model.column_col
 
 
 class NumericColumnCollector(ColumnCollectorBase):
-    def __init__(self, clm_name, clm_type, clm_values) -> None:
+
+    """Class for collect an empty column.
+
+    Attributes:
+        name (str): the name of the column.
+        type (str): the type of the column.
+        values (pandas.Series): the column values as Pandas.Series.
+        is_integer (boolean): a flag to indicate if values are integer or do not.
+
+    """
+
+    def __init__(self, clm_name: str, clm_type: str, clm_values: Series) -> None:
+        """Init NumericColumnCollector.
+
+        Args:
+            clm_name (str): the name of the column.
+            clm_type (str): the type of the column.
+            clm_values (pandas.Series): the column values as Pandas.Series.
+
+        """
         super().__init__(clm_name, clm_type, clm_values)
         self.is_integer = self.type in INTEGER_TYPE_COLLECTION
 
@@ -25,7 +46,7 @@ class NumericColumnCollector(ColumnCollectorBase):
         min_value = self.values.min().item()
         max_value = self.values.max().item()
         mean_value = self.values.mean().item()
-        decimal_precision = self.compute_decimal_precision()
+        decimal_precision = self._compute_decimal_precision()
         margin_error = self.values.std().item()
 
         custom_data_dict = {
@@ -38,7 +59,7 @@ class NumericColumnCollector(ColumnCollectorBase):
 
         return custom_data_dict
 
-    def compute_decimal_precision(self) -> int:
+    def _compute_decimal_precision(self) -> int:
         if self.is_integer:
             return 0
 

@@ -6,18 +6,21 @@ import json
 from numpy import int8
 import pandas as pd
 from pandera import DataFrameSchema, Column, Check
-import snowflake
 from snowflake.snowpark import Session
 from snowflake.snowpark import DataFrame as SnowparkDataFrame
 
 from snowflake.snowpark_checkpoints.checkpoint import (
-    check_df_schema_file,
-    check_df_schema,
+    check_dataframe_schema_file,
+    check_dataframe_schema,
     check_output_schema,
     check_input_schema,
 )
 from snowflake.snowpark import Session
 from snowflake.snowpark.functions import lit
+from snowflake.snowpark_checkpoints.utils.constant import (
+    CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT,
+    SKIP_ALL,
+)
 
 
 def test_input():
@@ -95,7 +98,7 @@ def test_df_check():
 
     session = Session.builder.getOrCreate()
     sp_df = session.create_dataframe(df)
-    check_df_schema(sp_df, schema)
+    check_dataframe_schema(sp_df, schema)
 
 
 def test_df_check_from_file():
@@ -116,10 +119,79 @@ def test_df_check_from_file():
     schema_data = {"pandera_schema": json.loads(schema.to_json()), "custom_data": {}}
 
     checkpoint_name = "testdf"
-    output_file = open(f"snowpark-{checkpoint_name}-schema.json", "w")
+    output_file = open(
+        CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(checkpoint_name), "w"
+    )
     output_file.write(json.dumps(schema_data))
     output_file.close()
 
     session = Session.builder.getOrCreate()
     sp_df = session.create_dataframe(df)
-    check_df_schema_file(sp_df, checkpoint_name)
+    check_dataframe_schema_file(sp_df, checkpoint_name)
+
+
+def test_df_check_custom_check():
+    df = pd.DataFrame(
+        {
+            "COLUMN1": [1, 4, 0, 10, 9],
+            "COLUMN2": [-1.3, -1.4, -2.9, -10.1, -20.4],
+        }
+    )
+
+    schema = DataFrameSchema(
+        {
+            "COLUMN1": Column(int8, Check(lambda x: 0 <= x <= 10, element_wise=True)),
+            "COLUMN2": Column(float, Check(lambda x: x < -1.2)),
+        }
+    )
+
+    session = Session.builder.getOrCreate()
+    sp_df = session.create_dataframe(df)
+    result = check_dataframe_schema(
+        sp_df,
+        schema,
+        custom_checks={
+            "COLUMN1": [
+                Check(lambda x: x.shape[0] == 5),
+                Check(lambda x: x.shape[1] == 2),
+            ],
+            "COLUMN2": [Check(lambda x: x.shape[0] == 5)],
+        },
+    )
+
+    assert len(schema.columns["COLUMN1"].checks) == 3
+    assert len(schema.columns["COLUMN2"].checks) == 2
+
+
+def test_df_check_skip_check():
+    df = pd.DataFrame(
+        {
+            "COLUMN1": [1, 4, 0, 10, 9],
+            "COLUMN2": [-1.3, -1.4, -2.9, -10.1, -20.4],
+        }
+    )
+
+    schema = DataFrameSchema(
+        {
+            "COLUMN1": Column(int8, Check.between(0, 10, element_wise=True)),
+            "COLUMN2": Column(
+                float,
+                [
+                    Check.greater_than(-20.5),
+                    Check.less_than(-1.0),
+                    Check(lambda x: x < -1.2),
+                ],
+            ),
+        }
+    )
+
+    session = Session.builder.getOrCreate()
+    sp_df = session.create_dataframe(df)
+    check_dataframe_schema(
+        sp_df,
+        schema,
+        skip_checks={"COLUMN1": [SKIP_ALL], "COLUMN2": ["greater_than", "less_than"]},
+    )
+
+    assert len(schema.columns["COLUMN1"].checks) == 0
+    assert len(schema.columns["COLUMN2"].checks) == 1

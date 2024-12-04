@@ -27,8 +27,8 @@ dependencies = [
   "snowflake-snowpark-python",
   "snowflake-connector-python",
   "pyspark",
-  "pandera[io]",
-  "pandera-report",
+  "pandera[io]==0.20.4",
+  "pandera-report==0.1.2",
 ]
 description = "Migration tools for Snowpark"
 keywords = [

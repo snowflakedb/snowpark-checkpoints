@@ -2,7 +2,8 @@
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
 
-from pandera import Check
+from pandas import DataFrame as PandasDataFrame
+from pandera import Check, Column
 
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     BETWEEN_CHECK_ERROR_MESSAGE_FORMAT,
@@ -22,7 +23,7 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
 
 
 def collector_register(cls):
-    """Decorate a class.
+    """Decorate a class with the checks mechanism.
 
     Args:
         cls: The class to decorate.
@@ -42,10 +43,10 @@ def collector_register(cls):
 
 
 def column_register(*args):
-    """Decorate a method.
+    """Decorate a method to register it in the checks mechanism based on column type.
 
     Args:
-        args: The decorator arguments.
+        args: the column type to register.
 
     Returns:
         The wrapper.
@@ -63,23 +64,38 @@ def column_register(*args):
 
 @collector_register
 class PanderaColumnChecksManager:
+
+    """Manage class for Pandera column checks based on type."""
+
     def add_checks_column(
-        self, clm_name, clm_type, pandas_df, pandera_column
-    ) -> dict[str, any]:
+        self,
+        clm_name: str,
+        clm_type: str,
+        pandas_df: PandasDataFrame,
+        pandera_column: Column,
+    ) -> None:
+        """Add checks to Pandera column based on the column type.
+
+        Args:
+            clm_name (str): the name of the column.
+            clm_type (str): the type of the column.
+            pandas_df (pandas.DataFrame): the DataFrame.
+            pandera_column (pandera.Column): the Pandera column.
+
+        """
         if clm_type not in self._collectors:
-            return {}
+            return
 
         func_name = self._collectors[clm_type]
         func = getattr(self, func_name)
-        data = func(clm_name, pandas_df, pandera_column)
-        return data
+        func(clm_name, pandas_df, pandera_column)
 
     @column_register(BOOLEAN_COLUMN_TYPE)
-    def add_boolean_type_checks(self, clm_name, pandas_df, pandera_column) -> None:
+    def _add_boolean_type_checks(self, clm_name, pandas_df, pandera_column) -> None:
         pandera_column.checks.extend([Check.isin([True, False])])
 
     @column_register(DATE_COLUMN_TYPE)
-    def add_date_type_checks(self, clm_name, pandas_df, pandera_column) -> None:
+    def _add_date_type_checks(self, clm_name, pandas_df, pandera_column) -> None:
         column_values = pandas_df[clm_name]
         min_value = str(column_values.min())
         max_value = str(column_values.max())
@@ -94,7 +110,7 @@ class PanderaColumnChecksManager:
         )
 
     @column_register(DAYTIMEINTERVAL_COLUMN_TYPE)
-    def add_daytimeinterval_type_checks(
+    def _add_daytimeinterval_type_checks(
         self, clm_name, pandas_df, pandera_column
     ) -> None:
         column_values = pandas_df[clm_name]
@@ -118,7 +134,7 @@ class PanderaColumnChecksManager:
         FLOAT_COLUMN_TYPE,
         DOUBLE_COLUMN_TYPE,
     )
-    def add_numeric_type_checks(self, clm_name, pandas_df, pandera_column) -> None:
+    def _add_numeric_type_checks(self, clm_name, pandas_df, pandera_column) -> None:
         column_values = pandas_df[clm_name]
         min_value = column_values.min().item()
         max_value = column_values.max().item()
@@ -133,11 +149,11 @@ class PanderaColumnChecksManager:
         )
 
     @column_register(STRING_COLUMN_TYPE)
-    def add_string_type_checks(self, clm_name, pandas_df, pandera_column) -> None:
+    def _add_string_type_checks(self, clm_name, pandas_df, pandera_column) -> None:
         pass
 
     @column_register(TIMESTAMP_COLUMN_TYPE)
-    def add_timestamp_type_checks(self, clm_name, pandas_df, pandera_column) -> None:
+    def _add_timestamp_type_checks(self, clm_name, pandas_df, pandera_column) -> None:
         column_values = pandas_df[clm_name]
         min_value = str(column_values.min())
         max_value = str(column_values.max())
@@ -152,7 +168,7 @@ class PanderaColumnChecksManager:
         )
 
     @column_register(TIMESTAMP_NTZ_COLUMN_TYPE)
-    def add_timestamp_ntz_type_checks(
+    def _add_timestamp_ntz_type_checks(
         self, clm_name, pandas_df, pandera_column
     ) -> None:
         column_values = pandas_df[clm_name]

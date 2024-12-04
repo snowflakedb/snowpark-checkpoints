@@ -6,7 +6,7 @@ import datetime
 import hashlib
 import json
 
-from os import makedirs, path
+from os import getenv, makedirs, path
 from pathlib import Path
 from platform import python_version
 from sys import platform
@@ -28,7 +28,7 @@ class TelemetryManager(metaclass=Singleton):
             snowflake_dirs.user_config_path / "snowpark-checkpoints-telemetry"
         )
         self.sf_path_telemetry = "/telemetry/send"
-        self.flush_size = 1
+        self.flush_size = 25
         self.conn = Session.builder.getOrCreate().connection
         self.is_enabled = self._is_telemetry_enabled()
         self.memory_limit = 5 * 1024 * 1024
@@ -116,6 +116,8 @@ class TelemetryManager(metaclass=Singleton):
                 file.unlink()
 
     def _is_telemetry_enabled(self) -> bool:
+        if getenv("SNOWPARK_CHECKPOINTS_TELEMETRY_ENABLED") == "false":
+            return False
         return self.conn.telemetry_enabled
 
 

@@ -197,6 +197,33 @@ class TelemetryManagerTest(unittest.TestCase):
     def test_telemetry_manager_is_telemetry_enabled(self):
         # Arrange
         mock_session, rest_mock, mock_DIRS = mock_before_telemetry_import()
+        rest_mock.telemetry_enabled = True
+        mock_session.builder.getOrCreate().connection = rest_mock
+        with patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.Session", mock_session
+        ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._upload_local_telemetry",
+            return_value=MagicMock(),
+        ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.getenv",
+            return_value=None,
+        ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.snowflake_dirs", mock_DIRS
+        ):
+
+            from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryManager
+
+            # Act
+            # Calls the is_telemetry_enabled method in the __init__ method
+            telemetry = TelemetryManager()
+
+            # Assert
+            assert telemetry.is_enabled == True
+            TelemetryManager._upload_local_telemetry.assert_called_once()
+
+    def test_telemetry_manager_is_telemetry_disable(self):
+        # Arrange
+        mock_session, rest_mock, mock_DIRS = mock_before_telemetry_import()
         rest_mock.telemetry_enabled = False
         mock_session.builder.getOrCreate().connection = rest_mock
         with patch(
@@ -204,6 +231,36 @@ class TelemetryManagerTest(unittest.TestCase):
         ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._upload_local_telemetry",
             return_value=MagicMock(),
+        ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.getenv",
+            return_value=None,
+        ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.snowflake_dirs", mock_DIRS
+        ):
+
+            from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryManager
+
+            # Act
+            # Calls the is_telemetry_enabled method in the __init__ method
+            telemetry = TelemetryManager()
+
+            # Assert
+            assert telemetry.is_enabled == False
+            TelemetryManager._upload_local_telemetry.assert_called_once()
+
+    def test_telemetry_manager_is_telemetry_disable_env(self):
+        # Arrange
+        mock_session, rest_mock, mock_DIRS = mock_before_telemetry_import()
+        rest_mock.telemetry_enabled = True
+        mock_session.builder.getOrCreate().connection = rest_mock
+        with patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.Session", mock_session
+        ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._upload_local_telemetry",
+            return_value=MagicMock(),
+        ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.getenv",
+            return_value="false",
         ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.snowflake_dirs", mock_DIRS
         ):

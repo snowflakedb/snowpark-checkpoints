@@ -51,12 +51,30 @@ jobs:
 
       - name: Update Version [hypothesis.snowpark]
         run: |
-          sed -i "s/^version = \".*\"/version = \"${NEW_VERSION}\"/" pyproject.toml
-          echo "Package Version updated:"
-          grep "version = " pyproject.toml
+          sed -i "s/^__version__ = \".*\"/__version__ = \"${NEW_VERSION}\"/" ${FILE_VERSION}
+          echo "Package Version updated:" && cat ${FILE_VERSION}
         env:
           NEW_VERSION: ${{ steps.gitversion.outputs.version }}
+          FILE_VERSION: ../hypothesis-snowpark/src/snowflake/hypothesis_snowpark/__version__.py
         working-directory: ./hypothesis-snowpark
+
+      - name: Update Version [snowpark-checkpoints]
+        run: |
+          sed -i "s/^__version__ = \".*\"/__version__ = \"${NEW_VERSION}\"/" ${FILE_VERSION}
+          echo "Package Version updated:" && cat ${FILE_VERSION}
+        env:
+          NEW_VERSION: ${{ steps.gitversion.outputs.version }}
+          FILE_VERSION: ../snowpark-checkpoints/src/snowflake/snowpark_checkpoints/__version__.py
+        working-directory: ./snowpark-checkpoints
+
+      - name: Update Version [snowpark-checkpoints-collector]
+        run: |
+          sed -i "s/^__version__ = \".*\"/__version__ = \"${NEW_VERSION}\"/" ${FILE_VERSION}
+          echo "Package Version updated:" && cat ${FILE_VERSION}
+        env:
+          NEW_VERSION: ${{ steps.gitversion.outputs.version }}
+          FILE_VERSION: ../snowpark-checkpoints-collector/src/snowflake/snowpark_checkpoints_collector/__version__.py
+        working-directory: ./snowpark-checkpoints-collector
 
       - name: Generate Package [hypothesis.snowpark]
         run: |
@@ -64,14 +82,11 @@ jobs:
           echo "Current directory: $PWD" && ls -la dist
         working-directory: ./hypothesis-snowpark
 
-      - name: Update Version [snowpark-checkpoints-collector]
+      - name: Generate Package [snowpark-checkpoints]
         run: |
-          sed -i "s/^version = \".*\"/version = \"${NEW_VERSION}\"/" pyproject.toml
-          echo "Package Version updated:"
-          grep "version = " pyproject.toml
-        env:
-          NEW_VERSION: ${{ steps.gitversion.outputs.version }}
-        working-directory: ./snowpark-checkpoints-collector
+          hatch build
+          echo "Current directory: $PWD" && ls -la dist
+        working-directory: ./snowpark-checkpoints
 
       - name: Generate Package [snowpark-checkpoints-collector]
         run: |
@@ -85,6 +100,7 @@ jobs:
           name: all-snowpark-checkpoints
           path: |
             ./hypothesis-snowpark/dist/*
+            ./snowpark-checkpoints/dist/*
             ./snowpark-checkpoints-collector/dist/*
 
   publish:

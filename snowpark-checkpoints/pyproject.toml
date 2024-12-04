@@ -27,8 +27,8 @@ dependencies = [
   "snowflake-snowpark-python",
   "snowflake-connector-python",
   "pyspark",
-  "pandera[io]",
-  "pandera-report",
+  "pandera[io]==0.20.4",
+  "pandera-report==0.1.2",
 ]
 description = "Migration tools for Snowpark"
 keywords = [
@@ -43,7 +43,7 @@ license = {file = "LICENSE"}
 name = "snowpark-checkpoints"
 readme = "README.md"
 requires-python = ">=3.9"
-version = "0.0.0"
+dynamic = ['version']
 
 [project.optional-dependencies]
 development = [
@@ -62,8 +62,8 @@ development = [
 "Source code" = "https://github.com/snowflakedb/snowpark-checkpoints/"
 
 [tool.hatch.version]
-path = "snowpark-checkpoints/__init__.py"
-pattern = '^__version__ = "(.*)"'
+path = "../snowpark-checkpoints/src/snowflake/snowpark_checkpoints/__version__.py"
+pattern = '^__version__ = "(?P<version>.*)"'
 source = "regex"
 
 [tool.setuptools.packages.find]
@@ -122,5 +122,5 @@ check = [
 
 coverage = [
   'cd test/outcome && pwd && ls -la',
-  'python ../.github/scripts/test_get_coverage.py test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.json --threshold={env:COVERAGE_THRESHOLD:83}',
+  'python ../.github/scripts/test_get_coverage.py test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.json --threshold={env:COVERAGE_THRESHOLD:85}',
 ]

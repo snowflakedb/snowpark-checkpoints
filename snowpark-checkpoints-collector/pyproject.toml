@@ -25,7 +25,7 @@ classifiers = [
 ]
 dependencies = [
   "pyspark",
-  "pandera[io]",
+  "pandera[io]==0.20.4",
 ]
 description = "Snowpark column and table statistics collection"
 keywords = [
@@ -40,7 +40,7 @@ license = {file = "LICENSE"}
 name = "snowpark-checkpoints-collector"
 readme = "README.md"
 requires-python = ">=3.9"
-version = "0.0.0"
+dynamic = ['version']
 
 [project.optional-dependencies]
 development = [
@@ -52,6 +52,7 @@ development = [
   "pre-commit>=4.0.1",
   "setuptools>=70.0.0",
   "pyarrow>=18.0.0",
+  "deepdiff>=8.0.0",
 ]
 
 [project.urls]
@@ -59,8 +60,8 @@ development = [
 "Source code" = "https://github.com/snowflakedb/snowpark-checkpoints/"
 
 [tool.hatch.version]
-path = "snowpark-checkpoints-collector/__init__.py"
-pattern = '^__version__ = "(.*)"'
+path = "../snowpark-checkpoints-collector/src/snowflake/snowpark_checkpoints_collector/__version__.py"
+pattern = '^__version__ = "(?P<version>.*)"'
 source = "regex"
 
 [tool.setuptools.packages.find]
@@ -123,5 +124,5 @@ check = [
 
 coverage = [
   'cd test/outcome && pwd && ls -la',
-  'python ../.github/scripts/test_get_coverage.py test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.json --threshold={env:COVERAGE_THRESHOLD:19}',
+  'python ../.github/scripts/test_get_coverage.py test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.json --threshold={env:COVERAGE_THRESHOLD:85}',
 ]

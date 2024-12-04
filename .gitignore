@@ -5,6 +5,9 @@
 # env
 wheelvenv/
 
+# version
+__version__.py
+
 #ruff
 .ruff_cache
 

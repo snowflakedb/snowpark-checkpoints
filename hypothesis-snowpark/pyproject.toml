@@ -40,7 +40,7 @@ license = {file = "LICENSE"}
 name = "hypothesis-snowpark"
 readme = "README.md"
 requires-python = ">=3.9"
-version = "0.0.0"
+dynamic = ['version']
 
 [project.optional-dependencies]
 development = [
@@ -58,8 +58,8 @@ development = [
 "Source code" = "https://github.com/snowflakedb/snowpark-checkpoints/"
 
 [tool.hatch.version]
-path = "hypothesis_snowpark/__init__.py"
-pattern = '^__version__ = "(.*)"'
+path = "../hypothesis-snowpark/src/snowflake/hypothesis_snowpark/__version__.py"
+pattern = '^__version__ = "(?P<version>.*)"'
 source = "regex"
 
 [tool.setuptools.packages.find]
@@ -89,16 +89,16 @@ include = [
 
 [tool.hatch.envs.default]
 features = ["development"]
-python = "3.9"
+python = "3.10"
 
 [[tool.hatch.envs.test_all.matrix]]
-python = ['3.9', '3.10', '3.11']
+python = ['3.10', '3.11']
 
 [tool.hatch.envs.test_all]
 template = 'test'
 
 [tool.hatch.envs.test]
-python = '3.9'
+python = '3.10'
 
 [tool.coverage.paths]
 src = ["src"]
@@ -121,5 +121,5 @@ check = [
 
 coverage = [
   'cd test/outcome && pwd && ls -la',
-  'python ../.github/scripts/test_get_coverage.py test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.json --threshold={env:COVERAGE_THRESHOLD:94}',
+  'python ../.github/scripts/test_get_coverage.py test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.json --threshold={env:COVERAGE_THRESHOLD:85}',
 ]

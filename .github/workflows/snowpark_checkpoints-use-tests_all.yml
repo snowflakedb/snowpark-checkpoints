@@ -8,12 +8,11 @@ jobs:
     name: Test ${{ matrix.download_name }}-${{ matrix.python-version }}-${{ matrix.cloud-provider }}
     runs-on: ${{ matrix.os }}
     env:
-      TERM: unknown
       SNOWFLAKE_CONNECTIONS_MYCONNECTION_AUTHENTICATOR: SNOWFLAKE_JWT
-      SNOWFLAKE_CONNECTIONS_MYCONNECTION_DATABASE: CHECKPOINTS_DEMO
-      SNOWFLAKE_CONNECTIONS_MYCONNECTION_SCHEMA: DEMO
-      SNOWFLAKE_CONNECTIONS_MYCONNECTION_WAREHOUSE: XSMALL_WH
-      SNOWFLAKE_CONNECTIONS_MYCONNECTION_ROLE: CHECKPOINT_ROLE
+      SNOWFLAKE_CONNECTIONS_MYCONNECTION_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
+      SNOWFLAKE_CONNECTIONS_MYCONNECTION_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
+      SNOWFLAKE_CONNECTIONS_MYCONNECTION_WAREHOUSE: ${{ secrets.SNOWFLAKE_WH }}
+      SNOWFLAKE_CONNECTIONS_MYCONNECTION_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
       SNOWFLAKE_CONNECTIONS_MYCONNECTION_USER: ${{ secrets.SNOWFLAKE_USER }}
       SNOWFLAKE_CONNECTIONS_MYCONNECTION_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
       SNOWFLAKE_CONNECTIONS_MYCONNECTION_PRIVATE_KEY_RAW: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_RAW }}
@@ -32,7 +31,6 @@ jobs:
             cloud-provider: aws
             snow_cli_version: "3.2.0"
             download_name: linux
-
           - os: windows-latest
             python-version: "3.10"
             cloud-provider: aws
@@ -51,7 +49,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Set up Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v4.5.0
         with:
           distribution: "temurin"
           java-version: "21"
@@ -73,6 +71,7 @@ jobs:
 
       - name: Set up key (Linux)
         if: runner.os == 'Linux'
+        shell: bash
         run: |
           PARENT_DIR=$(dirname "${{ github.workspace }}")
           PRIVATE_KEY_FILE=$PARENT_DIR/.ssh/key.p8
@@ -83,20 +82,22 @@ jobs:
           echo "${SNOWFLAKE_CONNECTIONS_MYCONNECTION_PRIVATE_KEY_RAW}" > $PRIVATE_KEY_FILE
           sudo chmod 600 $PRIVATE_KEY_FILE
           file $PRIVATE_KEY_FILE && ls -la $PRIVATE_KEY_FILE
-        env:
-          SNOWFLAKE_CONNECTIONS_MYCONNECTION_PRIVATE_KEY_RAW: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_RAW }}
 
       - name: Set up Connection Snowflake CLI (Linux)
         if: runner.os == 'Linux'
+        shell: bash
         run: |
-
           PARENT_DIR=$(dirname "${{ github.workspace }}")
           PRIVATE_KEY_FILE=$PARENT_DIR/.ssh/key.p8
           CONFIG_FILE=".github/config/config.toml"
           SNOWFLAKE_CONFIG_DIR="/home/runner/.snowflake"
           SNOWFLAKE_CONFIG_PATH="$SNOWFLAKE_CONFIG_DIR/config.toml"
 
-          mkdir -p "$SNOWFLAKE_CONFIG_DIR"
+          if [ ! -d "$SNOWFLAKE_CONFIG_DIR" ]; then
+            mkdir -p "$SNOWFLAKE_CONFIG_DIR"
+          else
+            echo "Snowflake Configuration directory already exists: $SNOWFLAKE_CONFIG_DIR"
+          fi
 
           echo "[connections.myconnection]" > "$CONFIG_FILE"
           echo "authenticator = \"$SNOWFLAKE_CONNECTIONS_MYCONNECTION_AUTHENTICATOR\"" >> "$CONFIG_FILE"
@@ -114,7 +115,7 @@ jobs:
 
           echo "Snowflake configuration at $SNOWFLAKE_CONFIG_PATH:"
           cat "$SNOWFLAKE_CONFIG_PATH"
-        shell: bash
+
 
       - name: Set up key (Windows)
         if: runner.os == 'Windows'

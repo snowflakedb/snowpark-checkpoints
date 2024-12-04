@@ -41,7 +41,7 @@ def test_dataframe_strategy_invalid_json_file(local_session: Session):
         match="Invalid JSON schema. The JSON schema must contain 'pandera_schema' and 'custom_data' keys.",
     ):
         dataframe_strategy(
-            json_schema="resources/invalid_json.json", session=local_session
+            json_schema="test/resources/invalid_json.json", session=local_session
         )
 
 
@@ -51,7 +51,7 @@ def test_dataframe_strategy_non_nullable_columns(
     data: st.DataObject, local_session: Session
 ):
     strategy = dataframe_strategy(
-        json_schema="resources/non_nullable_columns.json",
+        json_schema="test/resources/non_nullable_columns.json",
         session=local_session,
     )
 
@@ -86,7 +86,7 @@ def test_dataframe_strategy_nullable_column(
 ):
     number_of_rows = 8
     strategy = dataframe_strategy(
-        json_schema="resources/nullable_columns.json",
+        json_schema="test/resources/nullable_columns.json",
         session=local_session,
         size=number_of_rows,
     )
@@ -128,7 +128,7 @@ def test_dataframe_strategy_generated_schema(
     data: st.DataObject, local_session: Session
 ):
     strategy = dataframe_strategy(
-        json_schema="resources/supported_columns.json",
+        json_schema="test/resources/supported_columns.json",
         session=local_session,
     )
 
@@ -199,7 +199,7 @@ def test_dataframe_strategy_generated_values(
     }
 
     strategy = dataframe_strategy(
-        json_schema="resources/supported_columns.json",
+        json_schema="test/resources/supported_columns.json",
         session=local_session,
     )
 

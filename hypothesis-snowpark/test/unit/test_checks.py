@@ -5,6 +5,7 @@
 import datetime
 
 import hypothesis.strategies as st
+import pandas as pd
 import pandera as pa
 import pytest
 
@@ -22,7 +23,7 @@ def test_date_strategy_chained_strategies():
     )
 
     with pytest.raises(
-        ValueError, match="Chaining strategies are not supported for date dtype."
+        ValueError, match="Chaining strategies is not supported for 'date' dtype."
     ):
         check.strategy(pa.DateTime, **check.statistics, strategy=st.dates())
 
@@ -44,9 +45,9 @@ def test_date_strategy_invalid_range():
 
 @pytest.mark.parametrize(
     "include_min, include_max",
-    [(False, True), (True, False), (False, False)],
+    [(False, True), (True, False), (False, False), (True, True)],
 )
-def test_date_strategy(include_min: bool, include_max: bool):
+def test_date_strategy_min_max(include_min: bool, include_max: bool):
     min_value = datetime.date(2020, 1, 1)
     max_value = datetime.date(2020, 12, 31)
 
@@ -64,3 +65,32 @@ def test_date_strategy(include_min: bool, include_max: bool):
     assert (result >= min_value if include_min else result > min_value) & (
         result <= max_value if include_max else result < max_value
     )
+
+
+def test_dates_in_range_check():
+    df = pd.DataFrame(
+        {
+            "c1": [
+                datetime.date(2020, 1, 1),
+                datetime.date(2020, 6, 1),
+                datetime.date(2020, 12, 31),
+            ]
+        }
+    )
+
+    schema = pa.DataFrameSchema(
+        columns={
+            "c1": pa.Column(
+                pa.Date,
+                checks=pa.Check.dates_in_range(
+                    min_value=datetime.date(2020, 1, 1),
+                    max_value=datetime.date(2020, 12, 31),
+                    include_min=True,
+                    include_max=True,
+                ),
+            )
+        }
+    )
+
+    result = schema.validate(df)
+    assert isinstance(result, pd.DataFrame)

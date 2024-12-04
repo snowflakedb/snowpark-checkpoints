@@ -155,7 +155,7 @@ def generate_snowpark_dataframe(
 
     # Snowpark ignores the schema argument if the data argument is a pandas dataframe. We need to convert the pandas
     # dataframe into a list of tuples to be able to specify a schema.
-    data = pandas_df.to_records(index=False).tolist()
+    data = list(pandas_df.itertuples(index=False, name=None))
     schema = _generate_snowpark_schema()
     snowpark_df = session.create_dataframe(data=data, schema=schema)
     return snowpark_df

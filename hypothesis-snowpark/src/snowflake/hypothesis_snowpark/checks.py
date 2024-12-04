@@ -16,10 +16,10 @@ def date_strategy(
     pandera_dtype: pa.DataType,
     strategy: Optional[st.SearchStrategy] = None,
     *,
-    min_value=date.min,
-    max_value=date.max,
-    include_min=True,
-    include_max=True,
+    min_value: date,
+    max_value: date,
+    include_min: bool,
+    include_max: bool,
 ):
     """Create a Hypothesis strategy for generating dates within a specified range.
 
@@ -36,7 +36,7 @@ def date_strategy(
 
     """
     if strategy is not None:
-        raise ValueError("Chaining strategies are not supported for date dtype.")
+        raise ValueError("Chaining strategies is not supported for 'date' dtype.")
 
     if not include_min:
         min_value = min_value + timedelta(days=1)
@@ -58,11 +58,11 @@ def date_strategy(
 def dates_in_range(
     pandas_obj: Series,
     *,
-    min_value: date = date.min,
-    max_value: date = date.max,
-    include_min: bool = True,
-    include_max: bool = True,
-) -> bool:
+    min_value: date,
+    max_value: date,
+    include_min: True,
+    include_max: True,
+) -> Series:
     """Check if a date is within the specified range.
 
     Args:
@@ -76,7 +76,7 @@ def dates_in_range(
         True if the date is within the specified range, False otherwise.
 
     """
-    actual_date = pandas_obj.dt.date
+    actual_date = pandas_obj.dt.date if hasattr(pandas_obj, "dt") else pandas_obj
     is_in_range = (
         actual_date >= min_value if include_min else actual_date > min_value
     ) & (actual_date <= max_value if include_max else actual_date < max_value)

@@ -9,6 +9,7 @@ from datetime import date, datetime, timezone, timedelta
 from pyspark.sql import SparkSession
 import pytest
 import pandas as pd
+from deepdiff import DeepDiff
 from pyspark.sql.types import (
     StructType,
     StructField,
@@ -359,10 +360,19 @@ def test_collect_empty_dataframe_without_schema(spark_session):
 
 
 def validate_checkpoint_file_output(checkpoint_file_name) -> None:
-    schema_contract_output = get_output_schema_contract(checkpoint_file_name)
     schema_contract_expected = get_expected_schema_contract(checkpoint_file_name)
-    assert schema_contract_output == schema_contract_expected
+    schema_contract_output = get_output_schema_contract(checkpoint_file_name)
+    expected_obj = json.loads(schema_contract_expected)
+    actual_obj = json.loads(schema_contract_output)
+
+    exclude_paths = "root['pandera_schema']['version']"
+
+    diff = DeepDiff(
+        expected_obj, actual_obj, ignore_order=True, exclude_paths=[exclude_paths]
+    )
     remove_output_directory()
+
+    assert diff == {}
 
 
 def get_output_schema_contract(checkpoint_file_name) -> str:

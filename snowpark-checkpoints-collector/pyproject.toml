@@ -25,7 +25,7 @@ classifiers = [
 ]
 dependencies = [
   "pyspark",
-  "pandera[io]",
+  "pandera[io]==0.20.4",
 ]
 description = "Snowpark column and table statistics collection"
 keywords = [

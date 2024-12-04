@@ -6,46 +6,34 @@ import datetime
 import hashlib
 import json
 
-from os import getcwd, makedirs, path
+from os import makedirs, path
 from pathlib import Path
 from platform import python_version
 from sys import platform
 from uuid import getnode
-
-import yaml
 
 from snowflake.connector import (
     SNOWFLAKE_CONNECTOR_VERSION,
     SnowflakeConnection,
     time_util,
 )
-from snowflake.connector.constants import DIRS as snowflake_DIRS
+from snowflake.connector.constants import DIRS as snowflake_dirs
 from snowflake.snowpark.session import Session
-
-
-log_batch = []
-
-
-class Singleton(type):
-    _instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super().__call__(*args, **kwargs)
-        return cls._instances[cls]
+from snowflake.snowpark_checkpoints.utils.singleton import Singleton
 
 
 class TelemetryManager(metaclass=Singleton):
     def __init__(self):
         self.folder_path = str(
-            snowflake_DIRS.user_config_path / "snowpark-checkpoints-telemetry"
+            snowflake_dirs.user_config_path / "snowpark-checkpoints-telemetry"
         )
         self.sf_path_telemetry = "/telemetry/send"
         self.flush_size = 1
         self.conn = Session.builder.getOrCreate().connection
-        self.is_enabled = _is_telemetry_enabled()
+        self.is_enabled = self._is_telemetry_enabled()
         self.memory_limit = 5 * 1024 * 1024
         self._upload_local_telemetry()
+        self.log_batch = []
 
     def log_error(self, event_name: str, parameters_info: dict = None):
         self._log_telemetry(event_name, "error", parameters_info)
@@ -62,11 +50,10 @@ class TelemetryManager(metaclass=Singleton):
         return event
 
     def _add_log_to_batch(self, event: dict) -> None:
-        global log_batch
-        log_batch.append(event)
-        if len(log_batch) >= self.flush_size:
-            self._send_batch(log_batch)
-            log_batch = []
+        self.log_batch.append(event)
+        if len(self.log_batch) >= self.flush_size:
+            self._send_batch(self.log_batch)
+            self.log_batch = []
 
     def _send_batch(self, to_sent: list) -> bool:
         if not self.is_enabled:
@@ -75,6 +62,7 @@ class TelemetryManager(metaclass=Singleton):
             self._write_telemetry(to_sent)
             return False
         body = {"logs": to_sent}
+
         ret = self.conn.rest.request(
             self.sf_path_telemetry,
             body=body,
@@ -123,9 +111,12 @@ class TelemetryManager(metaclass=Singleton):
             client=None,
             timeout=5,
         )
-        if ret.get("False"):
+        if ret.get("success"):
             for file in Path(self.folder_path).glob("*.json"):
                 file.unlink()
+
+    def _is_telemetry_enabled(self) -> bool:
+        return self.conn.telemetry_enabled
 
 
 def _generate_event(
@@ -146,6 +137,7 @@ def _generate_event(
     }
     timestamp = time_util.get_time_millis()
     event_base = {"message": message, "timestamp": str(timestamp)}
+
     return event_base
 
 
@@ -153,24 +145,8 @@ def _get_metadata() -> dict:
     return {
         "OS_Version": platform,
         "Python_Version": python_version(),
-        "device_id": _get_unique_id(),
+        "Device_ID": _get_unique_id(),
     }
-
-
-def _is_telemetry_enabled() -> bool:
-    cwd = getcwd()
-    config_file = None
-    for file in Path(cwd).rglob("snowpark-checkpoints-config.yaml"):
-        config_file = file
-        break
-    if config_file is not None:
-        with open(config_file) as f:
-            data = yaml.full_load(f)
-            if data is not None:
-                is_telemetry_enabled = data.get("is_telemetry_enabled")
-                if not is_telemetry_enabled and is_telemetry_enabled is not None:
-                    return False
-    return True
 
 
 def _get_folder_size(folder_path: Path) -> int:
@@ -188,7 +164,7 @@ def _free_up_space(folder_path: Path, max_size: int) -> None:
             file.unlink()
 
 
-def _get_unique_id() -> None:
+def _get_unique_id() -> str:
     node_id_str = str(getnode())
     hashed_id = hashlib.sha256(node_id_str.encode()).hexdigest()
     return hashed_id

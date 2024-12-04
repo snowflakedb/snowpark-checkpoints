@@ -42,17 +42,17 @@ jobs:
 
       - name: Update Version
         run: |
-          sed -i "s/^version = \".*\"/version = \"${NEW_VERSION}\"/" pyproject.toml
-          echo "Package Version updated:"
-          grep "version = " pyproject.toml
+          sed -i "s/^__version__ = \".*\"/__version__ = \"${NEW_VERSION}\"/" ${FILE_VERSION}
+          echo "Package Version updated:" && cat ${FILE_VERSION}
         env:
           NEW_VERSION: ${{ steps.gitversion.outputs.version }}
+          FILE_VERSION: ../hypothesis-snowpark/src/snowflake/hypothesis_snowpark/__version__.py
         working-directory: ./hypothesis-snowpark
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.9"
+          python-version: "3.10"
 
       - name: Install required tools
         run: |

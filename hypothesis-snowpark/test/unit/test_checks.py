@@ -22,7 +22,7 @@ def test_date_strategy_chained_strategies():
     )
 
     with pytest.raises(
-        ValueError, match="Chained strategies are not supported for date dtype."
+        ValueError, match="Chaining strategies are not supported for date dtype."
     ):
         check.strategy(pa.DateTime, **check.statistics, strategy=st.dates())
 

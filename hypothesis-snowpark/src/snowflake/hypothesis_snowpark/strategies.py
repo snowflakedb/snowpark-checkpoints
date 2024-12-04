@@ -3,29 +3,37 @@
 #
 
 import copy
+import datetime
 import json
 
-from datetime import datetime
-from typing import Final, Optional
+from typing import Optional
 
+import dateutil
 import pandera as pa
 
-from dateutil import parser
 from hypothesis.strategies import DrawFn, SearchStrategy, composite
 
 from snowflake.hypothesis_snowpark.checks import (
     dates_in_range,  # noqa: F401 Import required to register the custom checks
 )
+from snowflake.hypothesis_snowpark.constants import (
+    CUSTOM_DATA_COLUMNS_KEY,
+    CUSTOM_DATA_FORMAT_KEY,
+    CUSTOM_DATA_KEY,
+    CUSTOM_DATA_NAME_KEY,
+    PANDERA_IN_RANGE_CHECK,
+    PANDERA_INCLUDE_MAX_KEY,
+    PANDERA_INCLUDE_MIN_KEY,
+    PANDERA_MAX_VALUE_KEY,
+    PANDERA_MIN_VALUE_KEY,
+    PANDERA_SCHEMA_KEY,
+)
 from snowflake.hypothesis_snowpark.strategies_utils import (
-    apply_null_values,
+    apply_custom_null_values,
     generate_snowpark_dataframe,
     load_json_schema,
 )
 from snowflake.snowpark import DataFrame, Session
-
-
-PANDERA_SCHEMA_KEY: Final[str] = "pandera_schema"
-CUSTOM_DATA_KEY: Final[str] = "custom_data"
 
 
 def dataframe_strategy(
@@ -60,7 +68,7 @@ def dataframe_strategy(
     pandera_schema = json_schema_dict.get(PANDERA_SCHEMA_KEY)
     custom_data = json_schema_dict.get(CUSTOM_DATA_KEY)
 
-    if not pandera_schema or not custom_data:
+    if not (pandera_schema and custom_data):
         raise ValueError(
             f"Invalid JSON schema. The JSON schema must contain '{PANDERA_SCHEMA_KEY}' and '{CUSTOM_DATA_KEY}' keys."
         )
@@ -72,7 +80,7 @@ def dataframe_strategy(
     def _dataframe_strategy(draw: DrawFn) -> DataFrame:
         pandas_strategy = df_schema.strategy(size=size)
         pandas_df = draw(pandas_strategy)
-        processed_pandas_df = apply_null_values(pandas_df, custom_data)
+        processed_pandas_df = apply_custom_null_values(pandas_df, custom_data)
         snowpark_df = generate_snowpark_dataframe(
             processed_pandas_df, session, df_schema, custom_data
         )
@@ -84,41 +92,50 @@ def dataframe_strategy(
 def _process_dataframe_schema(
     df_schema: pa.DataFrameSchema, custom_data: dict
 ) -> pa.DataFrameSchema:
-    processed_df_schema = copy.copy(df_schema)
+    df_schema_copy = copy.copy(df_schema)
 
-    for column_name, column_obj in processed_df_schema.columns.items():
+    for column_name, column_obj in df_schema_copy.columns.items():
         if type(column_obj.dtype) is pa.engines.pandas_engine.Date:
             # Data generation for date type is currently unsupported by Pandera. As a workaround, we can change the data
-            # type to DateTime to avoid an exception and manually generate the dates.
+            # type to pa.DateTime to avoid an exception and manually generate the dates.
             column_obj.dtype = pa.DateTime
 
             in_range_check = next(
-                (check for check in column_obj.checks if check.name == "in_range"), None
+                (
+                    check
+                    for check in column_obj.checks
+                    if check.name == PANDERA_IN_RANGE_CHECK
+                ),
+                None,
             )
 
             if in_range_check is None:
                 # Generate the values as DateTime and let Snowpark handle the conversion to Date.
                 continue
 
-            min_value = in_range_check.statistics.get("min_value")
-            max_value = in_range_check.statistics.get("max_value")
-            include_min = in_range_check.statistics.get("include_min", True)
-            include_max = in_range_check.statistics.get("include_max", True)
-            format = next(
+            min_value = in_range_check.statistics.get(PANDERA_MIN_VALUE_KEY)
+            max_value = in_range_check.statistics.get(PANDERA_MAX_VALUE_KEY)
+            include_min = in_range_check.statistics.get(PANDERA_INCLUDE_MIN_KEY, True)
+            include_max = in_range_check.statistics.get(PANDERA_INCLUDE_MAX_KEY, True)
+            date_format = next(
                 (
-                    column.get("format")
-                    for column in custom_data.get("columns", [])
-                    if column.get("name") == column_name
+                    column.get(CUSTOM_DATA_FORMAT_KEY)
+                    for column in custom_data.get(CUSTOM_DATA_COLUMNS_KEY, [])
+                    if column.get(CUSTOM_DATA_NAME_KEY) == column_name
                 ),
                 None,
             )
 
-            if format is not None:
-                min_value_obj = datetime.strptime(min_value, format).date()
-                max_value_obj = datetime.strptime(max_value, format).date()
+            if date_format is not None:
+                min_value_obj = datetime.datetime.strptime(
+                    min_value, date_format
+                ).date()
+                max_value_obj = datetime.datetime.strptime(
+                    max_value, date_format
+                ).date()
             else:
-                min_value_obj = parser.parse(min_value).date()
-                max_value_obj = parser.parse(max_value).date()
+                min_value_obj = dateutil.parser.parse(min_value).date()
+                max_value_obj = dateutil.parser.parse(max_value).date()
 
             # Replace the previous checks with the new date range check.
             column_obj.checks = [
@@ -130,4 +147,4 @@ def _process_dataframe_schema(
                 )
             ]
 
-    return processed_df_schema
+    return df_schema_copy

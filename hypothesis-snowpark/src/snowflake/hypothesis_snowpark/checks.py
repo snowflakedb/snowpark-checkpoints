@@ -36,7 +36,7 @@ def date_strategy(
 
     """
     if strategy is not None:
-        raise ValueError("Chained strategies are not supported for date dtype.")
+        raise ValueError("Chaining strategies are not supported for date dtype.")
 
     if not include_min:
         min_value = min_value + timedelta(days=1)

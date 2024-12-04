@@ -8,7 +8,7 @@ from datetime import date, datetime
 import hypothesis.strategies as st
 import pytest
 
-from hypothesis import given, settings
+from hypothesis import HealthCheck, given, settings
 
 from snowflake.hypothesis_snowpark import dataframe_strategy
 from snowflake.snowpark import DataFrame, Session
@@ -98,7 +98,7 @@ def test_dataframe_strategy_nullable_column(
 
 
 @given(data=st.data())
-@settings(deadline=None, max_examples=10)
+@settings(deadline=None, max_examples=10, suppress_health_check=list(HealthCheck))
 def test_dataframe_strategy_generated_schema(
     data: st.DataObject, local_session: Session
 ):

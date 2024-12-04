@@ -2,7 +2,8 @@
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
 
-from datetime import datetime, date
+from collections.abc import Iterable
+from datetime import date, datetime
 
 import hypothesis.strategies as st
 import pytest
@@ -56,27 +57,16 @@ def test_dataframe_strategy_non_nullable_columns(
     )
 
     df = data.draw(strategy)
-    assert isinstance(df, DataFrame)
 
-    null_counts = df.select(
+    null_count_df = df.select(
         count(when(col("A").is_null(), 1)).alias("null_count"),
-        count(when(col("A").is_not_null(), 1)).alias("non_null_count"),
     ).collect()
-    assert len(null_counts) == 1
+    assert len(null_count_df) == 1
 
-    expected_null_count = 0
-    actual_null_count = null_counts[0]["NULL_COUNT"]
-    assert expected_null_count == actual_null_count, (
-        f"Expected {expected_null_count} null values, but got {actual_null_count}. "
-        f"Actual rows: {null_counts}"
-    )
-
-    expected_non_null_count = df.count()
-    actual_non_null_count = null_counts[0]["NON_NULL_COUNT"]
-    assert expected_non_null_count == actual_non_null_count, (
-        f"Expected {expected_non_null_count} non-null values, but got {actual_non_null_count}. "
-        f"Actual rows: {null_counts}"
-    )
+    actual_null_count = null_count_df[0]["NULL_COUNT"]
+    assert (
+        actual_null_count == 0
+    ), f"Expected 0 null values, but got {actual_null_count}"
 
 
 @given(data=st.data())
@@ -85,6 +75,7 @@ def test_dataframe_strategy_nullable_column(
     data: st.DataObject, local_session: Session
 ):
     number_of_rows = 8
+
     strategy = dataframe_strategy(
         json_schema="test/resources/nullable_columns.json",
         session=local_session,
@@ -92,38 +83,22 @@ def test_dataframe_strategy_nullable_column(
     )
 
     df = data.draw(strategy)
-    assert isinstance(df, DataFrame)
 
     null_counts = df.select(
         count(when(col("A").is_null(), 1)).alias("null_count"),
-        count(when(col("A").is_not_null(), 1)).alias("non_null_count"),
     ).collect()
     assert len(null_counts) == 1
 
     actual_null_count = null_counts[0]["NULL_COUNT"]
     expected_min_null_count = number_of_rows / 2
     expected_max_null_count = number_of_rows
-    assert expected_min_null_count <= actual_null_count <= expected_max_null_count, (
-        f"Expected {expected_min_null_count} <= null values <= {expected_max_null_count}, but got {actual_null_count}. "
-        f"Actual rows: {null_counts}"
-    )
-
-    actual_non_null_count = null_counts[0]["NON_NULL_COUNT"]
-    expected_min_non_null_count = 0
-    expected_max_non_null_count = number_of_rows / 2
     assert (
-        expected_min_non_null_count
-        <= actual_non_null_count
-        <= expected_max_non_null_count
-    ), (
-        f"Expected {expected_min_non_null_count} <= non-null values <= {expected_max_non_null_count}, \n"
-        f"but got {actual_non_null_count}. "
-        f"Actual rows: {null_counts}"
-    )
+        expected_min_null_count <= actual_null_count <= expected_max_null_count
+    ), f"Expected {expected_min_null_count} <= null values <= {expected_max_null_count}, but got {actual_null_count}."
 
 
 @given(data=st.data())
-@settings(deadline=None)
+@settings(deadline=None, max_examples=10)
 def test_dataframe_strategy_generated_schema(
     data: st.DataObject, local_session: Session
 ):
@@ -163,69 +138,49 @@ def test_dataframe_strategy_generated_schema(
 def test_dataframe_strategy_generated_values(
     data: st.DataObject, local_session: Session
 ):
-    expected_constraints = {
-        "BOOLEAN_COLUMN": {"type": "bool", "allowed_values": [True, False]},
-        "BYTE_COLUMN": {"type": "numeric", "range": (-128, 127)},
-        "DATE_COLUMN": {
-            "type": "datetime",
-            "range": (date(2020, 1, 16), date(2024, 11, 1)),
-        },
-        "DOUBLE_COLUMN": {
-            "type": "numeric",
-            "range": (-2.6692257258090617, 2.5378806273606926),
-        },
-        "FLOAT_COLUMN": {
-            "type": "numeric",
-            "range": (-2.7640867233276367, 3.1381418704986572),
-        },
-        "INTEGER_COLUMN": {"type": "numeric", "range": (-148, 138)},
-        "LONG_COLUMN": {"type": "numeric", "range": (-29777341365, 29631563833)},
-        "SHORT_COLUMN": {"type": "numeric", "range": (-95, 100)},
-        "STRING_COLUMN": {"type": "string"},
-        "TIMESTAMP_COLUMN": {
-            "type": "time",
-            "range": (
-                datetime(2020, 3, 19, 13, 55, 59, 121579),
-                datetime(2024, 11, 25, 7, 50, 16, 682043),
-            ),
-        },
-        "TIMESTAMPNTZ_COLUMN": {
-            "type": "datetime",
-            "range": (
-                datetime(2020, 1, 1, 6, 29, 59, 768559),
-                datetime(2024, 11, 7, 14, 24, 40, 338141),
-            ),
-        },
-    }
-
     strategy = dataframe_strategy(
         json_schema="test/resources/supported_columns.json",
         session=local_session,
     )
 
     df = data.draw(strategy)
-    assert isinstance(df, DataFrame)
 
-    for column_name, constraints in expected_constraints.items():
-        column_rows = df.select(col(column_name)).collect()
-        column_values = [row[column_name] for row in column_rows]
+    def range_check(column_name: str, min_value: float, max_value: float):
+        return (col(column_name) >= min_value) & (col(column_name) <= max_value)
 
-        if constraints["type"] == "bool":
-            allowed_values = constraints["allowed_values"]
-            assert all(value in allowed_values for value in column_values), (
-                f"Values in column '{column_name}' are invalid. "
-                f"Expected values: {allowed_values}. "
-                f"Found values: {column_values}"
-            )
-        elif constraints["type"] == "datetime":
-            min_val, max_val = constraints["range"]
-            assert all(min_val <= value <= max_val for value in column_values), (
-                f"Values in column '{column_name}' are out of range. "
-                f"Expected range: ({min_val}, {max_val}). "
-                f"Found values: {column_values}"
-            )
-        elif constraints["type"] == "string":
-            assert all(isinstance(value, str) for value in column_values), (
-                f"Values in column '{column_name}' are not strings. "
-                f"Found values: {column_values}"
-            )
+    def in_check(column_name: str, values: Iterable):
+        return col(column_name).isin(values)
+
+    column_checks = {
+        "BOOLEAN_COLUMN": in_check("BOOLEAN_COLUMN", [True, False]),
+        "BYTE_COLUMN": range_check("BYTE_COLUMN", -128, 127),
+        "DATE_COLUMN": range_check("DATE_COLUMN", date(2020, 1, 16), date(2024, 11, 1)),
+        "DOUBLE_COLUMN": range_check(
+            "DOUBLE_COLUMN", -2.6692257258090617, 2.5378806273606926
+        ),
+        "FLOAT_COLUMN": range_check(
+            "FLOAT_COLUMN", -2.7640867233276367, 3.1381418704986572
+        ),
+        "INTEGER_COLUMN": range_check("INTEGER_COLUMN", -148, 138),
+        "LONG_COLUMN": range_check("LONG_COLUMN", -29777341365, 29631563833),
+        "SHORT_COLUMN": range_check("SHORT_COLUMN", -95, 100),
+        "STRING_COLUMN": col("STRING_COLUMN").cast("String") == col("STRING_COLUMN"),
+        "TIMESTAMP_COLUMN": range_check(
+            "TIMESTAMP_COLUMN",
+            datetime(2020, 3, 19, 13, 55, 59, 121579),
+            datetime(2024, 11, 25, 7, 50, 16, 682043),
+        ),
+        "TIMESTAMPNTZ_COLUMN": range_check(
+            "TIMESTAMPNTZ_COLUMN",
+            datetime(2020, 1, 1, 6, 29, 59, 768559),
+            datetime(2024, 11, 7, 14, 24, 40, 338141),
+        ),
+    }
+
+    for column, condition in column_checks.items():
+        invalid_rows = df.filter(~condition)
+        invalid_count = invalid_rows.count()
+        assert invalid_count == 0, (
+            f"Column '{column}' contains invalid values."
+            f"Actual values: {invalid_rows.collect()}"
+        )

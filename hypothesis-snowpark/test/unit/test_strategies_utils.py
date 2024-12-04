@@ -18,7 +18,7 @@ from snowflake.hypothesis_snowpark.strategies_utils import (
     load_json_schema,
     pyspark_to_snowpark_type,
 )
-from snowflake.snowpark import Session
+from snowflake.snowpark import DataFrame, Session
 from snowflake.snowpark.types import (
     DataType,
     LongType,
@@ -32,7 +32,6 @@ def test_load_json_schema_valid_file(tmp_path: Generator[Path, None, None]):
     json_content = {"key": "value"}
     json_file = tmp_path / "valid_file.json"
     json_file.write_text(json.dumps(json_content))
-
     result = load_json_schema(str(json_file))
     assert result == json_content
 
@@ -116,11 +115,14 @@ def test_apply_custom_null_values_invalid_column():
     assert "col3" not in result_df.columns
 
 
-def test_generate_snowpark_dataframe(local_session: Session):
+def test_generate_snowpark_dataframe_valid_schema(local_session: Session):
     pandas_df = pd.DataFrame({"name": ["Alice", "Bob", "Charlie"], "age": [25, 30, 35]})
 
     pandera_schema = pa.DataFrameSchema(
-        {"name": pa.Column(pa.String), "age": pa.Column(pa.Int, nullable=True)}
+        {
+            "name": pa.Column(pa.String, nullable=False),
+            "age": pa.Column(pa.Int, nullable=True),
+        }
     )
 
     custom_data = {
@@ -141,5 +143,80 @@ def test_generate_snowpark_dataframe(local_session: Session):
         ]
     )
 
+    assert isinstance(snowpark_df, DataFrame)
     assert snowpark_df.schema == expected_schema
     assert snowpark_df.collect() == [("Alice", 25), ("Bob", 30), ("Charlie", 35)]
+
+
+def test_generate_snowpark_dataframe_missing_column_in_custom_data(
+    local_session: Session,
+):
+    pandas_df = pd.DataFrame({"name": ["Alice", "Bob", "Charlie"], "age": [25, 30, 35]})
+
+    pandera_schema = pa.DataFrameSchema(
+        {
+            "name": pa.Column(pa.String, nullable=False),
+            "age": pa.Column(pa.Int, nullable=True),
+        }
+    )
+
+    custom_data = {
+        "columns": [
+            {"name": "name", "type": "string"},
+        ]
+    }
+
+    with pytest.raises(ValueError, match="Column 'age' is missing from custom_data"):
+        generate_snowpark_dataframe(
+            pandas_df, local_session, pandera_schema, custom_data
+        )
+
+
+def test_generate_snowpark_dataframe_missing_type_in_custom_data(
+    local_session: Session,
+):
+    pandas_df = pd.DataFrame({"name": ["Alice", "Bob", "Charlie"], "age": [25, 30, 35]})
+
+    pandera_schema = pa.DataFrameSchema(
+        {
+            "name": pa.Column(pa.String, nullable=False),
+            "age": pa.Column(pa.Int, nullable=True),
+        }
+    )
+
+    custom_data = {
+        "columns": [
+            {"name": "name", "type": "string"},
+            {"name": "age"},
+        ]
+    }
+
+    with pytest.raises(
+        ValueError, match="Type for column 'age' is missing from custom_data"
+    ):
+        generate_snowpark_dataframe(
+            pandas_df, local_session, pandera_schema, custom_data
+        )
+
+
+def test_generate_snowpark_dataframe_invalid_pyspark_type(local_session: Session):
+    pandas_df = pd.DataFrame({"name": ["Alice", "Bob", "Charlie"], "age": [25, 30, 35]})
+
+    pandera_schema = pa.DataFrameSchema(
+        {
+            "name": pa.Column(pa.String, nullable=False),
+            "age": pa.Column(pa.Int, nullable=True),
+        }
+    )
+
+    custom_data = {
+        "columns": [
+            {"name": "name", "type": "string"},
+            {"name": "age", "type": "unknown_type"},
+        ]
+    }
+
+    with pytest.raises(ValueError, match="Unsupported PySpark data type: unknown_type"):
+        generate_snowpark_dataframe(
+            pandas_df, local_session, pandera_schema, custom_data
+        )

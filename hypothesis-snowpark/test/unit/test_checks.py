@@ -25,7 +25,7 @@ def test_date_strategy_chained_strategies():
     with pytest.raises(
         ValueError, match="Chaining strategies is not supported for 'date' dtype."
     ):
-        check.strategy(pa.DateTime, **check.statistics, strategy=st.dates())
+        check.strategy(pa.Date, **check.statistics, strategy=st.dates())
 
 
 def test_date_strategy_invalid_range():
@@ -40,7 +40,7 @@ def test_date_strategy_invalid_range():
         ValueError,
         match="Invalid range: min_value must be less than or equal to max_value.",
     ):
-        check.strategy(pa.DateTime, **check.statistics)
+        check.strategy(pa.Date, **check.statistics)
 
 
 @pytest.mark.parametrize(
@@ -58,7 +58,7 @@ def test_date_strategy_min_max(include_min: bool, include_max: bool):
         include_max=include_max,
     )
 
-    strategy = check.strategy(pa.DateTime, **check.statistics)
+    strategy = check.strategy(pa.Date, **check.statistics)
     result = strategy.example()
 
     assert isinstance(result, datetime.date)
@@ -67,7 +67,7 @@ def test_date_strategy_min_max(include_min: bool, include_max: bool):
     )
 
 
-def test_dates_in_range_check():
+def test_dates_in_range_valid_range():
     df = pd.DataFrame(
         {
             "c1": [
@@ -94,3 +94,32 @@ def test_dates_in_range_check():
 
     result = schema.validate(df)
     assert isinstance(result, pd.DataFrame)
+
+
+def test_dates_in_range_invalid_range():
+    df = pd.DataFrame(
+        {
+            "c1": [
+                datetime.date(2020, 1, 1),
+                datetime.date(2020, 6, 1),
+                datetime.date(2020, 12, 30),
+            ]
+        }
+    )
+
+    schema = pa.DataFrameSchema(
+        columns={
+            "c1": pa.Column(
+                pa.Date,
+                checks=pa.Check.dates_in_range(
+                    min_value=datetime.date(2020, 1, 1),
+                    max_value=datetime.date(2020, 12, 31),
+                    include_min=False,
+                    include_max=False,
+                ),
+            )
+        }
+    )
+
+    with pytest.raises(pa.errors.SchemaError):
+        schema.validate(df)

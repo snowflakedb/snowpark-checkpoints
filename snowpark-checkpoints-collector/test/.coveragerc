@@ -2,11 +2,13 @@
 omit =
     */__init__.py
     **/__init__.py
+    */__version__.py
+    **/__version__.py
     */tests/*
     */test/*
     */.venv/*
     */.env/*
 
-precision = 2
-
-show_missing = True
+[report]
+show_missing = False
+skip_covered = False

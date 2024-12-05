@@ -9,6 +9,7 @@ import json
 from os import getenv, makedirs, path
 from pathlib import Path
 from platform import python_version
+from random import randint
 from sys import platform
 from uuid import getnode
 
@@ -39,8 +40,8 @@ class TelemetryManager(metaclass=Singleton):
         self._log_telemetry(event_name, "error", parameters_info)
 
     def log_info(self, event_name: str, parameters_info=None):
-        # if randint(1, 100) <= 5:
-        self._log_telemetry(event_name, "info", parameters_info)
+        if randint(1, 100) <= 5:
+            self._log_telemetry(event_name, "info", parameters_info)
 
     def _log_telemetry(self, event_name: str, event_type, parameters_info=None) -> dict:
         if not self.is_enabled:
@@ -62,7 +63,6 @@ class TelemetryManager(metaclass=Singleton):
             self._write_telemetry(to_sent)
             return False
         body = {"logs": to_sent}
-
         ret = self.conn.rest.request(
             self.sf_path_telemetry,
             body=body,

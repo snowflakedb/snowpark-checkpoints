@@ -11,7 +11,9 @@ import pytest
 class TelemetryManagerTest(unittest.TestCase):
     @pytest.fixture(autouse=True)
     def reset_singleton(self):
-        Singleton._instances = {}
+        from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryManager
+
+        Singleton.reset_instance(TelemetryManager)
 
     def test_get_metadata(self):
         # Arrange

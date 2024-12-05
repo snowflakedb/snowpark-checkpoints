@@ -22,6 +22,7 @@ from snowflake.snowpark_checkpoints.utils.constant import (
     COLUMN_NOT_FOUND_ERROR,
     SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR,
 )
+from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryManager
 from snowflake.snowpark_checkpoints.utils.utils_checks import (
     generate_schema,
     skip_checks_on_schema,
@@ -112,6 +113,7 @@ def check_dataframe_schema(
         SchemaValidationError: If the DataFrame fails schema validation.
 
     """
+    telemetry = TelemetryManager()
     skip_checks_on_schema(pandera_schema, skip_checks)
 
     if custom_checks:
@@ -140,15 +142,29 @@ def check_dataframe_schema(
     # Raises SchemaError on validation issues
     try:
         validator = DataFrameValidator()
-        validation_result = validator.validate(
+        validation, result = validator.validate(
             pandera_schema_upper, sample_df, validity_flag=True
+        )
+
+        telemetry.log_info(
+            "DataFrameValidator",
+            {
+                "type": "check_dataframe_schema",
+                "status": result,
+            },
         )
 
         if job_context is not None:
             job_context.mark_pass(checkpoint_name)
 
-        return validation_result
+        return validation
     except Exception as pandera_ex:
+        telemetry_data = {
+            "type": "check_dataframe_schema",
+            "error": "Snowpark output schema validation error",
+            "message": pandera_ex.message,
+        }
+        telemetry.log_error("DataFrameValidator_Error", telemetry_data)
         raise SchemaValidationError(
             SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR,
             job_context,
@@ -192,6 +208,7 @@ def check_output_schema(
             function: The decorated function.
 
         """
+        telemetry = TelemetryManager()
         checkpoint_name = check_name
         if check_name is None:
             checkpoint_name = snowpark_fn.__name__
@@ -218,15 +235,28 @@ def check_output_schema(
             # Raises SchemaError on validation issues
             try:
                 validator = DataFrameValidator()
-                validation_result = validator.validate(
+                validation, result = validator.validate(
                     pandera_schema, pandas_sample_args[0], validity_flag=True
                 )
 
+                telemetry.log_info(
+                    "DataFrameValidator",
+                    {
+                        "type": "check_output_schema",
+                        "status": result,
+                    },
+                )
                 if job_context is not None:
                     job_context.mark_pass(checkpoint_name)
 
-                print(validation_result)
+                print(validation)
             except Exception as pandera_ex:
+                telemetry_data = {
+                    "type": "check_output_schema",
+                    "error": "Snowpark output schema validation error",
+                    "message": pandera_ex.message,
+                }
+                telemetry.log_error("DataFrameValidator_Error", telemetry_data)
                 raise SchemaValidationError(
                     SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR,
                     job_context,
@@ -278,6 +308,7 @@ def check_input_schema(
             Callable: A wrapper function that performs schema validation before executing the original function.
 
         """
+        telemetry = TelemetryManager()
         checkpoint_name = check_name
         if check_name is None:
             checkpoint_name = snowpark_fn.__name__
@@ -304,15 +335,31 @@ def check_input_schema(
                 if isinstance(arg, pandas.DataFrame):
                     try:
                         validator = DataFrameValidator()
-                        validation_result = validator.validate(
+                        validation, result = validator.validate(
                             pandera_schema, arg, validity_flag=True
                         )
 
                         if job_context is not None:
                             job_context.mark_pass(checkpoint_name)
 
-                        print(validation_result)
+                        telemetry.log_info(
+                            "DataFrameValidator",
+                            {
+                                "type": "check_input_schema",
+                                "status": result,
+                            },
+                        )
+
+                        print(validation)
                     except Exception as pandera_ex:
+                        telemetry_data = {
+                            "type": "check_input_schema",
+                            "error": "Snowpark output schema validation error",
+                            "message": pandera_ex.message,
+                        }
+                        TelemetryManager().log_error(
+                            "DataFrameValidator_Error", telemetry_data
+                        )
                         raise SchemaValidationError(
                             SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR,
                             job_context,

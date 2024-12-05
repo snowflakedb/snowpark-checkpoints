@@ -8,6 +8,7 @@ import pandera as pa
 
 from pyspark.sql import DataFrame as SparkDataFrame
 
+from snowflake.snowpark_checkpoints.utils import TelemetryManager
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT,
     COLUMNS_KEY,
@@ -67,6 +68,7 @@ def collect_dataframe_checkpoint(
         Exception: It is not possible to collect a empty DataFrame without schema.
 
     """
+    telemetry = TelemetryManager()
     try:
         if _is_empty_dataframe_without_schema(df):
             raise Exception(EMPTY_DATAFRAME_WITHOUT_SCHEMA_ERROR_MESSAGE)
@@ -130,9 +132,20 @@ def collect_dataframe_checkpoint(
 
         dataframe_schema_contract_json = json.dumps(dataframe_schema_contract)
 
+        telemetry_data = {
+            "schema_types": [schema_type for schema_type in column_type_dict],
+        }
+
+        telemetry.log_info("DataFrameCollector", telemetry_data)
+
         _generate_json_checkpoint_file(checkpoint_name, dataframe_schema_contract_json)
 
     except Exception as err:
+        telemetry_data = {
+            "error": "Pyspark DataFrame Collector Error",
+            "message": str(err),
+        }
+        telemetry.log_error("DataFrameCollector_Error", {"error": telemetry_data})
         error_message = str(err)
         raise Exception(error_message) from None
 

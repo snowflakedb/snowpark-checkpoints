@@ -13,7 +13,7 @@ import pandera as pa
 
 from hypothesis.strategies import DrawFn, SearchStrategy, composite
 
-from snowflake.hypothesis_snowpark.checks import (
+from snowflake.hypothesis_snowpark.checks.date_check import (
     dates_in_range,  # noqa: F401 Import required to register the custom checks
 )
 from snowflake.hypothesis_snowpark.constants import (

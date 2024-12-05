@@ -9,7 +9,7 @@ import pandas as pd
 import pandera as pa
 import pytest
 
-from snowflake.hypothesis_snowpark.checks import (
+from snowflake.hypothesis_snowpark.checks.date_check import (
     dates_in_range,  # noqa: F401 Import required to register the custom checks
 )
 

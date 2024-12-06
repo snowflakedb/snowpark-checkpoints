@@ -297,7 +297,7 @@ class TelemetryManagerTest(unittest.TestCase):
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._upload_local_telemetry",
             return_value=MagicMock(),
         ), patch(
-            "os.makedirs"
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._upload_local_telemetry.makedirs"
         ), patch(
             "builtins.open", mock_open()
         ), patch(
@@ -556,7 +556,7 @@ class TelemetryManagerTest(unittest.TestCase):
             )
             assert result == {"foo": "boo"}
 
-    def test_telemetry_manager_log_telemetry_no_telemetry(self):
+    def test_telemetry_manager_log_telemetry_disable(self):
         # Arrange
         mock_session, rest_mock, mock_DIRS = mock_before_telemetry_import()
         with patch(
@@ -605,6 +605,8 @@ class TelemetryManagerTest(unittest.TestCase):
             return_value=MagicMock(),
         ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.Session", mock_session
+        ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.randint", return_value=1
         ):
             from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryManager
 
@@ -618,7 +620,7 @@ class TelemetryManagerTest(unittest.TestCase):
                 "event_name", "info", {"testing": "boo"}
             )
 
-    def test_telemetry_manager_log_telemetry_log_error(self):
+    def test_telemetry_manager_log_error(self):
         # Arrange
         mock_session, rest_mock, mock_DIRS = mock_before_telemetry_import()
         with patch(

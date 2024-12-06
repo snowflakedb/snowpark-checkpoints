@@ -4,8 +4,10 @@
 
 import json
 import os
+import random
 
-from typing import Final
+from contextlib import contextmanager
+from typing import Final, Union
 
 import numpy as np
 import pandas as pd
@@ -157,7 +159,8 @@ def generate_snowpark_dataframe(
     # dataframe into a list of tuples to be able to specify a schema.
     data = list(pandas_df.itertuples(index=False, name=None))
     schema = _generate_snowpark_schema()
-    snowpark_df = session.create_dataframe(data=data, schema=schema)
+    with temporary_random_seed():
+        snowpark_df = session.create_dataframe(data=data, schema=schema)
     return snowpark_df
 
 
@@ -203,3 +206,26 @@ def apply_custom_null_values(
             df_copy.iloc[selected_positions, df_copy.columns.get_loc(column)] = None
 
     return df_copy.replace({np.nan: None})
+
+
+@contextmanager
+def temporary_random_seed(seed: Union[int, float, str, bytes, bytearray, None] = None):
+    """Set a temporary random seed within a context.
+
+    This context manager saves the current state of the random number generator,
+    sets a new seed, and then restores the original state when exiting the context.
+
+    Args:
+        seed: The seed to set for the random number generator. If not provided, seeds from current time or from an
+              operating system specific randomness source if available.
+
+    Yields:
+        None: The context manager does not return anything.
+
+    """
+    current_state = random.getstate()
+    random.seed(seed)
+    try:
+        yield
+    finally:
+        random.setstate(current_state)

@@ -6,6 +6,7 @@ import json
 
 from collections.abc import Generator
 from pathlib import Path
+import random
 
 import pandas as pd
 import pandera as pa
@@ -17,6 +18,7 @@ from snowflake.hypothesis_snowpark.strategies_utils import (
     generate_snowpark_dataframe,
     load_json_schema,
     pyspark_to_snowpark_type,
+    temporary_random_seed,
 )
 from snowflake.snowpark import DataFrame, Session
 from snowflake.snowpark.types import (
@@ -220,3 +222,24 @@ def test_generate_snowpark_dataframe_invalid_pyspark_type(local_session: Session
         generate_snowpark_dataframe(
             pandas_df, local_session, pandera_schema, custom_data
         )
+
+
+def test_temporary_random_seed_no_seed():
+    initial_state = random.getstate()
+    with temporary_random_seed():
+        random_state_inside = random.getstate()
+        assert random_state_inside != initial_state
+    random_state_outside = random.getstate()
+    assert random_state_outside == initial_state
+
+
+def test_temporary_random_seed_with_seed():
+    seed = 42
+    initial_state = random.getstate()
+    with temporary_random_seed(seed):
+        random_state_inside = random.getstate()
+        random.seed(seed)
+        expected_state = random.getstate()
+        assert random_state_inside == expected_state
+    random_state_outside = random.getstate()
+    assert random_state_outside == initial_state

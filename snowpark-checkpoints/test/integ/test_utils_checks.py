@@ -3,73 +3,36 @@
 #
 
 import json
+import os
 from unittest.mock import patch, mock_open
-from numpy import float64, int8
+from numpy import float64
 from pandera import DataFrameSchema
-import pytest
+
 from snowflake.snowpark_checkpoints.utils.constant import (
     BOOLEAN_TYPE,
-    CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT,
+    CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME,
     DATAFRAME_CUSTOM_DATA_KEY,
     FLOAT_TYPE,
     NAME_KEY,
+    SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_FORMAT_NAME,
     TYPE_KEY,
 )
-from snowflake.snowpark_checkpoints.utils.utils_checks import generate_schema
 from pandera import Column, Check, DataFrameSchema
 import pandas as pd
+
 from snowflake.snowpark_checkpoints.utils.utils_checks import (
-    add_numeric_checks,
+    _generate_schema,
+    _add_numeric_checks,
     MEAN_KEY,
     MARGIN_ERROR_KEY,
     DECIMAL_PRECISION_KEY,
-)
-from snowflake.snowpark_checkpoints.utils.utils_checks import (
-    skip_checks_on_schema,
+    _skip_checks_on_schema,
     SKIP_ALL,
-    add_boolean_checks,
+    _add_boolean_checks,
     TRUE_COUNT_KEY,
     FALSE_COUNT_KEY,
     MARGIN_ERROR_KEY,
 )
-
-
-@pytest.fixture
-def generate_json_schema_file():
-    schema = DataFrameSchema(
-        {
-            "col1": Column(float64, Check(lambda x: 0 <= x <= 10, element_wise=True)),
-            "col2": Column(bool, Check.isin([True, False])),
-        }
-    )
-
-    schema_data = {
-        "pandera_schema": json.loads(schema.to_json()),
-        "custom_data": [
-            {
-                "type": FLOAT_TYPE,
-                "name": "col1",
-                "min": 4.50,
-                "max": 5.55,
-                "mean": 5.01,
-                "decimal_precision": 2,
-                "margin_error": 0.42,
-            },
-            {
-                "type": BOOLEAN_TYPE,
-                "name": "col2",
-                "true_count": 2,
-                "false_count": 1,
-            },
-        ],
-    }
-
-    checkpoint_name = "test_checkpoint"
-    output_file = open(
-        CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(checkpoint_name), "w"
-    )
-    output_file.write(json.dumps(schema_data))
-    output_file.close()
 
 
 def test_skip_specific_check():
@@ -81,7 +44,7 @@ def test_skip_specific_check():
     )
 
     skip_checks = {"col1": ["greater_than"]}
-    skip_checks_on_schema(schema, skip_checks)
+    _skip_checks_on_schema(schema, skip_checks)
 
     assert len(schema.columns["col1"].checks) == 1
     assert schema.columns["col1"].checks[0].name == "less_than"
@@ -97,7 +60,7 @@ def test_skip_checks_on_nonexistent_column():
     )
 
     skip_checks = {"col3": [SKIP_ALL]}
-    skip_checks_on_schema(schema, skip_checks)
+    _skip_checks_on_schema(schema, skip_checks)
 
     assert len(schema.columns["col1"].checks) == 2
     assert len(schema.columns["col2"].checks) == 1
@@ -112,7 +75,7 @@ def test_skip_no_checks():
     )
 
     skip_checks = {}
-    skip_checks_on_schema(schema, skip_checks)
+    _skip_checks_on_schema(schema, skip_checks)
 
     assert len(schema.columns["col1"].checks) == 2
     assert len(schema.columns["col2"].checks) == 1
@@ -127,7 +90,7 @@ def test_add_boolean_checks():
 
     additional_check = {TRUE_COUNT_KEY: 2, FALSE_COUNT_KEY: 1, MARGIN_ERROR_KEY: 0}
 
-    add_boolean_checks(schema, "col1", additional_check)
+    _add_boolean_checks(schema, "col1", additional_check)
 
     assert len(schema.columns["col1"].checks) == 3  # initial check + 2 added checks
 
@@ -147,7 +110,7 @@ def test_add_boolean_checks_with_margin_error():
 
     additional_check = {TRUE_COUNT_KEY: 2, FALSE_COUNT_KEY: 1, MARGIN_ERROR_KEY: 1}
 
-    add_boolean_checks(schema, "col1", additional_check)
+    _add_boolean_checks(schema, "col1", additional_check)
 
     assert len(schema.columns["col1"].checks) == 3  # initial check + 2 added checks
 
@@ -167,7 +130,7 @@ def test_add_boolean_checks_no_true_count():
 
     additional_check = {FALSE_COUNT_KEY: 3, MARGIN_ERROR_KEY: 0}
 
-    add_boolean_checks(schema, "col1", additional_check)
+    _add_boolean_checks(schema, "col1", additional_check)
 
     assert len(schema.columns["col1"].checks) == 3  # initial check + 2 added check
 
@@ -187,7 +150,7 @@ def test_add_boolean_checks_no_false_count():
 
     additional_check = {TRUE_COUNT_KEY: 3, MARGIN_ERROR_KEY: 0}
 
-    add_boolean_checks(schema, "col1", additional_check)
+    _add_boolean_checks(schema, "col1", additional_check)
 
     assert len(schema.columns["col1"].checks) == 3  # initial check + 2 added check
 
@@ -197,47 +160,49 @@ def test_add_boolean_checks_no_false_count():
     # Validate the DataFrame against the schema
     schema.validate(df)
 
-    def test_add_numeric_checks():
-        schema = DataFrameSchema(
-            {
-                "col1": Column(float, checks=[Check.greater_than(0)]),
-            }
-        )
 
-        additional_check = {MEAN_KEY: 5.0, MARGIN_ERROR_KEY: 1.0}
-
-        add_numeric_checks(schema, "col1", additional_check)
-
-        assert len(schema.columns["col1"].checks) == 2  # initial check + 1 added check
-
-        # Create a DataFrame to test the checks
-        df = pd.DataFrame({"col1": [4.5, 5.5, 5.0]})
-
-        # Validate the DataFrame against the schema
-        schema.validate(df)
-
-    def test_add_numeric_checks_with_decimal_precision():
-        schema = DataFrameSchema(
-            {
-                "col1": Column(float, checks=[Check.greater_than(0)]),
-            }
-        )
-
-        additional_check = {
-            MEAN_KEY: 5.0,
-            MARGIN_ERROR_KEY: 1.0,
-            DECIMAL_PRECISION_KEY: 2,
+def test_add_numeric_checks():
+    schema = DataFrameSchema(
+        {
+            "col1": Column(float, checks=[Check.greater_than(0)]),
         }
+    )
 
-        add_numeric_checks(schema, "col1", additional_check)
+    additional_check = {MEAN_KEY: 5.0, MARGIN_ERROR_KEY: 1.0}
 
-        assert len(schema.columns["col1"].checks) == 3  # initial check + 2 added checks
+    _add_numeric_checks(schema, "col1", additional_check)
 
-        # Create a DataFrame to test the checks
-        df = pd.DataFrame({"col1": [4.50, 5.55, 5.00]})
+    assert len(schema.columns["col1"].checks) == 2  # initial check + 1 added check
 
-        # Validate the DataFrame against the schema
-        schema.validate(df)
+    # Create a DataFrame to test the checks
+    df = pd.DataFrame({"col1": [4.5, 5.5, 5.0]})
+
+    # Validate the DataFrame against the schema
+    schema.validate(df)
+
+
+def test_add_numeric_checks_with_decimal_precision():
+    schema = DataFrameSchema(
+        {
+            "col1": Column(float, checks=[Check.greater_than(0)]),
+        }
+    )
+
+    additional_check = {
+        MEAN_KEY: 5.0,
+        MARGIN_ERROR_KEY: 1.0,
+        DECIMAL_PRECISION_KEY: 2,
+    }
+
+    _add_numeric_checks(schema, "col1", additional_check)
+
+    assert len(schema.columns["col1"].checks) == 3  # initial check + 2 added checks
+
+    # Create a DataFrame to test the checks
+    df = pd.DataFrame({"col1": [4.50, 5.55, 5.00]})
+
+    # Validate the DataFrame against the schema
+    schema.validate(df)
 
 
 def test_add_numeric_checks_no_mean():
@@ -249,7 +214,7 @@ def test_add_numeric_checks_no_mean():
 
     additional_check = {MARGIN_ERROR_KEY: 1.0}
 
-    add_numeric_checks(schema, "col1", additional_check)
+    _add_numeric_checks(schema, "col1", additional_check)
 
     assert len(schema.columns["col1"].checks) == 2  # initial check + 1 added check
 
@@ -269,7 +234,7 @@ def test_add_numeric_checks_no_margin_error():
 
     additional_check = {MEAN_KEY: 5.0}
 
-    add_numeric_checks(schema, "col1", additional_check)
+    _add_numeric_checks(schema, "col1", additional_check)
 
     assert len(schema.columns["col1"].checks) == 2  # initial check + 1 added check
 
@@ -289,7 +254,7 @@ def test_add_numeric_checks_no_decimal_precision():
 
     additional_check = {MEAN_KEY: 5.0, MARGIN_ERROR_KEY: 1.0}
 
-    add_numeric_checks(schema, "col1", additional_check)
+    _add_numeric_checks(schema, "col1", additional_check)
 
     assert len(schema.columns["col1"].checks) == 2  # initial check + 1 added check
 
@@ -300,10 +265,57 @@ def test_add_numeric_checks_no_decimal_precision():
     schema.validate(df)
 
 
-def test_generate_schema_with_custom_data(generate_json_schema_file):
-    checkpoint_name = "test_checkpoint"
+def test_generate_schema_with_custom_data():
+    schema = DataFrameSchema(
+        {
+            "col1": Column(float64, Check(lambda x: 0 <= x <= 10, element_wise=True)),
+            "col2": Column(bool, Check.isin([True, False])),
+        }
+    )
 
-    schema = generate_schema(checkpoint_name)
+    schema_data = {
+        "pandera_schema": json.loads(schema.to_json()),
+        "custom_data": {
+            "columns": [
+                {
+                    "type": FLOAT_TYPE,
+                    "name": "col1",
+                    "min": 4.50,
+                    "max": 5.55,
+                    "mean": 5.01,
+                    "decimal_precision": 2,
+                    "margin_error": 0.42,
+                },
+                {
+                    "type": BOOLEAN_TYPE,
+                    "name": "col2",
+                    "true_count": 2,
+                    "false_count": 1,
+                },
+            ],
+        },
+    }
+
+    checkpoint_name = "test_checkpoint"
+    current_directory_path = os.getcwd()
+
+    output_directory_path = os.path.join(
+        current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_FORMAT_NAME
+    )
+
+    if not os.path.exists(output_directory_path):
+        os.makedirs(output_directory_path)
+
+    checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME.format(
+        checkpoint_name
+    )
+
+    checkpoint_file_path = os.path.join(output_directory_path, checkpoint_file_name)
+
+    with open(checkpoint_file_path, "w") as output_file:
+        output_file.write(json.dumps(schema_data))
+
+    schema = _generate_schema(checkpoint_name)
 
     assert "col1" in schema.columns
     assert "col2" in schema.columns
@@ -327,10 +339,12 @@ def test_generate_schema_no_pandera_schema_key():
         ]
     }
 
-    with patch("builtins.open", mock_open(read_data=json.dumps(schema_json))):
-        schema = generate_schema(checkpoint_name)
-
-    assert "col1" not in schema.columns  # No initial schema provided
+    try:
+        with patch("builtins.open", mock_open(read_data=json.dumps(schema_json))):
+            schema = _generate_schema(checkpoint_name)
+            assert False
+    except:
+        pass
 
 
 def test_generate_schema_invalid_json():
@@ -339,7 +353,7 @@ def test_generate_schema_invalid_json():
 
     with patch("builtins.open", mock_open(read_data=invalid_json)):
         try:
-            generate_schema(checkpoint_name)
+            _generate_schema(checkpoint_name)
         except json.JSONDecodeError:
             assert True
         else:

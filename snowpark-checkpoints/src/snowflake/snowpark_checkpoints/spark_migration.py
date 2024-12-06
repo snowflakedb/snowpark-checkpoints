@@ -66,7 +66,7 @@ def check_with_spark(
             # Run the sampled data in snowpark
             snowpark_test_results = snowpark_fn(*snowpark_sample_args, **kwargs)
             spark_test_results = spark_function(*pyspark_sample_args, **kwargs)
-            assert_return(
+            _assert_return(
                 snowpark_test_results, spark_test_results, job_context, checkpoint_name
             )
             # Run the original function in snowpark
@@ -77,7 +77,7 @@ def check_with_spark(
     return check_with_spark_decorator
 
 
-def assert_return(snowpark_results, spark_results, job_context, checkpoint_name):
+def _assert_return(snowpark_results, spark_results, job_context, checkpoint_name):
     """Assert and validate the results from Snowpark and Spark transformations.
 
     Args:

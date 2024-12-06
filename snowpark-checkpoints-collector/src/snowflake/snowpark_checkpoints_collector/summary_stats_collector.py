@@ -143,8 +143,13 @@ def collect_dataframe_checkpoint(
     except Exception as err:
         telemetry_data = {
             "error": "Pyspark DataFrame Collector Error",
-            "message": str(err),
+            "type": "collect_dataframe_checkpoint",
         }
+        if "column_type_dict" in locals():
+            if column_type_dict is not None:
+                telemetry_data.update(
+                    {"schema_types": [schema_type for schema_type in column_type_dict]}
+                )
         telemetry.log_error("DataFrameCollector_Error", {"error": telemetry_data})
         error_message = str(err)
         raise Exception(error_message) from None

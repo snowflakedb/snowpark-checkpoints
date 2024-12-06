@@ -162,7 +162,6 @@ def check_dataframe_schema(
         telemetry_data = {
             "type": "check_dataframe_schema",
             "error": "Snowpark output schema validation error",
-            "message": pandera_ex.message,
         }
         telemetry.log_error("DataFrameValidator_Error", telemetry_data)
         raise SchemaValidationError(
@@ -254,7 +253,6 @@ def check_output_schema(
                 telemetry_data = {
                     "type": "check_output_schema",
                     "error": "Snowpark output schema validation error",
-                    "message": pandera_ex.message,
                 }
                 telemetry.log_error("DataFrameValidator_Error", telemetry_data)
                 raise SchemaValidationError(
@@ -355,11 +353,8 @@ def check_input_schema(
                         telemetry_data = {
                             "type": "check_input_schema",
                             "error": "Snowpark output schema validation error",
-                            "message": pandera_ex.message,
                         }
-                        TelemetryManager().log_error(
-                            "DataFrameValidator_Error", telemetry_data
-                        )
+                        telemetry.log_error("DataFrameValidator_Error", telemetry_data)
                         raise SchemaValidationError(
                             SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR,
                             job_context,

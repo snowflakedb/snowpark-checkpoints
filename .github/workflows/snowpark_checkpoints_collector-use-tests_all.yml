@@ -16,6 +16,7 @@ jobs:
       SNOWFLAKE_CONNECTIONS_MYCONNECTION_USER: ${{ secrets.SNOWFLAKE_USER }}
       SNOWFLAKE_CONNECTIONS_MYCONNECTION_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
       SNOWFLAKE_CONNECTIONS_MYCONNECTION_PRIVATE_KEY_RAW: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_RAW }}
+      HADOOP_HOME: "${{ github.workspace }}\\hadoop"
 
     strategy:
       fail-fast: false
@@ -50,7 +51,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: "temurin"
-          java-version: "21"
+          java-version: "11"
           check-latest: true
       - run: java --version
 
@@ -108,6 +109,47 @@ jobs:
           echo "Snowflake configuration at $SNOWFLAKE_CONFIG_PATH:"
           cat "$SNOWFLAKE_CONFIG_PATH"
         shell: bash
+
+      - name: Download Hadoop
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          echo "Downloading Hadoop"
+          curl -O https://dlcdn.apache.org/hadoop/common/hadoop-3.3.6/hadoop-3.3.6.tar.gz
+          tar -xvf hadoop-3.3.6.tar.gz
+          move hadoop-3.3.6 "${{ github.workspace }}\\hadoop"
+
+      - name: Setup Hadoop Environment
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          echo "## Configuring Hadoop Environment"
+          echo "HADOOP_HOME=${{ env.HADOOP_HOME }}" >> $GITHUB_ENV
+          echo "PATH=%PATH%;${{ env.HADOOP_HOME }}\\bin" >> $GITHUB_ENV
+          echo "Environment variables configured."
+
+      - name: List HADOOP_HOME Contents
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          echo "Listing contents of HADOOP_HOME"
+          dir "${{ env.HADOOP_HOME }}"
+
+      - name: Check and Start Hadoop Services
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          echo "## Checking if Hadoop services are running"
+          $namenode = Get-Process -Name "java" -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "*hadoop*" -and $_.CommandLine -like "*namenode*" }
+
+          if (-not $namenode) {
+            Write-Output "Namenode is not running. Starting..."
+            Start-Process -NoNewWindow -FilePath "cmd.exe" -ArgumentList "/C start /B $env:HADOOP_HOME\sbin\start-dfs.cmd"
+          } else {
+            Write-Output "Namenode is already running."
+          }
+          Write-Output "Hadoop services status check complete."
+
 
       - name: Set up key (Windows)
         if: runner.os == 'Windows'

@@ -4,6 +4,13 @@
 
 import locale
 
+from enum import Enum
+
+
+class CheckpointMode(Enum):
+    SCHEMA = 1
+    DATAFRAME = 2
+
 
 # CONSTANTS
 BOOLEAN_COLUMN_TYPE = "boolean"
@@ -44,11 +51,6 @@ INTEGER_TYPE_COLLECTION = [
     SHORT_COLUMN_TYPE,
 ]
 
-# ERROR CONSTANTS
-EMPTY_DATAFRAME_WITHOUT_SCHEMA_ERROR_MESSAGE = (
-    "It is not possible to collect a empty DataFrame without schema"
-)
-
 BETWEEN_CHECK_ERROR_MESSAGE_FORMAT = "Value must be between {} and {}"
 
 # SCHEMA CONTRACT KEYS CONSTANTS
@@ -75,9 +77,11 @@ PANDERA_COLUMN_TYPE_KEY = "dtype"
 # DIRECTORY AND FILE NAME CONSTANTS
 SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME = "snowpark-checkpoints-output"
 CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT = "{}.json"
+CHECKPOINT_PARQUET_OUTPUT_FILE_NAME_FORMAT = "{}.parquet"
 
 # MISC KEYS
 DECIMAL_TOKEN_KEY = "decimal_point"
+DOT_PARQUET_EXTENSION = ".parquet"
 
 
 def get_decimal_token() -> str:

@@ -198,7 +198,7 @@ def apply_custom_null_values(
         if column not in df_copy.columns:
             continue
 
-        required_nulls = int(total_rows * target_null_proportion)
+        required_nulls = round(total_rows * target_null_proportion)
         current_nulls = df_copy[column].isnull().sum()
 
         if current_nulls < required_nulls:

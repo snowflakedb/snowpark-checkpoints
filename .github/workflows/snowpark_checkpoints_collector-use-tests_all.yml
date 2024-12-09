@@ -57,8 +57,8 @@ jobs:
 
       - name: Display Python version
         run: |
-            python -c "import sys; print(sys.version)"
-            python ../.github/scripts/py_show_env.py
+          python -c "import sys; print(sys.version)"
+          python ../.github/scripts/py_show_env.py
         shell: bash
         working-directory: ./hypothesis-snowpark
 
@@ -115,9 +115,17 @@ jobs:
         shell: pwsh
         run: |
           echo "Downloading Hadoop"
-          curl -O https://dlcdn.apache.org/hadoop/common/hadoop-3.3.6/hadoop-3.3.6.tar.gz
-          tar -xvf hadoop-3.3.6.tar.gz
-          move hadoop-3.3.6 "${{ github.workspace }}\\hadoop"
+          Invoke-WebRequest -Uri "https://dlcdn.apache.org/hadoop/common/hadoop-3.3.6/hadoop-3.3.6.tar.gz" -OutFile "${{ github.workspace }}\\hadoop-3.3.6.tar.gz"
+          tar -xvf "${{ github.workspace }}\\hadoop-3.3.6.tar.gz"
+          Move-Item -Path "${{ github.workspace }}\\hadoop-3.3.6" -Destination "${{ github.workspace }}\\hadoop"
+
+      - name: Download winutils.exe
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          echo "Downloading winutils.exe"
+          Invoke-WebRequest -Uri "https://github.com/steveloughran/winutils/raw/master/hadoop-3.3.6/bin/winutils.exe" -OutFile "${{ env.HADOOP_HOME }}\\bin\\winutils.exe"
+          dir "${{ env.HADOOP_HOME }}\\bin"
 
       - name: Setup Hadoop Environment
         if: runner.os == 'Windows'
@@ -126,14 +134,30 @@ jobs:
           echo "## Configuring Hadoop Environment"
           echo "HADOOP_HOME=${{ env.HADOOP_HOME }}" >> $GITHUB_ENV
           echo "PATH=%PATH%;${{ env.HADOOP_HOME }}\\bin" >> $GITHUB_ENV
-          echo "Environment variables configured."
 
-      - name: List HADOOP_HOME Contents
+      - name: Validate HADOOP_HOME
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          echo "Listing contents of HADOOP_HOME"
-          dir "${{ env.HADOOP_HOME }}"
+          if (!(Test-Path -Path "${{ env.HADOOP_HOME }}")) {
+            Write-Error "HADOOP_HOME directory does not exist!"
+          } else {
+            echo "Listing contents of HADOOP_HOME"
+            dir "${{ env.HADOOP_HOME }}"
+          }
+
+      - name: Set permissions for winutils
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          icacls "${{ env.HADOOP_HOME }}\\bin\\winutils.exe" /grant:r "$($env:USERNAME):(R)"
+
+      - name: Verify Hadoop Installation
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          "${{ env.HADOOP_HOME }}\\bin\\winutils.exe" chmod 777 "${{ env.HADOOP_HOME }}\\tmp\\hadoop-${env:USERNAME}"
+          dir "${{ env.HADOOP_HOME }}\\tmp"
 
       - name: Check and Start Hadoop Services
         if: runner.os == 'Windows'
@@ -149,7 +173,6 @@ jobs:
             Write-Output "Namenode is already running."
           }
           Write-Output "Hadoop services status check complete."
-
 
       - name: Set up key (Windows)
         if: runner.os == 'Windows'
@@ -238,11 +261,11 @@ jobs:
 
       - name: Run tests
         run: |
-            echo "Current working directory: $PWD"
-            hatch config set dirs.env.virtual .hatch
-            hatch status && hatch env show
-            hatch run test:check
-            hatch run test:coverage
+          echo "Current working directory: $PWD"
+          hatch config set dirs.env.virtual .hatch
+          hatch status && hatch env show
+          hatch run test:check
+          hatch run test:coverage
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
           PYTEST_ADDOPTS: --color=yes --tb=short -v

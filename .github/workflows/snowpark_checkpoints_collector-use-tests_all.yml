@@ -53,7 +53,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: "temurin"
-          java-version: '${{ env.JAVA_VERSION }}'
+          java-version: "${{ env.JAVA_VERSION }}"
           check-latest: true
       - run: java --version
 
@@ -63,6 +63,14 @@ jobs:
           python ../.github/scripts/py_show_env.py
         shell: bash
         working-directory: ./hypothesis-snowpark
+
+      - name: Enable long paths (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Write-Output "Enabling long paths on Windows..."
+          Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name "LongPathsEnabled" -Value 1
+          Write-Output "Long paths have been enabled."
 
       - name: Download Winutils (Windows)
         if: runner.os == 'Windows'

@@ -5,7 +5,7 @@
 import json
 import os
 from numpy import int8
-from pandas import DataFrame as PandaDataFrame
+from pandas import DataFrame as PandasDataFrame
 from pandera import DataFrameSchema, Column, Check
 from snowflake.snowpark import Session
 from snowflake.snowpark import DataFrame as SnowparkDataFrame
@@ -27,7 +27,7 @@ from snowflake.snowpark_checkpoints.utils.constant import (
 
 
 def test_input():
-    df = PandaDataFrame(
+    df = PandasDataFrame(
         {
             "COLUMN1": [1, 4, 0, 10, 9],
             "COLUMN2": [-1.3, -1.4, -2.9, -10.1, -20.4],
@@ -56,7 +56,7 @@ def test_input():
 
 
 def test_output():
-    df = PandaDataFrame(
+    df = PandasDataFrame(
         {
             "COLUMN1": [1, 4, 0, 10, 9],
             "COLUMN2": [-1.3, -1.4, -2.9, -10.1, -20.4],
@@ -85,7 +85,7 @@ def test_output():
 
 
 def test_df_check():
-    df = PandaDataFrame(
+    df = PandasDataFrame(
         {
             "COLUMN1": [1, 4, 0, 10, 9],
             "COLUMN2": [-1.3, -1.4, -2.9, -10.1, -20.4],
@@ -106,7 +106,7 @@ def test_df_check():
 
 
 def test_df_check_from_file():
-    df = PandaDataFrame(
+    df = PandasDataFrame(
         {
             "COLUMN1": [1, 4, 0, 10, 9],
             "COLUMN2": [-1.3, -1.4, -2.9, -10.1, -20.4],
@@ -180,7 +180,7 @@ def test_df_check_from_file():
 
 
 def test_df_check_custom_check():
-    df = PandaDataFrame(
+    df = PandasDataFrame(
         {
             "COLUMN1": [1, 4, 0, 10, 9],
             "COLUMN2": [-1.3, -1.4, -2.9, -10.1, -20.4],
@@ -213,7 +213,7 @@ def test_df_check_custom_check():
 
 
 def test_df_check_skip_check():
-    df = PandaDataFrame(
+    df = PandasDataFrame(
         {
             "COLUMN1": [1, 4, 0, 10, 9],
             "COLUMN2": [-1.3, -1.4, -2.9, -10.1, -20.4],

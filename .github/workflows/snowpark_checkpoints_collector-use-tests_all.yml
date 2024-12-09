@@ -17,6 +17,8 @@ jobs:
       SNOWFLAKE_CONNECTIONS_MYCONNECTION_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
       SNOWFLAKE_CONNECTIONS_MYCONNECTION_PRIVATE_KEY_RAW: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_RAW }}
       HADOOP_HOME: "${{ github.workspace }}\\hadoop"
+      HADOOP_VERSION: "3.3.6"
+      JAVA_VERSION: "11"
 
     strategy:
       fail-fast: false
@@ -51,7 +53,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: "temurin"
-          java-version: "11"
+          java-version: '${{ env.JAVA_VERSION }}'
           check-latest: true
       - run: java --version
 
@@ -61,6 +63,81 @@ jobs:
           python ../.github/scripts/py_show_env.py
         shell: bash
         working-directory: ./hypothesis-snowpark
+
+      - name: Download Winutils (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $winutilsRepo = "https://github.com/cdarlint/winutils"
+          $hadoopDir = "hadoop-${{ env.HADOOP_VERSION }}/bin"
+          $tempDir = "$env:RUNNER_TEMP\hadoop_bin"
+
+          New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
+
+          try {
+            Invoke-WebRequest -Uri "$winutilsRepo/archive/master.zip" -OutFile "$tempDir\winutils.zip"
+            Expand-Archive -Path "$tempDir\winutils.zip" -DestinationPath $tempDir -Force
+
+            $sourceDir = Join-Path -Path $tempDir -ChildPath "winutils-master\$hadoopDir"
+            $destinationDir = "${{ env.HADOOP_HOME }}\bin"
+
+            New-Item -ItemType Directory -Force -Path $destinationDir | Out-Null
+            Get-ChildItem -Path $sourceDir | Move-Item -Destination $destinationDir -Force
+            $winutilsPath = Join-Path -Path $destinationDir -ChildPath "winutils.exe"
+
+            if (-Not (Test-Path $winutilsPath)) {
+              throw "winutils.exe not found in $destinationDir"
+            }
+
+            Write-Output "Winutils successfully installed at $winutilsPath"
+          }
+          catch {
+            Write-Error "Winutils download or installation failed: $_"
+            exit 1
+          }
+
+      - name: Configure Hadoop (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Write-Output "Configuring Hadoop environment variables"
+          echo "HADOOP_HOME=${{ env.HADOOP_HOME }}" | Out-File -FilePath $env:GITHUB_ENV -Append
+          $hadoopBinPath = "${{ env.HADOOP_HOME }}\bin"
+          echo "PATH=$env:PATH;$hadoopBinPath" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Output "HADOOP_HOME set to: ${{ env.HADOOP_HOME }}"
+          Write-Output "Hadoop bin added to PATH"
+
+      - name: Verify Hadoop (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          try {
+            $hadoopVersion = & "${{ env.HADOOP_HOME }}\bin\hadoop" version
+            Write-Output "Hadoop version verified: $hadoopVersion"
+          }
+          catch {
+            Write-Error "Hadoop version check failed: $_"
+            exit 1
+          }
+
+          Write-Output "Hadoop Home Contents:"
+          Get-ChildItem -Path "${{ env.HADOOP_HOME }}" -Recurse | Select-Object FullName, Length | Format-Table -AutoSize
+
+      - name: Test Hadoop Configuration (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          try {
+            & "${{ env.HADOOP_HOME }}\bin\hdfs" dfs -mkdir -p /test
+
+            $testList = & "${{ env.HADOOP_HOME }}\bin\hdfs" dfs -ls /
+            Write-Output "HDFS Basic Test Passed"
+            Write-Output "Directory Listing: $testList"
+          }
+          catch {
+            Write-Error "Hadoop HDFS test failed: $_"
+            exit 1
+          }
 
       - name: Set up Snowflake CLI
         uses: Snowflake-Labs/snowflake-cli-action@main
@@ -109,70 +186,6 @@ jobs:
           echo "Snowflake configuration at $SNOWFLAKE_CONFIG_PATH:"
           cat "$SNOWFLAKE_CONFIG_PATH"
         shell: bash
-
-      - name: Download Hadoop
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          echo "Downloading Hadoop"
-          Invoke-WebRequest -Uri "https://dlcdn.apache.org/hadoop/common/hadoop-3.3.6/hadoop-3.3.6.tar.gz" -OutFile "${{ github.workspace }}\\hadoop-3.3.6.tar.gz"
-          tar -xvf "${{ github.workspace }}\\hadoop-3.3.6.tar.gz"
-          Move-Item -Path "${{ github.workspace }}\\hadoop-3.3.6" -Destination "${{ github.workspace }}\\hadoop"
-
-      - name: Download winutils.exe
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          echo "Downloading winutils.exe"
-          Invoke-WebRequest -Uri "https://github.com/steveloughran/winutils/raw/master/hadoop-3.3.6/bin/winutils.exe" -OutFile "${{ env.HADOOP_HOME }}\\bin\\winutils.exe"
-          dir "${{ env.HADOOP_HOME }}\\bin"
-
-      - name: Setup Hadoop Environment
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          echo "## Configuring Hadoop Environment"
-          echo "HADOOP_HOME=${{ env.HADOOP_HOME }}" >> $GITHUB_ENV
-          echo "PATH=%PATH%;${{ env.HADOOP_HOME }}\\bin" >> $GITHUB_ENV
-
-      - name: Validate HADOOP_HOME
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          if (!(Test-Path -Path "${{ env.HADOOP_HOME }}")) {
-            Write-Error "HADOOP_HOME directory does not exist!"
-          } else {
-            echo "Listing contents of HADOOP_HOME"
-            dir "${{ env.HADOOP_HOME }}"
-          }
-
-      - name: Set permissions for winutils
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          icacls "${{ env.HADOOP_HOME }}\\bin\\winutils.exe" /grant:r "$($env:USERNAME):(R)"
-
-      - name: Verify Hadoop Installation
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          "${{ env.HADOOP_HOME }}\\bin\\winutils.exe" chmod 777 "${{ env.HADOOP_HOME }}\\tmp\\hadoop-${env:USERNAME}"
-          dir "${{ env.HADOOP_HOME }}\\tmp"
-
-      - name: Check and Start Hadoop Services
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          echo "## Checking if Hadoop services are running"
-          $namenode = Get-Process -Name "java" -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "*hadoop*" -and $_.CommandLine -like "*namenode*" }
-
-          if (-not $namenode) {
-            Write-Output "Namenode is not running. Starting..."
-            Start-Process -NoNewWindow -FilePath "cmd.exe" -ArgumentList "/C start /B $env:HADOOP_HOME\sbin\start-dfs.cmd"
-          } else {
-            Write-Output "Namenode is already running."
-          }
-          Write-Output "Hadoop services status check complete."
 
       - name: Set up key (Windows)
         if: runner.os == 'Windows'

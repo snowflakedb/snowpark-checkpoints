@@ -6,7 +6,9 @@ import os
 
 from snowflake.snowpark import Session
 from snowflake.snowpark_checkpoints_collector.collection_common import (
+    BACKSLASH_TOKEN,
     DOT_PARQUET_EXTENSION,
+    SLASH_TOKEN,
 )
 
 
@@ -67,8 +69,10 @@ class SnowConnection:
         for file in parquet_files_collection:
             is_parquet_file = file.name.endswith(DOT_PARQUET_EXTENSION)
             if is_parquet_file:
+                # Snowflake handle paths with slash, no matters the OS.
+                normalize_file_path = file.path.replace(BACKSLASH_TOKEN, SLASH_TOKEN)
                 put_statement = PUT_PARQUET_FILES_IN_STAGE_STATEMENT_FORMAT.format(
-                    file.path, stage_directory_path
+                    normalize_file_path, stage_directory_path
                 )
                 self.session.sql(put_statement).collect()
 

@@ -73,21 +73,16 @@ def collect_dataframe_checkpoint(
         Exception: It is not possible to collect an empty DataFrame without schema.
 
     """
-    try:
-        if _is_empty_dataframe_without_schema(df):
-            raise Exception(
-                "It is not possible to collect an empty DataFrame without schema"
-            )
+    if _is_empty_dataframe_without_schema(df):
+        raise Exception(
+            "It is not possible to collect an empty DataFrame without schema"
+        )
 
-        if mode == CheckpointMode.SCHEMA:
-            _collect_dataframe_checkpoint_mode_1(checkpoint_name, df, sample)
-        if mode == CheckpointMode.DATAFRAME:
-            snow_connection = SnowConnection()
-            _collect_dataframe_checkpoint_mode_2(checkpoint_name, df, snow_connection)
-
-    except Exception as err:
-        error_message = str(err)
-        raise Exception(error_message) from None
+    if mode == CheckpointMode.SCHEMA:
+        _collect_dataframe_checkpoint_mode_1(checkpoint_name, df, sample)
+    if mode == CheckpointMode.DATAFRAME:
+        snow_connection = SnowConnection()
+        _collect_dataframe_checkpoint_mode_2(checkpoint_name, df, snow_connection)
 
 
 def _collect_dataframe_checkpoint_mode_1(checkpoint_name, df, sample) -> None:
@@ -242,16 +237,11 @@ def _get_output_directory_path() -> str:
 
 
 def _upload_to_snowflake(checkpoint_name, snow_connection) -> None:
-    try:
-        output_directory_path = _get_output_directory_path()
-        checkpoint_file_name = CHECKPOINT_PARQUET_OUTPUT_FILE_NAME_FORMAT.format(
-            checkpoint_name
-        )
-        output_path = os.path.join(output_directory_path, checkpoint_file_name)
-        snow_connection.upload_to_snowflake(
-            checkpoint_name, checkpoint_file_name, output_path
-        )
-
-    except Exception as err:
-        error_message = str(err)
-        raise Exception(error_message) from None
+    output_directory_path = _get_output_directory_path()
+    checkpoint_file_name = CHECKPOINT_PARQUET_OUTPUT_FILE_NAME_FORMAT.format(
+        checkpoint_name
+    )
+    output_path = os.path.join(output_directory_path, checkpoint_file_name)
+    snow_connection.upload_to_snowflake(
+        checkpoint_name, checkpoint_file_name, output_path
+    )

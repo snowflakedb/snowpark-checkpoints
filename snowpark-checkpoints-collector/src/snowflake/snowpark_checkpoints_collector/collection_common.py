@@ -82,6 +82,8 @@ CHECKPOINT_PARQUET_OUTPUT_FILE_NAME_FORMAT = "{}.parquet"
 # MISC KEYS
 DECIMAL_TOKEN_KEY = "decimal_point"
 DOT_PARQUET_EXTENSION = ".parquet"
+BACKSLASH_TOKEN = "\\"
+SLASH_TOKEN = "/"
 
 
 def get_decimal_token() -> str:

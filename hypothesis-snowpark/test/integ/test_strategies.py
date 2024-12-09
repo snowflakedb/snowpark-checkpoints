@@ -90,7 +90,7 @@ def test_dataframe_strategy_nullable_column(
     assert len(null_counts) == 1
 
     actual_null_count = null_counts[0]["NULL_COUNT"]
-    expected_min_null_count = number_of_rows / 2
+    expected_min_null_count = number_of_rows // 2
     expected_max_null_count = number_of_rows
     assert (
         expected_min_null_count <= actual_null_count <= expected_max_null_count

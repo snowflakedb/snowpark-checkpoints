@@ -10,25 +10,13 @@ from snowflake.snowpark import Session
 
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from snowflake.snowpark_checkpoints.spark_migration import (
-    check_with_spark,
     auto_migrate,
 )
 from snowflake.snowpark_checkpoints.spark_migration import SamplingStrategy
 from pyspark.sql import DataFrame as SparkDataFrame
 from pyspark.sql import SparkSession
 
-
-connection_parameters = {
-    "account": "snowhouse",  # Snowflake Account
-    "user": "jkew",  # Snowflake User Name
-    "authenticator": "externalbrowser",  # for external authentication
-    "database": "TEMP",
-    "schema": "public",
-    "warehouse": "SNOWADHOC",
-    "role": "ENGINEER",
-}
-
-session = Session.builder.configs(connection_parameters).getOrCreate()
+session = Session.builder.getOrCreate()
 spark_session = SparkSession.builder.getOrCreate()
 job_context = SnowparkJobContext(session, spark_session, "demo-e2e-auto-migrate", False)
 

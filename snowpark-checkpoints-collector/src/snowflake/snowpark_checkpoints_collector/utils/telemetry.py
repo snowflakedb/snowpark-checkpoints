@@ -1,1 +1,1 @@
-/Users/dchaconbarrantes/Documents/git-repos/CHECKPOINTS/snowpark-checkpoints/snowpark-checkpoints/src/snowflake/snowpark_checkpoints/utils/telemetry.py
+../../../../../snowpark-checkpoints/src/snowflake/snowpark_checkpoints/utils/telemetry.py

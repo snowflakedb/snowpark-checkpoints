@@ -12,6 +12,7 @@ import types
 from typing import Callable, Optional, TypeVar
 
 from pyspark.sql import DataFrame as SparkDataFrame
+from tqdm import tqdm
 
 from snowflake.snowpark import DataFrame as SnowparkDataFrame
 from snowflake.snowpark_checkpoints.errors import SparkMigrationError
@@ -38,7 +39,7 @@ def _string_to_function(source):
 
 
 def _translate_spark_to_snowpark(job_context, spark_source: str):
-    print("Spark Source:\n", spark_source)
+    job_context.autopbar.set_description("Calling cortex functions")
     llm_query = job_context.snowpark_session.sql(
         "SELECT SNOWFLAKE.CORTEX.COMPLETE('snowflake-arctic', "
         + "'Convert the following spark function code to snowpark,"
@@ -49,7 +50,7 @@ def _translate_spark_to_snowpark(job_context, spark_source: str):
     llm_answer.columns = ["ans"]
     llm_answer = llm_answer["ans"].iloc[0]
     llm_answer = llm_answer.split("```")[1].replace("python\n", "")
-    print("Snowpark Source:\n", llm_answer)
+    job_context.autopbar.update(10)
     return llm_answer
 
 
@@ -61,6 +62,8 @@ def _spark_fn_to_snowpark_fn(job_context, spark_fn: callable):
     snowpark_fn_source = re.sub(
         r"def [^(]*\(", f"def {original_fn_name}(", snowpark_fn_source
     )
+    job_context.autopbar.update(10)
+    job_context.autopbar.set_description("Initial translation complete")
     return (_string_to_function(snowpark_fn_source), snowpark_fn_source)
 
 
@@ -137,13 +140,17 @@ def auto_migrate(
         patch_key = _patch_cache_key(spark_fn)
         if patch_key in patch_cache:
             return patch_cache[patch_key]
+        job_context.autopbar = tqdm(total=100)
+        job_context.autopbar.set_description("Translating spark -> snowpark")
         (snowpark_fn, snowpark_fn_source) = _spark_fn_to_snowpark_fn(
             job_context, spark_fn
         )
         patches.append((spark_fn, snowpark_fn_source))
         patch_cache[patch_key] = snowpark_fn
+        job_context.autopbar.update(30)
 
         def wrapper(*args, **kwargs):
+            job_context.autopbar.set_description("Validating code with sampled data")
             sampler = SamplingAdapter(
                 job_context,
                 sample_n=100,
@@ -159,6 +166,9 @@ def auto_migrate(
             # spark_test_results = spark_fn(*pyspark_sample_args, **kwargs)
 
             # Run the original function in snowpark
+            job_context.autopbar.update(50)
+            job_context.autopbar.set_description("Spark Code Converted")
+            job_context.autopbar.close()
             return snowpark_fn(*args, **kwargs)
 
         return wrapper

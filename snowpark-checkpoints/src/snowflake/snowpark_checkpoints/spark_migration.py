@@ -6,6 +6,7 @@ import ast
 import atexit
 import inspect
 import re
+import shutil
 import types
 
 from typing import Callable, Optional, TypeVar
@@ -24,6 +25,7 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
 fn = TypeVar("F", bound=Callable)
 
 patches = []
+patch_cache = {}
 
 
 def _string_to_function(source):
@@ -54,7 +56,11 @@ def _translate_spark_to_snowpark(job_context, spark_source: str):
 def _spark_fn_to_snowpark_fn(job_context, spark_fn: callable):
     spark_fn_source = inspect.getsource(spark_fn)
     spark_fn_source = re.sub(r"@auto_migrate[^)]*\)\n", "", spark_fn_source)
+    original_fn_name = spark_fn.__name__
     snowpark_fn_source = _translate_spark_to_snowpark(job_context, spark_fn_source)
+    snowpark_fn_source = re.sub(
+        r"def [^(]*\(", f"def {original_fn_name}(", snowpark_fn_source
+    )
     return (_string_to_function(snowpark_fn_source), snowpark_fn_source)
 
 
@@ -68,6 +74,7 @@ def _update_snowpark_code():
         line_start = source_lines[1]
         line_count = len(source_lines[0])
         line_end = line_start + line_count
+
         patch_queue[line_start] = {
             "start": line_start,
             "end": line_end,
@@ -76,6 +83,8 @@ def _update_snowpark_code():
 
     filename = inspect.getfile(spark_fn)
     out_filename = f"{filename}.migrated"
+    save_filename = f"{filename}.original"
+    shutil.copyfile(filename, save_filename)
     source_lines = inspect.getsourcelines(spark_fn)
 
     with open(filename) as file:
@@ -101,10 +110,18 @@ def _update_snowpark_code():
                     line_start = 0
                     out_file.write(line)
                 line_num = line_num + 1
+    shutil.copyfile(out_filename, filename)
     return None
 
 
 atexit.register(_update_snowpark_code)
+
+
+def _patch_cache_key(spark_fn):
+    source_lines = inspect.getsourcelines(spark_fn)
+    filename = inspect.getfile(spark_fn)
+    function_start = source_lines[1]
+    return f"{filename}:{function_start}"
 
 
 def auto_migrate(
@@ -117,10 +134,14 @@ def auto_migrate(
     """
 
     def auto_migrate_decorator(spark_fn):
+        patch_key = _patch_cache_key(spark_fn)
+        if patch_key in patch_cache:
+            return patch_cache[patch_key]
         (snowpark_fn, snowpark_fn_source) = _spark_fn_to_snowpark_fn(
             job_context, spark_fn
         )
         patches.append((spark_fn, snowpark_fn_source))
+        patch_cache[patch_key] = snowpark_fn
 
         def wrapper(*args, **kwargs):
             sampler = SamplingAdapter(

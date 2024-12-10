@@ -35,4 +35,8 @@ def my_spark_fn_2(df):
 # Calls to the spark function switch out the spark
 # code with generated snowpark code
 result = my_spark_fn_2(df)
+
+# Does the cache work with a second call?
+result2 = my_spark_fn_2(df)
+
 print("Done!\n", result.to_pandas())

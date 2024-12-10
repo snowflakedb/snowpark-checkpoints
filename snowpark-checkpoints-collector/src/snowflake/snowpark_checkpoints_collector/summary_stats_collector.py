@@ -10,19 +10,23 @@ from pyspark.sql import DataFrame as SparkDataFrame
 
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT,
+    CHECKPOINT_PARQUET_OUTPUT_FILE_NAME_FORMAT,
     COLUMNS_KEY,
     DATAFRAME_CUSTOM_DATA_KEY,
     DATAFRAME_PANDERA_SCHEMA_KEY,
     DECIMAL_COLUMN_TYPE,
-    EMPTY_DATAFRAME_WITHOUT_SCHEMA_ERROR_MESSAGE,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
     STRING_COLUMN_TYPE,
+    CheckpointMode,
 )
 from snowflake.snowpark_checkpoints_collector.column_collection import (
     ColumnCollectorManager,
 )
 from snowflake.snowpark_checkpoints_collector.column_pandera_checks import (
     PanderaColumnChecksManager,
+)
+from snowflake.snowpark_checkpoints_collector.snow_connection_model import (
+    SnowConnection,
 )
 from snowflake.snowpark_checkpoints_collector.utils.telemetry import TelemetryManager
 
@@ -54,7 +58,7 @@ def collect_output_schema(df: SparkDataFrame) -> None:
 
 
 def collect_dataframe_checkpoint(
-    df: SparkDataFrame, checkpoint_name, sample=1.0
+    df: SparkDataFrame, checkpoint_name, sample=1.0, mode=CheckpointMode.SCHEMA
 ) -> None:
     """Collect a DataFrame checkpoint.
 
@@ -63,96 +67,112 @@ def collect_dataframe_checkpoint(
         checkpoint_name (str): The name of the checkpoint.
         sample (float, optional): Fraction of DataFrame to sample for schema inference.
             Defaults to 1.0.
+        mode (CheckpointMode): The mode to execution the collection.
+            Defaults to CheckpointMode.Schema
 
     Raises:
-        Exception: It is not possible to collect a empty DataFrame without schema.
+        Exception: It is not possible to collect an empty DataFrame without schema.
+        Exception: Invalid mode value.
 
     """
-    telemetry = TelemetryManager()
     try:
         if _is_empty_dataframe_without_schema(df):
-            raise Exception(EMPTY_DATAFRAME_WITHOUT_SCHEMA_ERROR_MESSAGE)
-
-        source_df = df.sample(sample)
-        if source_df.isEmpty():
-            source_df = df
-        pandas_df = source_df.toPandas()
-
-        is_empty_df_with_string_column = _is_empty_dataframe_with_string_column(df)
-        pandera_infer_schema = (
-            pa.infer_schema(pandas_df) if not is_empty_df_with_string_column else {}
-        )
-
-        column_type_dict = _get_spark_column_types(df)
-        column_name_collection = df.schema.names
-        columns_to_remove_from_pandera_schema_collection = []
-        column_custom_data_collection = []
-        column_collector_manager = ColumnCollectorManager()
-        column_pandera_checks_manager = PanderaColumnChecksManager()
-
-        for column in column_name_collection:
-            column_type = column_type_dict[column]
-            is_empty_column = len(pandas_df[column]) == 0
-            is_column_to_remove_from_pandera_schema = (
-                _is_column_to_remove_from_pandera_schema(column_type)
+            raise Exception(
+                "It is not possible to collect an empty DataFrame without schema"
             )
 
-            if is_column_to_remove_from_pandera_schema:
-                columns_to_remove_from_pandera_schema_collection.append(column)
+        if mode == CheckpointMode.SCHEMA:
+            _collect_dataframe_checkpoint_mode_schema(checkpoint_name, df, sample)
 
-            if is_empty_column:
-                custom_data = column_collector_manager.collect_empty_custom_data(
-                    column, column_type, pandas_df[column]
-                )
-                column_custom_data_collection.append(custom_data)
-                continue
-
-            pandera_column = pandera_infer_schema.columns[column]
-            pandera_column.checks = []
-            column_pandera_checks_manager.add_checks_column(
-                column, column_type, pandas_df, pandera_column
+        elif mode == CheckpointMode.DATAFRAME:
+            snow_connection = SnowConnection()
+            _collect_dataframe_checkpoint_mode_dataframe(
+                checkpoint_name, df, snow_connection
             )
 
-            custom_data = column_collector_manager.collect_column(
-                column, column_type, pandas_df[column]
-            )
-            column_custom_data_collection.append(custom_data)
-
-        pandera_infer_schema_dict = _get_pandera_infer_schema_as_dict(
-            pandera_infer_schema,
-            is_empty_df_with_string_column,
-            columns_to_remove_from_pandera_schema_collection,
-        )
-        dataframe_custom_column_data = {COLUMNS_KEY: column_custom_data_collection}
-
-        dataframe_schema_contract = {
-            DATAFRAME_PANDERA_SCHEMA_KEY: pandera_infer_schema_dict,
-            DATAFRAME_CUSTOM_DATA_KEY: dataframe_custom_column_data,
-        }
-
-        dataframe_schema_contract_json = json.dumps(dataframe_schema_contract)
-
-        telemetry_data = {
-            "schema_types": [schema_type for schema_type in column_type_dict],
-        }
-
-        telemetry.log_info("DataFrame_Collection", telemetry_data)
-
-        _generate_json_checkpoint_file(checkpoint_name, dataframe_schema_contract_json)
+        else:
+            raise Exception("Invalid mode value.")
 
     except Exception as err:
+        telemetry = TelemetryManager()
+
         telemetry_data = {
             "error": "PysparkDFCollectorError",
             "type": "collect_dataframe_checkpoint",
         }
-        if "column_type_dict" in locals():
-            if column_type_dict is not None:
-                telemetry_data.update(
-                    {"schema_types": [schema_type for schema_type in column_type_dict]}
-                )
+        column_type_dict = _get_spark_column_types(df)
+        if column_type_dict is not None:
+            telemetry_data.update(
+                {"schema_types": [schema_type for schema_type in column_type_dict]}
+            )
         telemetry.log_error("DataFrame_Collection_Error", telemetry_data)
         error_message = str(err)
-        raise Exception(error_message) from None
+        raise Exception(error_message) from BaseException
+
+
+def _collect_dataframe_checkpoint_mode_schema(checkpoint_name, df, sample) -> None:
+    telemetry = TelemetryManager()
+    source_df = df.sample(sample)
+    if source_df.isEmpty():
+        source_df = df
+    pandas_df = source_df.toPandas()
+    is_empty_df_with_string_column = _is_empty_dataframe_with_string_column(df)
+    pandera_infer_schema = (
+        pa.infer_schema(pandas_df) if not is_empty_df_with_string_column else {}
+    )
+
+    column_type_dict = _get_spark_column_types(df)
+    column_name_collection = df.schema.names
+    columns_to_remove_from_pandera_schema_collection = []
+    column_custom_data_collection = []
+    column_collector_manager = ColumnCollectorManager()
+    column_pandera_checks_manager = PanderaColumnChecksManager()
+
+    for column in column_name_collection:
+        column_type = column_type_dict[column]
+        is_empty_column = len(pandas_df[column]) == 0
+        is_column_to_remove_from_pandera_schema = (
+            _is_column_to_remove_from_pandera_schema(column_type)
+        )
+
+        if is_column_to_remove_from_pandera_schema:
+            columns_to_remove_from_pandera_schema_collection.append(column)
+
+        if is_empty_column:
+            custom_data = column_collector_manager.collect_empty_custom_data(
+                column, column_type, pandas_df[column]
+            )
+            column_custom_data_collection.append(custom_data)
+            continue
+
+        pandera_column = pandera_infer_schema.columns[column]
+        pandera_column.checks = []
+        column_pandera_checks_manager.add_checks_column(
+            column, column_type, pandas_df, pandera_column
+        )
+
+        custom_data = column_collector_manager.collect_column(
+            column, column_type, pandas_df[column]
+        )
+        column_custom_data_collection.append(custom_data)
+
+    pandera_infer_schema_dict = _get_pandera_infer_schema_as_dict(
+        pandera_infer_schema,
+        is_empty_df_with_string_column,
+        columns_to_remove_from_pandera_schema_collection,
+    )
+
+    dataframe_custom_column_data = {COLUMNS_KEY: column_custom_data_collection}
+    dataframe_schema_contract = {
+        DATAFRAME_PANDERA_SCHEMA_KEY: pandera_infer_schema_dict,
+        DATAFRAME_CUSTOM_DATA_KEY: dataframe_custom_column_data,
+    }
+    dataframe_schema_contract_json = json.dumps(dataframe_schema_contract)
+    _generate_json_checkpoint_file(checkpoint_name, dataframe_schema_contract_json)
+    telemetry_data = {
+        "schema_types": [schema_type for schema_type in column_type_dict],
+    }
+    telemetry.log_info("DataFrame_Collection", telemetry_data)
 
 
 def _get_spark_column_types(df: SparkDataFrame) -> dict[str, any]:
@@ -213,5 +233,49 @@ def _generate_json_checkpoint_file(checkpoint_name, dataframe_schema_contract) -
         checkpoint_name
     )
     checkpoint_file_path = os.path.join(output_directory_path, checkpoint_file_name)
-    f = open(checkpoint_file_path, "w")
-    f.write(dataframe_schema_contract)
+    with open(checkpoint_file_path, "w") as f:
+        f.write(dataframe_schema_contract)
+
+
+def _collect_dataframe_checkpoint_mode_dataframe(
+    checkpoint_name, df: SparkDataFrame, snow_connection
+) -> None:
+    _generate_parquet_checkpoint_file(checkpoint_name, df)
+    _upload_to_snowflake(checkpoint_name, snow_connection)
+
+
+def _generate_parquet_checkpoint_file(checkpoint_name, df: SparkDataFrame) -> None:
+    output_directory_path = _get_output_directory_path()
+
+    checkpoint_file_name = CHECKPOINT_PARQUET_OUTPUT_FILE_NAME_FORMAT.format(
+        checkpoint_name
+    )
+    checkpoint_file_path = os.path.join(output_directory_path, checkpoint_file_name)
+    df.write.parquet(checkpoint_file_path, mode="overwrite")
+
+
+def _get_output_directory_path() -> str:
+    current_directory_path = os.getcwd()
+    output_directory_path = os.path.join(
+        current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME
+    )
+    if not os.path.exists(output_directory_path):
+        os.makedirs(output_directory_path)
+
+    return output_directory_path
+
+
+def _upload_to_snowflake(checkpoint_name, snow_connection) -> None:
+    try:
+        output_directory_path = _get_output_directory_path()
+        checkpoint_file_name = CHECKPOINT_PARQUET_OUTPUT_FILE_NAME_FORMAT.format(
+            checkpoint_name
+        )
+        output_path = os.path.join(output_directory_path, checkpoint_file_name)
+        snow_connection.upload_to_snowflake(
+            checkpoint_name, checkpoint_file_name, output_path
+        )
+
+    except Exception as err:
+        error_message = str(err)
+        raise Exception(error_message) from BaseException

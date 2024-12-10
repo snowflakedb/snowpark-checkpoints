@@ -71,21 +71,33 @@ def collect_dataframe_checkpoint(
 
     Raises:
         Exception: It is not possible to collect an empty DataFrame without schema.
+        Exception: Invalid mode value.
 
     """
-    if _is_empty_dataframe_without_schema(df):
-        raise Exception(
-            "It is not possible to collect an empty DataFrame without schema"
-        )
+    try:
+        if _is_empty_dataframe_without_schema(df):
+            raise Exception(
+                "It is not possible to collect an empty DataFrame without schema"
+            )
 
-    if mode == CheckpointMode.SCHEMA:
-        _collect_dataframe_checkpoint_mode_1(checkpoint_name, df, sample)
-    if mode == CheckpointMode.DATAFRAME:
-        snow_connection = SnowConnection()
-        _collect_dataframe_checkpoint_mode_2(checkpoint_name, df, snow_connection)
+        if mode == CheckpointMode.SCHEMA:
+            _collect_dataframe_checkpoint_mode_schema(checkpoint_name, df, sample)
+
+        elif mode == CheckpointMode.DATAFRAME:
+            snow_connection = SnowConnection()
+            _collect_dataframe_checkpoint_mode_dataframe(
+                checkpoint_name, df, snow_connection
+            )
+
+        else:
+            raise Exception("Invalid mode value.")
+
+    except Exception as err:
+        error_message = str(err)
+        raise Exception(error_message) from BaseException
 
 
-def _collect_dataframe_checkpoint_mode_1(checkpoint_name, df, sample) -> None:
+def _collect_dataframe_checkpoint_mode_schema(checkpoint_name, df, sample) -> None:
     source_df = df.sample(sample)
     if source_df.isEmpty():
         source_df = df
@@ -208,7 +220,7 @@ def _generate_json_checkpoint_file(checkpoint_name, dataframe_schema_contract) -
         f.write(dataframe_schema_contract)
 
 
-def _collect_dataframe_checkpoint_mode_2(
+def _collect_dataframe_checkpoint_mode_dataframe(
     checkpoint_name, df: SparkDataFrame, snow_connection
 ) -> None:
     _generate_parquet_checkpoint_file(checkpoint_name, df)
@@ -237,11 +249,16 @@ def _get_output_directory_path() -> str:
 
 
 def _upload_to_snowflake(checkpoint_name, snow_connection) -> None:
-    output_directory_path = _get_output_directory_path()
-    checkpoint_file_name = CHECKPOINT_PARQUET_OUTPUT_FILE_NAME_FORMAT.format(
-        checkpoint_name
-    )
-    output_path = os.path.join(output_directory_path, checkpoint_file_name)
-    snow_connection.upload_to_snowflake(
-        checkpoint_name, checkpoint_file_name, output_path
-    )
+    try:
+        output_directory_path = _get_output_directory_path()
+        checkpoint_file_name = CHECKPOINT_PARQUET_OUTPUT_FILE_NAME_FORMAT.format(
+            checkpoint_name
+        )
+        output_path = os.path.join(output_directory_path, checkpoint_file_name)
+        snow_connection.upload_to_snowflake(
+            checkpoint_name, checkpoint_file_name, output_path
+        )
+
+    except Exception as err:
+        error_message = str(err)
+        raise Exception(error_message) from BaseException

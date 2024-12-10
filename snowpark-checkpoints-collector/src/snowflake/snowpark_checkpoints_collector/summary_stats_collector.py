@@ -4,6 +4,8 @@
 import json
 import os
 
+from typing import Optional
+
 import pandera as pa
 
 from pyspark.sql import DataFrame as SparkDataFrame
@@ -28,7 +30,10 @@ from snowflake.snowpark_checkpoints_collector.column_pandera_checks import (
 from snowflake.snowpark_checkpoints_collector.snow_connection_model import (
     SnowConnection,
 )
-
+from snowflake.snowpark_checkpoints_collector.utils.extra_config import (
+    get_checkpoint_sample,
+    is_checkpoint_enabled,
+)
 
 def collect_input_schema(df: SparkDataFrame) -> None:
     """Collect and return the input schema of a Spark DataFrame.
@@ -57,7 +62,7 @@ def collect_output_schema(df: SparkDataFrame) -> None:
 
 
 def collect_dataframe_checkpoint(
-    df: SparkDataFrame, checkpoint_name, sample=1.0, mode=CheckpointMode.SCHEMA
+    df: SparkDataFrame, checkpoint_name, sample:Optional[float] = None, mode=CheckpointMode.SCHEMA
 ) -> None:
     """Collect a DataFrame checkpoint.
 
@@ -72,25 +77,30 @@ def collect_dataframe_checkpoint(
     Raises:
         Exception: It is not possible to collect an empty DataFrame without schema.
         Exception: Invalid mode value.
+        Exception: It is not possible to collect an empty DataFrame without schema.
 
     """
     try:
-        if _is_empty_dataframe_without_schema(df):
-            raise Exception(
-                "It is not possible to collect an empty DataFrame without schema"
-            )
+        if is_checkpoint_enabled(checkpoint_name):
 
-        if mode == CheckpointMode.SCHEMA:
-            _collect_dataframe_checkpoint_mode_schema(checkpoint_name, df, sample)
+            _sample = get_checkpoint_sample(checkpoint_name, sample)
 
-        elif mode == CheckpointMode.DATAFRAME:
-            snow_connection = SnowConnection()
-            _collect_dataframe_checkpoint_mode_dataframe(
-                checkpoint_name, df, snow_connection
-            )
+            if _is_empty_dataframe_without_schema(df):
+                raise Exception(
+                    "It is not possible to collect an empty DataFrame without schema"
+                )
 
-        else:
-            raise Exception("Invalid mode value.")
+            if mode == CheckpointMode.SCHEMA:
+                _collect_dataframe_checkpoint_mode_schema(checkpoint_name, df, sample)
+
+            elif mode == CheckpointMode.DATAFRAME:
+                snow_connection = SnowConnection()
+                _collect_dataframe_checkpoint_mode_dataframe(
+                    checkpoint_name, df, snow_connection
+                )
+
+            else:
+                raise Exception("Invalid mode value.")
 
     except Exception as err:
         error_message = str(err)

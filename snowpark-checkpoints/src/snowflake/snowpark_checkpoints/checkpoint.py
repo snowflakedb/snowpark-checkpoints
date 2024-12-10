@@ -3,7 +3,7 @@
 #
 
 # Wrapper around pandera which logs to snowflake
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import numpy as np
 
@@ -23,6 +23,7 @@ from snowflake.snowpark_checkpoints.utils.constant import (
     DATA_FRAME_IS_REQUIRED_ERROR,
     SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR,
 )
+from snowflake.snowpark_checkpoints.utils.extra_config import is_checkpoint_enabled
 from snowflake.snowpark_checkpoints.utils.utils_checks import (
     _add_custom_checks,
     _generate_schema,
@@ -96,7 +97,7 @@ def check_dataframe_schema(
     sample_frac: Optional[float] = 0.1,
     sample_n: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
-) -> tuple[bool, PandasDataFrame]:
+) -> Union[tuple[bool, PandasDataFrame] | None]:
     """Validate a DataFrame against a given Pandera schema using sampling techniques.
 
     Args:
@@ -121,7 +122,8 @@ def check_dataframe_schema(
         SchemaValidationError: If the DataFrame fails schema validation.
 
     Returns:
-        tuple[bool, PanderaDataFrame]: A tuple containing the validity flag and the Pandera DataFrame.
+        Union[tuple[bool, PandasDataFrame]|None]: A tuple containing the validity flag and the Pandas DataFrame.
+        If the validation for that checkpoint is disabled it returns None.
 
     """
     if df is None:
@@ -129,6 +131,32 @@ def check_dataframe_schema(
 
     if pandera_schema is None:
         raise ValueError("Schema is required")
+
+    if is_checkpoint_enabled(checkpoint_name):
+        return _check_dataframe_schema(
+            df,
+            pandera_schema,
+            job_context,
+            checkpoint_name,
+            custom_checks,
+            skip_checks,
+            sample_frac,
+            sample_n,
+            sampling_strategy,
+        )
+
+
+def _check_dataframe_schema(
+    df: SnowparkDataFrame,
+    pandera_schema: DataFrameSchema,
+    job_context: SnowparkJobContext = None,
+    checkpoint_name: str = None,
+    custom_checks: Optional[dict[str, list[Check]]] = None,
+    skip_checks: Optional[dict[Any, Any]] = None,
+    sample_frac: Optional[float] = 0.1,
+    sample_n: Optional[int] = None,
+    sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
+) -> tuple[bool, PandasDataFrame]:
 
     _skip_checks_on_schema(pandera_schema, skip_checks)
 

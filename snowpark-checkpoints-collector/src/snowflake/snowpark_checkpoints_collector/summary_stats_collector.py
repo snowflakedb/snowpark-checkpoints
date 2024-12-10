@@ -136,7 +136,7 @@ def collect_dataframe_checkpoint(
             "schema_types": [schema_type for schema_type in column_type_dict],
         }
 
-        telemetry.log_info("DataFrameCollector", telemetry_data)
+        telemetry.log_info("DataFrame_Collection", telemetry_data)
 
         _generate_json_checkpoint_file(checkpoint_name, dataframe_schema_contract_json)
 
@@ -150,7 +150,7 @@ def collect_dataframe_checkpoint(
                 telemetry_data.update(
                     {"schema_types": [schema_type for schema_type in column_type_dict]}
                 )
-        telemetry.log_error("DataFrameCollector_Error", {"error": telemetry_data})
+        telemetry.log_error("DataFrame_Collection_Error", telemetry_data)
         error_message = str(err)
         raise Exception(error_message) from None
 

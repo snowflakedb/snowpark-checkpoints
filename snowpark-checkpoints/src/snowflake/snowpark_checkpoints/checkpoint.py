@@ -147,7 +147,7 @@ def check_dataframe_schema(
         )
 
         telemetry.log_info(
-            "DataFrameValidator",
+            "DataFrame_Validator",
             {
                 "type": "check_dataframe_schema",
                 "status": result,
@@ -163,7 +163,7 @@ def check_dataframe_schema(
             "type": "check_dataframe_schema",
             "error": "SnowparkOutputSchemaValidationError",
         }
-        telemetry.log_error("DataFrameValidator_Error", telemetry_data)
+        telemetry.log_error("DataFrame_Validator_Error", telemetry_data)
         raise SchemaValidationError(
             SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR,
             job_context,
@@ -239,7 +239,7 @@ def check_output_schema(
                 )
 
                 telemetry.log_info(
-                    "DataFrameValidator",
+                    "DataFrame_Validator",
                     {
                         "type": "check_output_schema",
                         "status": result,
@@ -254,7 +254,7 @@ def check_output_schema(
                     "type": "check_output_schema",
                     "error": "SnowparkOutputSchemaValidationError",
                 }
-                telemetry.log_error("DataFrameValidator_Error", telemetry_data)
+                telemetry.log_error("DataFrame_Validator_Error", telemetry_data)
                 raise SchemaValidationError(
                     SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR,
                     job_context,
@@ -341,7 +341,7 @@ def check_input_schema(
                             job_context.mark_pass(checkpoint_name)
 
                         telemetry.log_info(
-                            "DataFrameValidator",
+                            "DataFrame_Validator",
                             {
                                 "type": "check_input_schema",
                                 "status": result,
@@ -354,7 +354,7 @@ def check_input_schema(
                             "type": "check_input_schema",
                             "error": "SnowparkOutputSchemaValidationError",
                         }
-                        telemetry.log_error("DataFrameValidator_Error", telemetry_data)
+                        telemetry.log_error("DataFrame_Validator_Error", telemetry_data)
                         raise SchemaValidationError(
                             SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR,
                             job_context,

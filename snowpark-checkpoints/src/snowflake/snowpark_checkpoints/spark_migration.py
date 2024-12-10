@@ -112,20 +112,20 @@ def assert_return(snowpark_results, spark_results, job_context, checkpoint_name)
 
         if not cmp.empty:
             telemetry.log_info(
-                "DataframeValidator", {"type": "assert_return", "status": False}
+                "DataFrame_Validator", {"type": "assert_return", "status": False}
             )
             raise SparkMigrationError(
                 "DataFrame difference:\n", job_context, checkpoint_name, cmp
             )
         else:
             telemetry.log_info(
-                "DataframeValidator", {"type": "assert_return", "status": True}
+                "DataFrame_Validator", {"type": "assert_return", "status": True}
             )
         job_context.mark_pass(checkpoint_name)
     else:
         if snowpark_results != spark_results:
             telemetry.log_info(
-                "DataframeValidator", {"type": "assert_return", "status": False}
+                "DataFrame_Validator", {"type": "assert_return", "status": False}
             )
             raise SparkMigrationError(
                 "Return value difference:\n",
@@ -135,7 +135,7 @@ def assert_return(snowpark_results, spark_results, job_context, checkpoint_name)
             )
         else:
             telemetry.log_info(
-                "DataframeValidator", {"type": "assert_return", "status": True}
+                "DataFrame_Validator", {"type": "assert_return", "status": True}
             )
 
         job_context.mark_pass(checkpoint_name)

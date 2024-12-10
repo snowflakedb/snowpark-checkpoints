@@ -3,8 +3,9 @@
 #
 
 import json
+import os
 from numpy import int8
-import pandas as pd
+from pandas import DataFrame as PandasDataFrame
 from pandera import DataFrameSchema, Column, Check
 from snowflake.snowpark import Session
 from snowflake.snowpark import DataFrame as SnowparkDataFrame
@@ -17,14 +18,16 @@ from snowflake.snowpark_checkpoints.checkpoint import (
 )
 from snowflake.snowpark import Session
 from snowflake.snowpark.functions import lit
+
 from snowflake.snowpark_checkpoints.utils.constant import (
-    CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT,
+    CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME,
     SKIP_ALL,
+    SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_FORMAT_NAME,
 )
 
 
 def test_input():
-    df = pd.DataFrame(
+    df = PandasDataFrame(
         {
             "COLUMN1": [1, 4, 0, 10, 9],
             "COLUMN2": [-1.3, -1.4, -2.9, -10.1, -20.4],
@@ -53,7 +56,7 @@ def test_input():
 
 
 def test_output():
-    df = pd.DataFrame(
+    df = PandasDataFrame(
         {
             "COLUMN1": [1, 4, 0, 10, 9],
             "COLUMN2": [-1.3, -1.4, -2.9, -10.1, -20.4],
@@ -82,7 +85,7 @@ def test_output():
 
 
 def test_df_check():
-    df = pd.DataFrame(
+    df = PandasDataFrame(
         {
             "COLUMN1": [1, 4, 0, 10, 9],
             "COLUMN2": [-1.3, -1.4, -2.9, -10.1, -20.4],
@@ -91,47 +94,93 @@ def test_df_check():
 
     schema = DataFrameSchema(
         {
-            "COLUMN1": Column(int8, Check(lambda x: 0 <= x <= 10, element_wise=True)),
+            "COLUMN1": Column(int8, Check(lambda x: 0 <= x <= 10)),
             "COLUMN2": Column(float, Check(lambda x: x < -1.2)),
         }
     )
 
     session = Session.builder.getOrCreate()
     sp_df = session.create_dataframe(df)
+
     check_dataframe_schema(sp_df, schema)
 
 
 def test_df_check_from_file():
-    df = pd.DataFrame(
+    df = PandasDataFrame(
         {
             "COLUMN1": [1, 4, 0, 10, 9],
             "COLUMN2": [-1.3, -1.4, -2.9, -10.1, -20.4],
+            "COLUMN3": [True, False, True, False, True],
         }
     )
 
     schema = DataFrameSchema(
         {
-            "COLUMN1": Column(int8, Check(lambda x: 0 <= x <= 10, element_wise=True)),
-            "COLUMN2": Column(float, Check(lambda x: x < -1.2)),
+            "COLUMN1": Column(int8, Check.between(0, 10)),
+            "COLUMN2": Column(float, Check.between(-20.5, -1.0)),
         }
     )
 
-    schema_data = {"pandera_schema": json.loads(schema.to_json()), "custom_data": {}}
+    schema_data = {
+        "pandera_schema": json.loads(schema.to_json()),
+        "custom_data": {
+            "columns": [
+                {
+                    "name": "COLUMN1",
+                    "type": "integer",
+                    "rows_count": 5,
+                    "rows_not_null_count": 5,
+                    "rows_null_count": 0,
+                    "min": 0,
+                    "max": 10,
+                    "mean": 4.8,
+                    "decimal_precision": 0,
+                    "margin_error": 4.0693979898752,
+                },
+                {
+                    "name": "COLUMN2",
+                    "type": "float",
+                    "rows_count": 5,
+                    "rows_not_null_count": 5,
+                    "rows_null_count": 0,
+                    "min": -20.4,
+                    "max": -1.3,
+                    "mean": -7.22,
+                    "decimal_precision": 1,
+                    "margin_error": 7.3428604780426,
+                },
+            ],
+        },
+    }
 
-    checkpoint_name = "testdf"
-    output_file = open(
-        CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(checkpoint_name), "w"
+    checkpoint_name = "test_checkpoint"
+
+    current_directory_path = os.getcwd()
+
+    output_directory_path = os.path.join(
+        current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_FORMAT_NAME
     )
-    output_file.write(json.dumps(schema_data))
-    output_file.close()
+
+    if not os.path.exists(output_directory_path):
+        os.makedirs(output_directory_path)
+
+    checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME.format(
+        checkpoint_name
+    )
+
+    checkpoint_file_path = os.path.join(output_directory_path, checkpoint_file_name)
+
+    with open(checkpoint_file_path, "w") as output_file:
+        output_file.write(json.dumps(schema_data))
 
     session = Session.builder.getOrCreate()
     sp_df = session.create_dataframe(df)
+
     check_dataframe_schema_file(sp_df, checkpoint_name)
 
 
 def test_df_check_custom_check():
-    df = pd.DataFrame(
+    df = PandasDataFrame(
         {
             "COLUMN1": [1, 4, 0, 10, 9],
             "COLUMN2": [-1.3, -1.4, -2.9, -10.1, -20.4],
@@ -147,7 +196,7 @@ def test_df_check_custom_check():
 
     session = Session.builder.getOrCreate()
     sp_df = session.create_dataframe(df)
-    result = check_dataframe_schema(
+    check_dataframe_schema(
         sp_df,
         schema,
         custom_checks={
@@ -164,7 +213,7 @@ def test_df_check_custom_check():
 
 
 def test_df_check_skip_check():
-    df = pd.DataFrame(
+    df = PandasDataFrame(
         {
             "COLUMN1": [1, 4, 0, 10, 9],
             "COLUMN2": [-1.3, -1.4, -2.9, -10.1, -20.4],

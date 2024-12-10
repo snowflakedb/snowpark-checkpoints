@@ -26,6 +26,7 @@ classifiers = [
 dependencies = [
   "snowflake-snowpark-python[localtest]",
   "hypothesis",
+  "pandera[io]==0.20.4",
 ]
 description = "Hypothesis extension for generating Snowpark DataFrames"
 keywords = [

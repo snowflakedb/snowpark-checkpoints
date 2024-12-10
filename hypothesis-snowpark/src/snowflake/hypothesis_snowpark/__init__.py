@@ -1,5 +1,9 @@
-from snowflake.hypothesis_snowpark.strategies import snowpark_dataframe
+#
+# Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
+#
+
+from snowflake.hypothesis_snowpark.strategies import dataframe_strategy
 
 __all__ = [
-    "snowpark_dataframe",
+    "dataframe_strategy",
 ]

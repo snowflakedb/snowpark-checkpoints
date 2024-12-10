@@ -3,15 +3,22 @@
 #
 
 import json
+import os
 
 from typing import Any, Optional
 
 import pandera as pa
 
-from pandera import DataFrameSchema
+from pandera import Check, DataFrameSchema
 
 from snowflake.snowpark_checkpoints.utils.constant import (
-    CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT,
+    CHECKPOINT_JSON_OUTPUT_DIRECTORY_ERROR,
+    CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME,
+    CHECKPOINT_JSON_OUTPUT_FILE_NOT_FOUND_ERROR,
+    COLUMN_NAME_NOT_DEFINED_FORMAT_ERROR,
+    COLUMN_NOT_FOUND_FORMAT_ERROR,
+    COLUMNS_KEY,
+    COLUMNS_NOT_FOUND_JSON_FORMAT_ERROR,
     DATAFRAME_CUSTOM_DATA_KEY,
     DATAFRAME_PANDERA_SCHEMA_KEY,
     DECIMAL_PRECISION_KEY,
@@ -19,9 +26,12 @@ from snowflake.snowpark_checkpoints.utils.constant import (
     MARGIN_ERROR_KEY,
     MEAN_KEY,
     NAME_KEY,
+    PANDERA_NOT_FOUND_JSON_FORMAT_ERROR,
     SKIP_ALL,
+    SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_FORMAT_NAME,
     TRUE_COUNT_KEY,
     TYPE_KEY,
+    TYPE_NOT_DEFINED_FORMAT_ERROR,
 )
 from snowflake.snowpark_checkpoints.utils.supported_types import (
     BooleanTypes,
@@ -29,7 +39,7 @@ from snowflake.snowpark_checkpoints.utils.supported_types import (
 )
 
 
-def add_numeric_checks(
+def _add_numeric_checks(
     schema: DataFrameSchema, col: str, additional_check: dict[str, Any]
 ):
     """Add numeric checks to a specified column in a DataFrameSchema.
@@ -53,7 +63,9 @@ def add_numeric_checks(
         series_mean = series.mean()
         return mean - std <= series_mean <= mean + std
 
-    schema.columns[col].checks.append(pa.Check(check_mean, element_wise=False))
+    schema.columns[col].checks.append(
+        pa.Check(check_mean, element_wise=False, name="mean")
+    )
 
     if DECIMAL_PRECISION_KEY in additional_check:
         schema.columns[col].checks.append(
@@ -61,12 +73,13 @@ def add_numeric_checks(
                 lambda series: series.apply(
                     lambda x: len(str(x).split(".")[1]) if "." in str(x) else 0
                 )
-                <= additional_check[DECIMAL_PRECISION_KEY]
+                <= additional_check[DECIMAL_PRECISION_KEY],
+                name="decimal_precision",
             )
         )
 
 
-def add_boolean_checks(
+def _add_boolean_checks(
     schema: DataFrameSchema, col: str, additional_check: dict[str, Any]
 ):
     """Add boolean checks to a specified column in a DataFrameSchema.
@@ -103,7 +116,7 @@ def add_boolean_checks(
     )
 
 
-def generate_schema(checkpoint_name: str) -> DataFrameSchema:
+def _generate_schema(checkpoint_name: str) -> DataFrameSchema:
     """Generate a DataFrameSchema based on the checkpoint name provided.
 
     This function reads a JSON file corresponding to the checkpoint name,
@@ -120,41 +133,66 @@ def generate_schema(checkpoint_name: str) -> DataFrameSchema:
                          constraints of the DataFrame.
 
     """
-    with open(
-        CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(checkpoint_name)
-    ) as additional_checks_schema:
+    current_directory_path = os.getcwd()
 
-        additional_checks_schema_json = json.load(additional_checks_schema)
+    output_directory_path = os.path.join(
+        current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_FORMAT_NAME
+    )
 
-        if DATAFRAME_PANDERA_SCHEMA_KEY in additional_checks_schema_json:
-            schema_dict = additional_checks_schema_json.get(
-                DATAFRAME_PANDERA_SCHEMA_KEY
-            )
-            schema_dict_str = json.dumps(schema_dict)
-            schema = pa.DataFrameSchema.from_json(schema_dict_str)
-        else:
-            schema = pa.DataFrameSchema()
+    if not os.path.exists(output_directory_path):
+        raise ValueError(CHECKPOINT_JSON_OUTPUT_DIRECTORY_ERROR)
 
-        if DATAFRAME_CUSTOM_DATA_KEY in additional_checks_schema_json:
-            for additional_check in additional_checks_schema_json.get(
-                DATAFRAME_CUSTOM_DATA_KEY, []
-            ):
-                type = additional_check.get(TYPE_KEY, None)
-                name = additional_check.get(NAME_KEY, None)
+    checkpoint_file_path = os.path.join(
+        output_directory_path,
+        CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME.format(checkpoint_name),
+    )
 
-                if name is None or type is None:
-                    continue
+    if not os.path.exists(checkpoint_file_path):
+        raise ValueError(
+            CHECKPOINT_JSON_OUTPUT_FILE_NOT_FOUND_ERROR.format(checkpoint_name)
+        )
 
-                if type in NumericTypes:
-                    add_numeric_checks(schema, name, additional_check)
+    with open(checkpoint_file_path) as custom_data_schema:
+        custom_data_schema_json = json.load(custom_data_schema)
 
-                elif type in BooleanTypes:
-                    add_boolean_checks(schema, name, additional_check)
+    if DATAFRAME_PANDERA_SCHEMA_KEY not in custom_data_schema_json:
+        raise ValueError(PANDERA_NOT_FOUND_JSON_FORMAT_ERROR.format(checkpoint_name))
 
+    schema_dict = custom_data_schema_json.get(DATAFRAME_PANDERA_SCHEMA_KEY)
+    schema_dict_str = json.dumps(schema_dict)
+    schema = pa.DataFrameSchema.from_json(schema_dict_str)
+
+    if DATAFRAME_CUSTOM_DATA_KEY not in custom_data_schema_json:
         return schema
 
+    custom_data = custom_data_schema_json.get(DATAFRAME_CUSTOM_DATA_KEY)
 
-def skip_checks_on_schema(
+    if COLUMNS_KEY not in custom_data:
+        raise ValueError(COLUMNS_NOT_FOUND_JSON_FORMAT_ERROR.format(checkpoint_name))
+
+    for additional_check in custom_data.get(COLUMNS_KEY):
+
+        type = additional_check.get(TYPE_KEY, None)
+        name = additional_check.get(NAME_KEY, None)
+
+        if name is None:
+            raise ValueError(
+                COLUMN_NAME_NOT_DEFINED_FORMAT_ERROR.format(checkpoint_name)
+            )
+
+        if type is None:
+            raise ValueError(TYPE_NOT_DEFINED_FORMAT_ERROR.format(name))
+
+        if type in NumericTypes:
+            _add_numeric_checks(schema, name, additional_check)
+
+        elif type in BooleanTypes:
+            _add_boolean_checks(schema, name, additional_check)
+
+    return schema
+
+
+def _skip_checks_on_schema(
     pandera_schema: DataFrameSchema,
     skip_checks: Optional[dict[str, list[str]]] = None,
 ):
@@ -171,17 +209,46 @@ def skip_checks_on_schema(
         None
 
     """
-    if skip_checks:
-        for col, checks_to_skip in skip_checks.items():
+    if not skip_checks:
+        return
 
-            if col in pandera_schema.columns:
+    for col, checks_to_skip in skip_checks.items():
 
-                if SKIP_ALL in checks_to_skip:
-                    pandera_schema.columns[col].checks = {}
+        if col in pandera_schema.columns:
 
-                else:
-                    pandera_schema.columns[col].checks = [
-                        check
-                        for check in pandera_schema.columns[col].checks
-                        if check.name not in checks_to_skip
-                    ]
+            if SKIP_ALL in checks_to_skip:
+                pandera_schema.columns[col].checks = {}
+
+            else:
+                pandera_schema.columns[col].checks = [
+                    check
+                    for check in pandera_schema.columns[col].checks
+                    if check.name not in checks_to_skip
+                ]
+
+
+def _add_custom_checks(
+    schema: DataFrameSchema,
+    custom_checks: Optional[dict[str, list[Check]]] = None,
+):
+    """Add custom checks to a Pandera DataFrameSchema.
+
+    Args:
+        schema (DataFrameSchema): The Pandera DataFrameSchema object to modify.
+        custom_checks (Optional[dict[str, list[Check]]]): A dictionary where keys are column names
+                                                and values are lists of checks to add for
+                                                those columns.
+
+    Returns:
+        None
+
+    """
+    if not custom_checks:
+        return
+
+    for col, checks in custom_checks.items():
+        if col in schema.columns:
+            col_schema = schema.columns[col]
+            col_schema.checks.extend(checks)
+        else:
+            raise ValueError(COLUMN_NOT_FOUND_FORMAT_ERROR.format(col))

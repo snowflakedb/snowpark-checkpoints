@@ -1,0 +1,91 @@
+#
+# Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
+#
+
+from typing import Optional
+
+from pydantic import BaseModel
+
+
+class Checkpoint(BaseModel):
+
+    """Checkpoint model.
+
+    Args:
+        BaseModel (pydantic.BaseModel): pydantic BaseModel
+
+    """
+
+    name: str
+    mode: int = 1
+    function: Optional[str] = None
+    df: Optional[str] = None
+    sample: Optional[float] = None
+    file: Optional[str] = None
+    location: int = -1
+    enabled: bool = True
+
+
+class Pipeline(BaseModel):
+
+    """Pipeline model.
+
+    Args:
+        BaseModel (pydantic.BaseModel): pydantic BaseModel
+
+    """
+
+    entryPoint: str
+    checkpoints: list[Checkpoint]
+
+
+class Checkpoints(BaseModel):
+
+    """Checkpoints model.
+
+    Args:
+        BaseModel (pydantic.BaseModel): pydantic BaseModel
+
+    Returns:
+        Checkpoints: An instance of the Checkpoints class
+
+    """
+
+    type: str
+    pipelines: list[Pipeline]
+
+    # this dictionary holds the unpacked checkpoints from the different pipelines.
+    _checkpoints = {}
+
+    def _build_checkpoints_dict(self):
+        for pipeline in self.pipelines:
+            for checkpoint in pipeline.checkpoints:
+                self._checkpoints[checkpoint.name] = checkpoint
+
+    def get_check_point(self, checkpoint_name: str) -> Checkpoint:
+        """Get a checkpoint by its name.
+
+        Args:
+            checkpoint_name (str): pydantic BaseModel
+
+        Returns:
+            Checkpoint: The checkpoint object if found, otherwise a new Checkpoint object
+            with the name set to the checkpoint_id.
+
+        """
+        if not self._checkpoints:
+            self._build_checkpoints_dict()
+
+        checkpoint = self._checkpoints.get(checkpoint_name)
+        if checkpoint is None:
+            checkpoint = Checkpoint(name=checkpoint_name)
+        return checkpoint
+
+    def add_checkpoint(self, checkpoint: Checkpoint) -> None:
+        """Add a checkpoint to the checkpoints' dictionary.
+
+        Args:.
+            checkpoint (Checkpoint): The checkpoint object to add
+
+        """
+        self._checkpoints[checkpoint.name] = checkpoint

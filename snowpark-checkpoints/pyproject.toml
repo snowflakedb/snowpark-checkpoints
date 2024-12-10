@@ -67,7 +67,7 @@ pattern = '^__version__ = "(?P<version>.*)"'
 source = "regex"
 
 [tool.setuptools.packages.find]
-include = ["snowflake.snowpark_checkpoints", "snowflake.snowpark_checkpoints.utils"]
+include = ["snowflake.snowpark_checkpoints"]
 where = ["src/"]
 
 [tool.hatch.build]

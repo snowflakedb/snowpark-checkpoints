@@ -8,7 +8,6 @@ import pandera as pa
 
 from pyspark.sql import DataFrame as SparkDataFrame
 
-from snowflake.snowpark_checkpoints.utils import TelemetryManager
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT,
     COLUMNS_KEY,
@@ -25,6 +24,7 @@ from snowflake.snowpark_checkpoints_collector.column_collection import (
 from snowflake.snowpark_checkpoints_collector.column_pandera_checks import (
     PanderaColumnChecksManager,
 )
+from snowflake.snowpark_checkpoints_collector.utils.telemetry import TelemetryManager
 
 
 def collect_input_schema(df: SparkDataFrame) -> None:
@@ -142,7 +142,7 @@ def collect_dataframe_checkpoint(
 
     except Exception as err:
         telemetry_data = {
-            "error": "Pyspark DataFrame Collector Error",
+            "error": "PysparkDFCollectorError",
             "type": "collect_dataframe_checkpoint",
         }
         if "column_type_dict" in locals():

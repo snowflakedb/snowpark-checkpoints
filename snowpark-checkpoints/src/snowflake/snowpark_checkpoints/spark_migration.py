@@ -13,7 +13,7 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
     SamplingAdapter,
     SamplingStrategy,
 )
-from snowflake.snowpark_checkpoints.utils import TelemetryManager
+from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryManager
 
 
 fn = TypeVar("F", bound=Callable)

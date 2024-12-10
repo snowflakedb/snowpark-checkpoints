@@ -13,12 +13,10 @@ It can be used to initialize the package and import necessary modules.
 # from .module_name import ClassName, function_name
 
 from .utils_checks import generate_schema
-from .telemetry import TelemetryManager
 
 __all__ = [
     # List of modules, classes, or functions to be imported when using 'from package import *'
     # 'ClassName',
     # 'function_name',
     "generate_schema",
-    "TelemetryManager",
 ]

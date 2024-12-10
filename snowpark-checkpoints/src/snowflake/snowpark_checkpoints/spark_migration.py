@@ -2,6 +2,12 @@
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
 
+import ast
+import atexit
+import inspect
+import re
+import types
+
 from typing import Callable, Optional, TypeVar
 
 from pyspark.sql import DataFrame as SparkDataFrame
@@ -16,6 +22,127 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
 
 
 fn = TypeVar("F", bound=Callable)
+
+patches = []
+
+
+def _string_to_function(source):
+    tree = ast.parse(source)
+    if len(tree.body) != 1 or not isinstance(tree.body[0], ast.FunctionDef):
+        raise ValueError("provided code fragment is not a single function")
+    co = compile(tree, "custom.py", "exec")
+    # first constant should be the code object for the function
+    return types.FunctionType(co.co_consts[0], {})
+
+
+def _translate_spark_to_snowpark(job_context, spark_source: str):
+    print("Spark Source:\n", spark_source)
+    llm_query = job_context.snowpark_session.sql(
+        "SELECT SNOWFLAKE.CORTEX.COMPLETE('snowflake-arctic', "
+        + "'Convert the following spark function code to snowpark,"
+        + "keeping the function name and signature the same as the "
+        + f"original```{spark_source}```');"
+    )
+    llm_answer = llm_query.to_pandas()
+    llm_answer.columns = ["ans"]
+    llm_answer = llm_answer["ans"].iloc[0]
+    llm_answer = llm_answer.split("```")[1].replace("python\n", "")
+    print("Snowpark Source:\n", llm_answer)
+    return llm_answer
+
+
+def _spark_fn_to_snowpark_fn(job_context, spark_fn: callable):
+    spark_fn_source = inspect.getsource(spark_fn)
+    spark_fn_source = re.sub(r"@auto_migrate[^)]*\)\n", "", spark_fn_source)
+    snowpark_fn_source = _translate_spark_to_snowpark(job_context, spark_fn_source)
+    return (_string_to_function(snowpark_fn_source), snowpark_fn_source)
+
+
+def _update_snowpark_code():
+    if len(patches) <= 0:
+        return
+    patch_queue = {}
+    for patch in patches:
+        (spark_fn, snowpark_fn_source) = patch
+        source_lines = inspect.getsourcelines(spark_fn)
+        line_start = source_lines[1]
+        line_count = len(source_lines[0])
+        line_end = line_start + line_count
+        patch_queue[line_start] = {
+            "start": line_start,
+            "end": line_end,
+            "source": snowpark_fn_source,
+        }
+
+    filename = inspect.getfile(spark_fn)
+    out_filename = f"{filename}.migrated"
+    source_lines = inspect.getsourcelines(spark_fn)
+
+    with open(filename) as file:
+        with open(out_filename, "w") as out_file:
+            line_num = 1
+            line_end = 0
+            line_start = 0
+            for line in file:
+                if line_num in patch_queue:
+                    out_file.write("######################################\n")
+                    out_file.write("## Auto-migrated Snowpark code: \n")
+                    out_file.write(patch_queue[line_num]["source"])
+                    out_file.write("######################################\n")
+                    out_file.write("## Original Spark code: \n")
+                    line_end = patch_queue[line_num]["end"]
+                    line_start = patch_queue[line_num]["start"]
+                elif line_num > line_start and line_num < line_end:
+                    out_file.write("## ")
+                    out_file.write(line)
+                    pass
+                else:
+                    line_end = 0
+                    line_start = 0
+                    out_file.write(line)
+                line_num = line_num + 1
+    return None
+
+
+atexit.register(_update_snowpark_code)
+
+
+def auto_migrate(
+    job_context: SnowparkJobContext,
+) -> Callable[[fn], fn]:
+    """Auto migrate a function written for spark.
+
+    Will take the wrapped function and
+    generate a snowpark equivalent.
+    """
+
+    def auto_migrate_decorator(spark_fn):
+        (snowpark_fn, snowpark_fn_source) = _spark_fn_to_snowpark_fn(
+            job_context, spark_fn
+        )
+        patches.append((spark_fn, snowpark_fn_source))
+
+        def wrapper(*args, **kwargs):
+            sampler = SamplingAdapter(
+                job_context,
+                sample_n=100,
+                sampling_strategy=SamplingStrategy.RANDOM_SAMPLE,
+            )
+            sampler.process_args(args)
+            # snowpark_sample_args = sampler.get_sampled_snowpark_args()
+            # pyspark_sample_args = sampler.get_sampled_spark_args()
+
+            # Run the sampled data in snowpark
+            # snowpark_test_results = snowpark_fn(*snowpark_sample_args, **kwargs)
+            # snowpark_test_results = snowpark_sample_args[0]
+            # spark_test_results = spark_fn(*pyspark_sample_args, **kwargs)
+
+            # Run the original function in snowpark
+            return snowpark_fn(*args, **kwargs)
+
+        return wrapper
+
+    return auto_migrate_decorator
 
 
 def check_with_spark(

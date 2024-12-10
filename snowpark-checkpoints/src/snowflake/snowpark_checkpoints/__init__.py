@@ -12,6 +12,7 @@ from snowflake.snowpark_checkpoints.checkpoint import (
 )
 
 __all__ = [
+    "auto_migrate",
     "check_with_spark",
     "check_dataframe_schema",
     "check_dataframe_schema_file",

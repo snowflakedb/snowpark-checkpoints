@@ -5,14 +5,7 @@
 import json
 from unittest.mock import MagicMock
 from snowflake.snowpark_checkpoints_collector.collection_common import (
-    BOOLEAN_COLUMN_TYPE,
-    DATE_COLUMN_TYPE,
-    DAYTIMEINTERVAL_COLUMN_TYPE,
-    DECIMAL_COLUMN_TYPE,
     INTEGER_COLUMN_TYPE,
-    STRING_COLUMN_TYPE,
-    TIMESTAMP_COLUMN_TYPE,
-    TIMESTAMP_NTZ_COLUMN_TYPE,
 )
 
 from snowflake.snowpark_checkpoints_collector.column_collection.model import (

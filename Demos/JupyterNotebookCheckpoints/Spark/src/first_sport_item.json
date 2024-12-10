@@ -14,28 +14,14 @@
             "title": null,
             "unique": false
         },
-        "discount": {
-            "checks": {
-                "greater_than_or_equal_to": 113.0,
-                "less_than_or_equal_to": 114.0
-            },
-            "coerce": false,
-            "description": null,
-            "dtype": "float64",
-            "nullable": false,
-            "regex": false,
-            "required": true,
-            "title": null,
-            "unique": false
-        },
         "id": {
             "checks": {
-                "greater_than_or_equal_to": 1.0,
-                "less_than_or_equal_to": 999984.0
+                "greater_than_or_equal_to": 12756.0,
+                "less_than_or_equal_to": 12756.0
             },
             "coerce": false,
             "description": null,
-            "dtype": "int32",
+            "dtype": "int64",
             "nullable": false,
             "regex": false,
             "required": true,
@@ -55,8 +41,8 @@
         },
         "price": {
             "checks": {
-                "greater_than_or_equal_to": 5.03,
-                "less_than_or_equal_to": 1499.97
+                "greater_than_or_equal_to": 5.0,
+                "less_than_or_equal_to": 5.0
             },
             "coerce": false,
             "description": null,
@@ -69,26 +55,12 @@
         },
         "quantity": {
             "checks": {
-                "greater_than_or_equal_to": 1.0,
-                "less_than_or_equal_to": 100.0
+                "greater_than_or_equal_to": 79.0,
+                "less_than_or_equal_to": 79.0
             },
             "coerce": false,
             "description": null,
-            "dtype": "int32",
-            "nullable": false,
-            "regex": false,
-            "required": true,
-            "title": null,
-            "unique": false
-        },
-        "two_items_discount": {
-            "checks": {
-                "greater_than_or_equal_to": 155.49,
-                "less_than_or_equal_to": 155.49
-            },
-            "coerce": false,
-            "description": null,
-            "dtype": "float64",
+            "dtype": "int64",
             "nullable": false,
             "regex": false,
             "required": true,

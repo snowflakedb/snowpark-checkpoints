@@ -31,7 +31,6 @@ from snowflake.snowpark_checkpoints_collector import collect_dataframe_checkpoin
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     DATAFRAME_PANDERA_SCHEMA_KEY,
     CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT,
-    EMPTY_DATAFRAME_WITHOUT_SCHEMA_ERROR_MESSAGE,
     DATAFRAME_CUSTOM_DATA_KEY,
     COLUMNS_KEY,
     COLUMN_TYPE_KEY,
@@ -51,9 +50,7 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
 )
 
-TEST_PANDERA_COLLECT_SCHEMA_EXPECTED_DIRECTORY_NAME = (
-    "test_pandera_collect_schema_expected"
-)
+TEST_COLLECT_DF_MODE_1_EXPECTED_DIRECTORY_NAME = "test_collect_df_mode_1_expected"
 
 
 @pytest.fixture
@@ -356,7 +353,9 @@ def test_collect_empty_dataframe_without_schema(spark_session):
 
     with pytest.raises(Exception) as ex_info:
         collect_dataframe_checkpoint(pyspark_df, checkpoint_name="")
-    assert EMPTY_DATAFRAME_WITHOUT_SCHEMA_ERROR_MESSAGE == str(ex_info.value)
+    assert "It is not possible to collect an empty DataFrame without schema" == str(
+        ex_info.value
+    )
 
 
 def validate_checkpoint_file_output(checkpoint_file_name) -> None:
@@ -390,7 +389,7 @@ def get_expected_schema_contract(checkpoint_file_name) -> str:
     current_directory_path = os.path.dirname(__file__)
     expected_file_path = os.path.join(
         current_directory_path,
-        TEST_PANDERA_COLLECT_SCHEMA_EXPECTED_DIRECTORY_NAME,
+        TEST_COLLECT_DF_MODE_1_EXPECTED_DIRECTORY_NAME,
         checkpoint_file_name,
     )
 

@@ -309,6 +309,7 @@ class TelemetryManagerTest(unittest.TestCase):
             ),
         ):
             from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryManager
+            from os import path
 
             telemetry = TelemetryManager()
 
@@ -318,7 +319,8 @@ class TelemetryManagerTest(unittest.TestCase):
             # Assert
             TelemetryManager._validate_folder_space.assert_called_once_with(batch[0])
             open.assert_called_once_with(
-                f"{telemetry.folder_path}/{mock_date}-telemetry_test.json", "w"
+                path.join(telemetry.folder_path, f"{mock_date}-telemetry_test.json"),
+                "w",
             )
             open().write.assert_called_once_with(f"{event}")
 

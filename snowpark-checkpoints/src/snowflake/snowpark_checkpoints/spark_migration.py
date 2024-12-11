@@ -32,21 +32,35 @@ patch_cache = {}
 def _string_to_function(source):
     tree = ast.parse(source)
     if len(tree.body) != 1 or not isinstance(tree.body[0], ast.FunctionDef):
+        print("Source:\n", source)
         raise ValueError("provided code fragment is not a single function")
-    co = compile(tree, "custom.py", "exec")
+    co = compile(tree, "custom.py", "exec", dont_inherit=False)
     # first constant should be the code object for the function
     return types.FunctionType(co.co_consts[0], {})
 
 
 def _translate_spark_to_snowpark(job_context, spark_source: str):
     job_context.autopbar.set_description("Calling cortex functions")
-    llm_query = job_context.snowpark_session.sql(
-        "SELECT SNOWFLAKE.CORTEX.COMPLETE('snowflake-arctic', "
-        + "'Convert the following spark function code to snowpark,"
+
+    # escape single quotes
+    spark_fn_source = re.sub(r"'", "''", spark_source)
+
+    query_text = (
+        "SELECT SNOWFLAKE.CORTEX.COMPLETE('mistral-large2', "
+        + "'Convert the following spark function to a single snowpark function, "
         + "keeping the function name and signature the same as the "
-        + f"original```{spark_source}```');"
+        + "original but excluding any import statements inside or outside of the function.\n"
+        + f"```{spark_fn_source}```');"
     )
-    llm_answer = llm_query.to_pandas()
+    llm_query = job_context.snowpark_session.sql(query_text)
+    llm_answer = None
+    try:
+        llm_answer = llm_query.to_pandas()
+    except Exception as e:
+        print("Unable to translate:\n", spark_fn_source)
+        print("Query: ", query_text)
+        print("Exception:\n ", e)
+        raise e
     llm_answer.columns = ["ans"]
     llm_answer = llm_answer["ans"].iloc[0]
     llm_answer = llm_answer.split("```")[1].replace("python\n", "")
@@ -57,6 +71,7 @@ def _translate_spark_to_snowpark(job_context, spark_source: str):
 def _spark_fn_to_snowpark_fn(job_context, spark_fn: callable):
     spark_fn_source = inspect.getsource(spark_fn)
     spark_fn_source = re.sub(r"@auto_migrate[^)]*\)\n", "", spark_fn_source)
+
     original_fn_name = spark_fn.__name__
     snowpark_fn_source = _translate_spark_to_snowpark(job_context, spark_fn_source)
     snowpark_fn_source = re.sub(
@@ -145,8 +160,7 @@ def auto_migrate(
         (snowpark_fn, snowpark_fn_source) = _spark_fn_to_snowpark_fn(
             job_context, spark_fn
         )
-        patches.append((spark_fn, snowpark_fn_source))
-        patch_cache[patch_key] = snowpark_fn
+
         job_context.autopbar.update(30)
 
         def wrapper(*args, **kwargs):
@@ -157,17 +171,24 @@ def auto_migrate(
                 sampling_strategy=SamplingStrategy.RANDOM_SAMPLE,
             )
             sampler.process_args(args)
-            # snowpark_sample_args = sampler.get_sampled_snowpark_args()
+            snowpark_sample_args = sampler.get_sampled_snowpark_args()
             # pyspark_sample_args = sampler.get_sampled_spark_args()
 
             # Run the sampled data in snowpark
-            # snowpark_test_results = snowpark_fn(*snowpark_sample_args, **kwargs)
-            # snowpark_test_results = snowpark_sample_args[0]
+            try:
+                # snowpark_test_results =
+                snowpark_fn(*snowpark_sample_args, **kwargs)
+            except Exception:
+                print("Error running: \n", snowpark_fn_source)
+                # breakpoint()
+                # raise e
             # spark_test_results = spark_fn(*pyspark_sample_args, **kwargs)
 
             # Run the original function in snowpark
             job_context.autopbar.update(50)
             job_context.autopbar.set_description("Spark Code Converted")
+            patches.append((spark_fn, snowpark_fn_source))
+            patch_cache[patch_key] = snowpark_fn
             job_context.autopbar.close()
             return snowpark_fn(*args, **kwargs)
 

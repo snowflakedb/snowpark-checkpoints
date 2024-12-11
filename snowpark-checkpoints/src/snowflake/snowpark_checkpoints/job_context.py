@@ -24,6 +24,7 @@ class SnowparkJobContext:
         self.job_name = job_name
         self.spark_session = spark_session or SparkSession.builder.getOrCreate()
         self.snowpark_session = snowpark_session
+        self.pbar = None
 
     def mark_fail(self, message, checkpoint_name, data):
         if self.log_results:

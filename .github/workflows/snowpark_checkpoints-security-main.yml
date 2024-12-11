@@ -6,8 +6,8 @@ on:
       - "main"
     paths:
       - "**"
-      - "!snowpark-checkpoints-collector/**"
-      - "!hypothesis-snowpark/**"
+      - "!snowpark-checkpoints-collectors/**"
+      - "!snowpark-checkpoints-hypothesis/**"
       - "!Demos/**"
 
 permissions:
@@ -57,7 +57,7 @@ jobs:
           python -m pip install -r requirements.txt
           pip list
         env:
-          DIR_NAME: "snowpark-checkpoints"
+          DIR_NAME: "snowpark-checkpoints-validators"
 
       - name: Run Snyk monitor
         run: |

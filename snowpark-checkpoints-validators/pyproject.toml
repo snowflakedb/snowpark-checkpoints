@@ -40,9 +40,9 @@ keywords = [
   'Snowpark',
 ]
 license = {file = "LICENSE"}
-name = "snowpark-checkpoints"
+name = "snowpark-checkpoints-validators"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = '>=3.9,<3.12'
 dynamic = ['version']
 
 [project.optional-dependencies]
@@ -62,7 +62,7 @@ development = [
 "Source code" = "https://github.com/snowflakedb/snowpark-checkpoints/"
 
 [tool.hatch.version]
-path = "../snowpark-checkpoints/src/snowflake/snowpark_checkpoints/__version__.py"
+path = "../snowpark-checkpoints-validators/src/snowflake/snowpark_checkpoints/__version__.py"
 pattern = '^__version__ = "(?P<version>.*)"'
 source = "regex"
 
@@ -72,17 +72,17 @@ where = ["src/"]
 
 [tool.hatch.build]
 dev-mode-dirs = ['src']
-directory = 'snowpark-checkpoints'
+directory = 'snowpark-checkpoints-validators'
 
 [tool.hatch.build.targets.wheel]
 directory = "dist"
-packages = ["snowpark-checkpoints/src/snowflake/snowpark_checkpoints"]
+packages = ["snowpark-checkpoints-validators/src/snowflake/snowpark_checkpoints"]
 
 [tool.hatch.build.targets.sdist]
 directory = "dist"
 exclude = ["/.github", "/.idea"]
 include = [
-  'snowpark-checkpoints/src',
+  'src/',
   'README.md',
   'LICENSE',
   'test/',

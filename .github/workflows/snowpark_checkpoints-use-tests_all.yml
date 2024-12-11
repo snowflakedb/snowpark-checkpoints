@@ -61,7 +61,7 @@ jobs:
           python -c "import sys; print(sys.version)"
           python ../.github/scripts/py_show_env.py
         shell: bash
-        working-directory: ./snowpark-checkpoints
+        working-directory: ./snowpark-checkpoints-validators
 
       - name: Set up Snowflake CLI
         uses: Snowflake-Labs/snowflake-cli-action@main
@@ -178,13 +178,13 @@ jobs:
           pip install hatch pyyaml frictionless requests
           pip list
         shell: bash
-        working-directory: ./snowpark-checkpoints
+        working-directory: ./snowpark-checkpoints-validators
 
       - name: Display Host Info
         run: |
           python ../.github/scripts/py_show_host.py
         shell: bash
-        working-directory: ./snowpark-checkpoints
+        working-directory: ./snowpark-checkpoints-validators
 
       - name: Run Tests
         run: |
@@ -197,4 +197,4 @@ jobs:
           PYTHON_VERSION: ${{ matrix.python-version }}
           PYTEST_ADDOPTS: --color=yes --tb=short -v
         shell: bash
-        working-directory: ./snowpark-checkpoints
+        working-directory: ./snowpark-checkpoints-validators

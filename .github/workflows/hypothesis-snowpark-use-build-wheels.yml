@@ -26,12 +26,12 @@ jobs:
 
       - name: Generate wheel and sdist
         run: hatch build
-        working-directory: ./hypothesis-snowpark
+        working-directory: ./snowpark-checkpoints-hypothesis
 
       - name: Show generated artifacts
         run: |
           echo "Current directory: $PWD" && ls -la dist
-        working-directory: ./hypothesis-snowpark
+        working-directory: ./snowpark-checkpoints-hypothesis
 
       - name: Verify build artifacts
         run: |
@@ -40,4 +40,4 @@ jobs:
           wheelvenv/bin/pip install dist/*.whl
           wheelvenv/bin/pip list
           wheelvenv/bin/pip show hypothesis-snowpark
-        working-directory: ./hypothesis-snowpark
+        working-directory: ./snowpark-checkpoints-hypothesis

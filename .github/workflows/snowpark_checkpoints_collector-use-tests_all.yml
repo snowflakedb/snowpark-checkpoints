@@ -59,7 +59,7 @@ jobs:
             python -c "import sys; print(sys.version)"
             python ../.github/scripts/py_show_env.py
         shell: bash
-        working-directory: ./hypothesis-snowpark
+        working-directory: ./snowpark-checkpoints-hypothesis
 
       - name: Set up Snowflake CLI
         uses: Snowflake-Labs/snowflake-cli-action@main
@@ -169,13 +169,13 @@ jobs:
           python -m pip install ".[development]"
           pip install hatch pyyaml frictionless requests
           pip list
-        working-directory: ./snowpark-checkpoints-collector
+        working-directory: ./snowpark-checkpoints-collectors
 
       - name: Display Host Info
         run: |
           python ../.github/scripts/py_show_host.py
         shell: bash
-        working-directory: ./snowpark-checkpoints-collector
+        working-directory: ./snowpark-checkpoints-collectors
 
       - name: Set PySpark (Windows)
         if: runner.os == 'Windows'
@@ -205,4 +205,4 @@ jobs:
           PYTHON_VERSION: ${{ matrix.python-version }}
           PYTEST_ADDOPTS: --color=yes --tb=short -v
         shell: bash
-        working-directory: ./snowpark-checkpoints-collector
+        working-directory: ./snowpark-checkpoints-collectors

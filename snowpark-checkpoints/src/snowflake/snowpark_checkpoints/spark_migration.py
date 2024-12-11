@@ -13,7 +13,7 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
     SamplingAdapter,
     SamplingStrategy,
 )
-from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryManager
+from snowflake.snowpark_checkpoints.utils.telemetry import get_telemetry_manager
 
 
 fn = TypeVar("F", bound=Callable)
@@ -92,7 +92,7 @@ def _assert_return(snowpark_results, spark_results, job_context, checkpoint_name
         TypeError: If the results cannot be compared.
 
     """
-    telemetry = TelemetryManager()
+    telemetry = get_telemetry_manager()
     if isinstance(snowpark_results, SnowparkDataFrame) and isinstance(
         spark_results, SparkDataFrame
     ):
@@ -111,20 +111,20 @@ def _assert_return(snowpark_results, spark_results, job_context, checkpoint_name
             cmp = spark_df.compare(snowpark_df, result_names=("Spark", "snowpark"))
 
         if not cmp.empty:
-            telemetry.log_info(
+            telemetry.sc_log_info(
                 "DataFrame_Validator", {"type": "assert_return", "status": False}
             )
             raise SparkMigrationError(
                 "DataFrame difference:\n", job_context, checkpoint_name, cmp
             )
         else:
-            telemetry.log_info(
+            telemetry.sc_log_info(
                 "DataFrame_Validator", {"type": "assert_return", "status": True}
             )
         job_context.mark_pass(checkpoint_name)
     else:
         if snowpark_results != spark_results:
-            telemetry.log_info(
+            telemetry.sc_log_info(
                 "DataFrame_Validator", {"type": "assert_return", "status": False}
             )
             raise SparkMigrationError(
@@ -134,7 +134,7 @@ def _assert_return(snowpark_results, spark_results, job_context, checkpoint_name
                 f"{snowpark_results} != {spark_results}",
             )
         else:
-            telemetry.log_info(
+            telemetry.sc_log_info(
                 "DataFrame_Validator", {"type": "assert_return", "status": True}
             )
 

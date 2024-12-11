@@ -28,7 +28,9 @@ from snowflake.snowpark_checkpoints_collector.column_pandera_checks import (
 from snowflake.snowpark_checkpoints_collector.snow_connection_model import (
     SnowConnection,
 )
-from snowflake.snowpark_checkpoints_collector.utils.telemetry import TelemetryManager
+from snowflake.snowpark_checkpoints_collector.utils.telemetry import (
+    get_telemetry_manager,
+)
 
 
 def collect_input_schema(df: SparkDataFrame) -> None:
@@ -94,7 +96,7 @@ def collect_dataframe_checkpoint(
             raise Exception("Invalid mode value.")
 
     except Exception as err:
-        telemetry = TelemetryManager()
+        telemetry = get_telemetry_manager()
 
         telemetry_data = {
             "error": "PysparkDFCollectorError",
@@ -105,13 +107,13 @@ def collect_dataframe_checkpoint(
             telemetry_data.update(
                 {"schema_types": [schema_type for schema_type in column_type_dict]}
             )
-        telemetry.log_error("DataFrame_Collection_Error", telemetry_data)
+        telemetry.sc_log_error("DataFrame_Collection_Error", telemetry_data)
         error_message = str(err)
         raise Exception(error_message) from BaseException
 
 
 def _collect_dataframe_checkpoint_mode_schema(checkpoint_name, df, sample) -> None:
-    telemetry = TelemetryManager()
+    telemetry = get_telemetry_manager()
     source_df = df.sample(sample)
     if source_df.isEmpty():
         source_df = df
@@ -172,7 +174,7 @@ def _collect_dataframe_checkpoint_mode_schema(checkpoint_name, df, sample) -> No
     telemetry_data = {
         "schema_types": [schema_type for schema_type in column_type_dict],
     }
-    telemetry.log_info("DataFrame_Collection", telemetry_data)
+    telemetry.sc_log_info("DataFrame_Collection", telemetry_data)
 
 
 def _get_spark_column_types(df: SparkDataFrame) -> dict[str, any]:

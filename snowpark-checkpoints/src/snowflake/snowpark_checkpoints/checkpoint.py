@@ -23,7 +23,7 @@ from snowflake.snowpark_checkpoints.utils.constant import (
     DATA_FRAME_IS_REQUIRED_ERROR,
     SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR,
 )
-from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryManager
+from snowflake.snowpark_checkpoints.utils.telemetry import get_telemetry_manager
 from snowflake.snowpark_checkpoints.utils.utils_checks import (
     _add_custom_checks,
     _generate_schema,
@@ -125,7 +125,7 @@ def check_dataframe_schema(
         tuple[bool, PanderaDataFrame]: A tuple containing the validity flag and the Pandera DataFrame.
 
     """
-    telemetry = TelemetryManager()
+    telemetry = get_telemetry_manager()
     if df is None:
         raise ValueError("DataFrame is required")
 
@@ -158,7 +158,7 @@ def check_dataframe_schema(
             pandera_schema_upper, sample_df, validity_flag=True
         )
 
-        telemetry.log_info(
+        telemetry.sc_log_info(
             "DataFrame_Validator",
             {
                 "type": "check_dataframe_schema",
@@ -175,7 +175,7 @@ def check_dataframe_schema(
             "type": "check_dataframe_schema",
             "error": "SnowparkOutputSchemaValidationError",
         }
-        telemetry.log_error("DataFrame_Validator_Error", telemetry_data)
+        telemetry.sc_log_error("DataFrame_Validator_Error", telemetry_data)
         raise SchemaValidationError(
             SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR,
             job_context,
@@ -219,7 +219,7 @@ def check_output_schema(
             function: The decorated function.
 
         """
-        telemetry = TelemetryManager()
+        telemetry = get_telemetry_manager()
         checkpoint_name = check_name
         if check_name is None:
             checkpoint_name = snowpark_fn.__name__
@@ -250,7 +250,7 @@ def check_output_schema(
                     pandera_schema, pandas_sample_args[0], validity_flag=True
                 )
 
-                telemetry.log_info(
+                telemetry.sc_log_info(
                     "DataFrame_Validator",
                     {
                         "type": "check_output_schema",
@@ -266,7 +266,7 @@ def check_output_schema(
                     "type": "check_output_schema",
                     "error": "SnowparkOutputSchemaValidationError",
                 }
-                telemetry.log_error("DataFrame_Validator_Error", telemetry_data)
+                telemetry.sc_log_error("DataFrame_Validator_Error", telemetry_data)
                 raise SchemaValidationError(
                     SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR,
                     job_context,
@@ -318,7 +318,7 @@ def check_input_schema(
             Callable: A wrapper function that performs schema validation before executing the original function.
 
         """
-        telemetry = TelemetryManager()
+        telemetry = get_telemetry_manager()
         checkpoint_name = check_name
         if check_name is None:
             checkpoint_name = snowpark_fn.__name__
@@ -352,7 +352,7 @@ def check_input_schema(
                         if job_context is not None:
                             job_context.mark_pass(checkpoint_name)
 
-                        telemetry.log_info(
+                        telemetry.sc_log_info(
                             "DataFrame_Validator",
                             {
                                 "type": "check_input_schema",
@@ -366,7 +366,9 @@ def check_input_schema(
                             "type": "check_input_schema",
                             "error": "SnowparkOutputSchemaValidationError",
                         }
-                        telemetry.log_error("DataFrame_Validator_Error", telemetry_data)
+                        telemetry.sc_log_error(
+                            "DataFrame_Validator_Error", telemetry_data
+                        )
                         raise SchemaValidationError(
                             SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR,
                             job_context,

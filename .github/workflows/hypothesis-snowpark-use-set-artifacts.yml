@@ -46,8 +46,8 @@ jobs:
           echo "Package Version updated:" && cat ${FILE_VERSION}
         env:
           NEW_VERSION: ${{ steps.gitversion.outputs.version }}
-          FILE_VERSION: ../hypothesis-snowpark/src/snowflake/hypothesis_snowpark/__version__.py
-        working-directory: ./hypothesis-snowpark
+          FILE_VERSION: ../snowpark-checkpoints-hypothesis/src/snowflake/hypothesis_snowpark/__version__.py
+        working-directory: ./snowpark-checkpoints-hypothesis
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -63,11 +63,11 @@ jobs:
         run: |
           hatch build
           echo "Current directory: $PWD" && ls -la dist
-        working-directory: ./hypothesis-snowpark
+        working-directory: ./snowpark-checkpoints-hypothesis
 
       - name: Upload PR Artifact
         if: ${{ github.event_name == 'pull_request' }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.artifact-name }}
-          path: ./hypothesis-snowpark/dist/*
+          path: ./snowpark-checkpoints-hypothesis/dist/*

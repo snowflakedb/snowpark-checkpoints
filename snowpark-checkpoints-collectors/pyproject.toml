@@ -24,11 +24,10 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Information Analysis",
 ]
 dependencies = [
-  "snowflake-snowpark-python[localtest]",
-  "hypothesis",
+  "pyspark",
   "pandera[io]==0.20.4",
 ]
-description = "Hypothesis extension for generating Snowpark DataFrames"
+description = "Snowpark column and table statistics collection"
 keywords = [
   'Snowflake',
   'analytics',
@@ -38,9 +37,9 @@ keywords = [
   'Snowpark',
 ]
 license = {file = "LICENSE"}
-name = "hypothesis-snowpark"
+name = "snowpark-checkpoints-collectors"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = '>=3.9,<3.12'
 dynamic = ['version']
 
 [project.optional-dependencies]
@@ -52,6 +51,8 @@ development = [
   "hatchling==1.25.0",
   "pre-commit>=4.0.1",
   "setuptools>=70.0.0",
+  "pyarrow>=18.0.0",
+  "deepdiff>=8.0.0",
 ]
 
 [project.urls]
@@ -59,47 +60,47 @@ development = [
 "Source code" = "https://github.com/snowflakedb/snowpark-checkpoints/"
 
 [tool.hatch.version]
-path = "../hypothesis-snowpark/src/snowflake/hypothesis_snowpark/__version__.py"
+path = "../snowpark-checkpoints-collectors/src/snowflake/snowpark_checkpoints_collector/__version__.py"
 pattern = '^__version__ = "(?P<version>.*)"'
 source = "regex"
 
 [tool.setuptools.packages.find]
-include = ["snowflake.hypothesis_snowpark"]
+include = ["snowflake.snowpark_checkpoints_collector"]
 where = ["src/"]
 
 [tool.hatch.build]
 dev-mode-dirs = ['src']
-directory = 'hypothesis_snowpark'
+directory = 'snowpark-checkpoints-collectors'
 
 [tool.hatch.build.targets.wheel]
 directory = "dist"
-packages = ["hypothesis_snowpark/src/snowflake"]
+packages = ["snowpark-checkpoints-collectors/src/snowflake/snowpark_checkpoints_collector"]
 
 [tool.hatch.build.targets.sdist]
 directory = "dist"
 exclude = ["/.github", "/.idea"]
 include = [
-  'hypothesis_snowpark/src',
+  'src/',
   'README.md',
   'LICENSE',
   'test/',
-  'docs/',
   'CHANGELOG.md',
   'pyproject.toml',
+  'snowpark-testdf-schema.json',
 ]
 
 [tool.hatch.envs.default]
 features = ["development"]
-python = "3.10"
+python = "3.9"
 
 [[tool.hatch.envs.test_all.matrix]]
-python = ['3.10', '3.11']
+python = ['3.9', '3.10', '3.11']
 
 [tool.hatch.envs.test_all]
 template = 'test'
 
 [tool.hatch.envs.test]
-python = '3.10'
+python = '3.9'
 
 [tool.coverage.paths]
 src = ["src"]
@@ -109,6 +110,7 @@ tests = ["test"]
 exclude_lines = [
   "if __name__ == .__main__.:",
 ]
+
 
 [tool.hatch.envs.linter.scripts]
 check = [

@@ -1,0 +1,120 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[project]
+name = "snowpark-checkpoints"
+description = "Snowflake Snowpark Checkpoints"
+dynamic = ['version']
+authors = [
+  {name = 'Snowflake, Inc.', email = 'snowflake-python-libraries-dl@snowflake.com'},
+]
+license = {text = 'Apache-2.0'}
+readme = "README.md"
+requires-python = '>=3.9,<3.13'
+homepage = "https://www.snowflake.com/"
+
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Environment :: Other Environment",
+  "Intended Audience :: Developers",
+  'Intended Audience :: Education',
+  "Intended Audience :: Information Technology",
+  "Intended Audience :: System Administrators",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: SQL",
+  "Topic :: Database",
+  "Topic :: Software Development",
+  "Topic :: Software Development :: Libraries",
+  "Topic :: Software Development :: Libraries :: Application Frameworks",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+]
+
+keywords = [
+  'Snowflake',
+  'Snowpark',
+  'analytics',
+  'cloud',
+  'database',
+  'data',
+  'data-warehouse',
+  'data-analysis',
+  'data-science',
+  'data-engineering',
+  'data-analytics',
+  'data-visualization',
+  'data-processing',
+  'data-management',
+]
+
+dependencies = [
+  "pyspark",
+  "pandera[io]==0.20.4",
+  "hypothesis",
+  "snowflake-snowpark-python",
+  "snowflake-connector-python",
+  "pandera-report==0.1.2",
+]
+
+[project.optional-dependencies]
+development = [
+  "pytest>=8.3.3",
+  "pytest-cov>=6.0.0",
+  "coverage>=7.6.7",
+  "twine==5.1.1",
+  "hatchling==1.25.0",
+  "pre-commit>=4.0.1",
+  "setuptools>=70.0.0",
+  "pyarrow>=18.0.0",
+  "deepdiff>=8.0.0",
+]
+
+[project.urls]
+Source = "https://github.com/snowflakedb/snowpark-checkpoints"
+
+
+[tool.hatch.build]
+sources = [
+  "snowpark-checkpoints-collectors/src",
+  "snowpark-checkpoints-validators/src",
+  "snowpark-checkpoints-hypothesis/src",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "snowpark-checkpoints-validators/src/**",
+  "snowpark-checkpoints-collectors/src/**",
+  "snowpark-checkpoints-hypothesis/src/**",
+]
+
+[tool.hatch.build.targets.wheel]
+directory = "dist"
+packages = [
+  "snowpark-checkpoints-validators/src/snowflake/snowpark_checkpoints",
+  "snowpark-checkpoints-collectors/src/snowflake/snowpark_checkpoints_collector",
+  "snowpark-checkpoints-hypothesis/src/snowflake/hypothesis_snowpark",
+]
+
+[tool.hatch.version]
+path = "__version__.py"
+pattern = '^__version__ = "(?P<version>.*)"'
+source = "regex"
+
+[[tool.hatch.sources]]
+dir = "snowpark-checkpoints-collectors/src"
+name = "snowpark-checkpoints-collectors"
+type = "package"
+
+[[tool.hatch.sources]]
+dir = "snowpark-checkpoints-validators/src"
+name = "snowpark-checkpoints-validators"
+type = "package"
+
+[[tool.hatch.sources]]
+dir = "snowpark-checkpoints-hypothesis/src"
+name = "snowpark-checkpoints-hypothesis"
+type = "package"

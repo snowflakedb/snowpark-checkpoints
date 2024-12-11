@@ -30,4 +30,4 @@ jobs:
         run: |
           echo "Current working directory:" && pwd
           hatch run linter:check
-        working-directory: ./hypothesis-snowpark
+        working-directory: ./snowpark-checkpoints-hypothesis

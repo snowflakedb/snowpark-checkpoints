@@ -6,15 +6,15 @@ on:
       - main
     paths:
       - "**"
-      - "!snowpark-checkpoints/**"
-      - "!snowpark-checkpoints-collector/**"
+      - "!snowpark-checkpoints-validators/**"
+      - "!snowpark-checkpoints-collectors/**"
       - "!Demos/**"
   pull_request:
     branches: "**"
     paths:
       - "**"
-      - "!snowpark-checkpoints/**"
-      - "!snowpark-checkpoints-collector/**"
+      - "!snowpark-checkpoints-validators/**"
+      - "!snowpark-checkpoints-collectors/**"
       - "!Demos/**"
   workflow_call:
 
@@ -41,4 +41,4 @@ jobs:
     uses: ./.github/workflows/hypothesis-snowpark-use-set-artifacts.yml
     secrets: inherit
     with:
-      artifact-name: hypothesis-snowpark
+      artifact-name: snowpark-checkpoints-hypothesis

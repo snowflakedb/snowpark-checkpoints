@@ -71,7 +71,7 @@ def collect_dataframe_checkpoint(
             _mode = get_checkpoint_mode(checkpoint_name, mode)
 
             if _mode == CheckpointMode.SCHEMA:
-                _collect_dataframe_checkpoint_mode_schema(checkpoint_name, df, sample)
+                _collect_dataframe_checkpoint_mode_schema(checkpoint_name, df, _sample)
 
             elif _mode == CheckpointMode.DATAFRAME:
                 snow_connection = SnowConnection()

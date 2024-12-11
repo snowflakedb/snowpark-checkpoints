@@ -21,8 +21,8 @@ jobs:
 
       - name: Setup Python environment
         run: |
-          python -m pip install --upgrade pip
-          pip install hatch flake8 black ruff
+          python -m pip install --upgrade pip -q
+          pip install hatch flake8 black ruff -q
           pip list
           hatch --version
 
@@ -30,4 +30,4 @@ jobs:
         run: |
           echo "Current working directory:" && pwd
           hatch run linter:check
-        working-directory: ./snowpark-checkpoints
+        working-directory: ./snowpark-checkpoints-validators

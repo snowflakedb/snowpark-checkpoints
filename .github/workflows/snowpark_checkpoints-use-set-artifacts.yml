@@ -46,8 +46,8 @@ jobs:
           echo "Package Version updated:" && cat ${FILE_VERSION}
         env:
           NEW_VERSION: ${{ steps.gitversion.outputs.version }}
-          FILE_VERSION: ../snowpark-checkpoints/src/snowflake/snowpark_checkpoints/__version__.py
-        working-directory: ./snowpark-checkpoints
+          FILE_VERSION: ../snowpark-checkpoints-validators/src/snowflake/snowpark_checkpoints/__version__.py
+        working-directory: ./snowpark-checkpoints-validators
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -56,18 +56,18 @@ jobs:
 
       - name: Install required tools
         run: |
-          python -m pip install --upgrade pip
-          pip install hatch
+          python -m pip install --upgrade pip -q
+          pip install hatch -q
 
       - name: Generate wheel and sdist
         run: |
           hatch build
           echo "Current directory: $PWD" && ls -la dist
-        working-directory: ./snowpark-checkpoints
+        working-directory: ./snowpark-checkpoints-validators
 
       - name: Upload PR Artifact
         if: ${{ github.event_name == 'pull_request' }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.artifact-name }}
-          path: ./snowpark-checkpoints/dist/*
+          path: ./snowpark-checkpoints-validators/dist/*

@@ -17,8 +17,8 @@ jobs:
 
       - name: Install required tools
         run: |
-          python -m pip install --upgrade pip
-          pip install hatch
+          python -m pip install --upgrade pip -q
+          pip install hatch -q
           pip list
           hatch status
           hatch env show
@@ -26,18 +26,20 @@ jobs:
 
       - name: Generate wheel and sdist
         run: hatch build
-        working-directory: ./snowpark-checkpoints
+        working-directory: ./snowpark-checkpoints-validators
 
       - name: Show generated artifacts
         run: |
           echo "Current directory: $PWD" && ls -la dist
-        working-directory: ./snowpark-checkpoints
+        working-directory: ./snowpark-checkpoints-validators
 
       - name: Verify build artifacts
         run: |
           python -m venv wheelvenv
-          wheelvenv/bin/pip install --upgrade pip
-          wheelvenv/bin/pip install dist/*.whl
+          wheelvenv/bin/pip install --upgrade pip -q
+          wheelvenv/bin/pip install dist/*.whl -q
           wheelvenv/bin/pip list
-          wheelvenv/bin/pip show snowpark-checkpoints
-        working-directory: ./snowpark-checkpoints
+          wheelvenv/bin/pip show $PACKAGE_NAME
+        working-directory: ./snowpark-checkpoints-validators
+        env:
+          PACKAGE_NAME: snowpark-checkpoints-validators

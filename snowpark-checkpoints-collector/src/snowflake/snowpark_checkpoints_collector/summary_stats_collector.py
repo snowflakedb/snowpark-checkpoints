@@ -31,9 +31,11 @@ from snowflake.snowpark_checkpoints_collector.snow_connection_model import (
     SnowConnection,
 )
 from snowflake.snowpark_checkpoints_collector.utils.extra_config import (
+    get_checkpoint_mode,
     get_checkpoint_sample,
     is_checkpoint_enabled,
 )
+
 
 def collect_input_schema(df: SparkDataFrame) -> None:
     """Collect and return the input schema of a Spark DataFrame.
@@ -62,7 +64,10 @@ def collect_output_schema(df: SparkDataFrame) -> None:
 
 
 def collect_dataframe_checkpoint(
-    df: SparkDataFrame, checkpoint_name, sample:Optional[float] = None, mode=CheckpointMode.SCHEMA
+    df: SparkDataFrame,
+    checkpoint_name,
+    sample: Optional[float] = None,
+    mode: Optional[CheckpointMode] = None,
 ) -> None:
     """Collect a DataFrame checkpoint.
 
@@ -90,10 +95,12 @@ def collect_dataframe_checkpoint(
                     "It is not possible to collect an empty DataFrame without schema"
                 )
 
-            if mode == CheckpointMode.SCHEMA:
+            _mode = get_checkpoint_mode(checkpoint_name, mode)
+
+            if _mode == CheckpointMode.SCHEMA:
                 _collect_dataframe_checkpoint_mode_schema(checkpoint_name, df, sample)
 
-            elif mode == CheckpointMode.DATAFRAME:
+            elif _mode == CheckpointMode.DATAFRAME:
                 snow_connection = SnowConnection()
                 _collect_dataframe_checkpoint_mode_dataframe(
                     checkpoint_name, df, snow_connection

@@ -55,3 +55,26 @@ def get_checkpoint_sample(checkpoint_name: str, sample: float = None) -> float:
         default_sample = config.sample if config.sample is not None else 1.0
 
     return sample if sample is not None else default_sample
+
+
+def get_checkpoint_mode(checkpoint_name: str, mode: int = None) -> int:
+    """Get the checkpoint mode.
+
+        Following this order first, the mode passed as argument, second, the mode from the checkpoint configuration,
+        third, the default mode value 1.
+
+    Args:
+        checkpoint_name (str): The name of the checkpoint.
+        mode (int, optional): The value passed to the function.
+
+    Returns:
+        int: returns the mode for that specific checkpoint.
+
+    """
+    default_mode = 1
+
+    if configuration_enabled:
+        config = metadata.get_checkpoint(checkpoint_name)
+        default_mode = config.mode if config.mode is not None else 1
+
+    return mode if mode is not None else default_mode

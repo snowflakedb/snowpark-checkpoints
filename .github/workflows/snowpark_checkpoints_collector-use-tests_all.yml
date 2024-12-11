@@ -165,9 +165,9 @@ jobs:
 
       - name: Install required tools
         run: |
-          python -m pip install --upgrade pip
+          python -m pip install --upgrade pip -q
           python -m pip install ".[development]"
-          pip install hatch pyyaml frictionless requests
+          pip install hatch pyyaml frictionless requests -q
           pip list
         working-directory: ./snowpark-checkpoints-collectors
 

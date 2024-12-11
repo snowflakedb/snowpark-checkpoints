@@ -1,4 +1,4 @@
-name: Run tests [snowpark_checkpoints_collector]
+name: Run tests [snowpark_checkpoints_configuration]
 
 on:
   workflow_call:
@@ -62,7 +62,7 @@ jobs:
             python -c "import sys; print(sys.version)"
             python ../.github/scripts/py_show_env.py
         shell: bash
-        working-directory: ./snowpark-checkpoints-collectors
+        working-directory: ./snowpark-checkpoints-configuration
 
       - name: Enable long paths (Windows)
         if: runner.os == 'Windows'
@@ -255,13 +255,13 @@ jobs:
           python -m pip install ".[development]"
           pip install hatch pyyaml frictionless requests -q
           pip list
-        working-directory: ./snowpark-checkpoints-collectors
+        working-directory: ./snowpark-checkpoints-configuration
 
       - name: Display Host Info
         run: |
           python ../.github/scripts/py_show_host.py
         shell: bash
-        working-directory: ./snowpark-checkpoints-collectors
+        working-directory: ./snowpark-checkpoints-configuration
 
       - name: Set PySpark (Windows)
         if: runner.os == 'Windows'
@@ -291,4 +291,4 @@ jobs:
           PYTHON_VERSION: ${{ matrix.python-version }}
           PYTEST_ADDOPTS: --color=yes --tb=short -v
         shell: bash
-        working-directory: ./snowpark-checkpoints-collectors
+        working-directory: ./snowpark-checkpoints-configuration

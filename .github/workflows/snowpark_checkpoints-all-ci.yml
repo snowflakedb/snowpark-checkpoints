@@ -7,6 +7,7 @@ on:
     paths:
       - "**"
       - "!snowpark-checkpoints-collectors/**"
+      - "!snowpark-checkpoints-configuration/**"
       - "!snowpark-checkpoints-hypothesis/**"
       - "!Demos/**"
   pull_request:
@@ -14,6 +15,7 @@ on:
     paths:
       - "**"
       - "!snowpark-checkpoints-collectors/**"
+      - "!snowpark-checkpoints-configuration/**"
       - "!snowpark-checkpoints-hypothesis/**"
       - "!Demos/**"
   workflow_call:

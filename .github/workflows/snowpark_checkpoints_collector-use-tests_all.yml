@@ -16,6 +16,9 @@ jobs:
       SNOWFLAKE_CONNECTIONS_MYCONNECTION_USER: ${{ secrets.SNOWFLAKE_USER }}
       SNOWFLAKE_CONNECTIONS_MYCONNECTION_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
       SNOWFLAKE_CONNECTIONS_MYCONNECTION_PRIVATE_KEY_RAW: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_RAW }}
+      HADOOP_HOME: "${{ github.workspace }}\\hadoop"
+      HADOOP_VERSION: "3.3.6"
+      JAVA_VERSION: "11"
 
     strategy:
       fail-fast: false
@@ -60,6 +63,89 @@ jobs:
             python ../.github/scripts/py_show_env.py
         shell: bash
         working-directory: ./snowpark-checkpoints-hypothesis
+
+      - name: Enable long paths (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Write-Output "Enabling long paths on Windows..."
+          Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name "LongPathsEnabled" -Value 1
+          Write-Output "Long paths have been enabled."
+
+      - name: Download Winutils (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $winutilsRepo = "https://github.com/cdarlint/winutils"
+          $hadoopDir = "hadoop-${{ env.HADOOP_VERSION }}/bin"
+          $tempDir = "$env:RUNNER_TEMP\hadoop_bin"
+
+          New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
+
+          try {
+            Invoke-WebRequest -Uri "$winutilsRepo/archive/master.zip" -OutFile "$tempDir\winutils.zip"
+            Expand-Archive -Path "$tempDir\winutils.zip" -DestinationPath $tempDir -Force
+
+            $sourceDir = Join-Path -Path $tempDir -ChildPath "winutils-master\$hadoopDir"
+            $destinationDir = "${{ env.HADOOP_HOME }}\bin"
+
+            New-Item -ItemType Directory -Force -Path $destinationDir | Out-Null
+            Get-ChildItem -Path $sourceDir | Move-Item -Destination $destinationDir -Force
+            $winutilsPath = Join-Path -Path $destinationDir -ChildPath "winutils.exe"
+
+            if (-Not (Test-Path $winutilsPath)) {
+              throw "winutils.exe not found in $destinationDir"
+            }
+
+            Write-Output "Winutils successfully installed at $winutilsPath"
+          }
+          catch {
+            Write-Error "Winutils download or installation failed: $_"
+            exit 1
+          }
+
+      - name: Configure Hadoop (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Write-Output "Configuring Hadoop environment variables"
+          echo "HADOOP_HOME=${{ env.HADOOP_HOME }}" | Out-File -FilePath $env:GITHUB_ENV -Append
+          $hadoopBinPath = "${{ env.HADOOP_HOME }}\bin"
+          echo "PATH=$env:PATH;$hadoopBinPath" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Output "HADOOP_HOME set to: ${{ env.HADOOP_HOME }}"
+          Write-Output "Hadoop bin added to PATH"
+
+      - name: Verify Hadoop (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          try {
+            $hadoopVersion = & "${{ env.HADOOP_HOME }}\bin\hadoop" version
+            Write-Output "Hadoop version verified: $hadoopVersion"
+          }
+          catch {
+            Write-Error "Hadoop version check failed: $_"
+            exit 1
+          }
+
+          Write-Output "Hadoop Home Contents:"
+          Get-ChildItem -Path "${{ env.HADOOP_HOME }}" -Recurse | Select-Object FullName, Length | Format-Table -AutoSize
+
+      - name: Test Hadoop Configuration (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          try {
+            & "${{ env.HADOOP_HOME }}\bin\hdfs" dfs -mkdir -p /test
+
+            $testList = & "${{ env.HADOOP_HOME }}\bin\hdfs" dfs -ls /
+            Write-Output "HDFS Basic Test Passed"
+            Write-Output "Directory Listing: $testList"
+          }
+          catch {
+            Write-Error "Hadoop HDFS test failed: $_"
+            exit 1
+          }
 
       - name: Set up Snowflake CLI
         uses: Snowflake-Labs/snowflake-cli-action@main

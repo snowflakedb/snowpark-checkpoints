@@ -6,8 +6,8 @@ on:
       - "**"
     paths:
       - "**"
-      - "!snowpark-checkpoints/**"
-      - "!snowpark-checkpoints-collector/**"
+      - "!snowpark-checkpoints-validators/**"
+      - "!snowpark-checkpoints-collectors/**"
       - "!Demos/**"
 
 permissions:
@@ -34,8 +34,8 @@ jobs:
 
       - name: Setup Python environment
         run: |
-          python -m pip install --upgrade pip
-          pip install toml
+          python -m pip install --upgrade pip -q
+          pip install toml -q
           pip list
 
       - name: Install Snyk CLI
@@ -57,7 +57,7 @@ jobs:
           python -m pip install -r requirements.txt
           pip list
         env:
-          DIR_NAME: "hypothesis-snowpark"
+          DIR_NAME: "snowpark-checkpoints-hypothesis"
 
       - name: Run Snyk test
         run: |

@@ -1,1 +1,0 @@
-../../../../../snowpark-checkpoints/src/snowflake/snowpark_checkpoints/utils/telemetry.py

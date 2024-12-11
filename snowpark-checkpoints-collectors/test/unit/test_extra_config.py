@@ -108,3 +108,50 @@ def test_get_checkpoint_sample_checkpoint_value():
             )
 
             assert get_checkpoint_sample("my-checkpoint") == 0.6
+
+
+def test_get_checkpoint_mode_import_error():
+    with patch(
+        "snowflake.snowpark_checkpoints_configuration.checkpoint_metadata.CheckpointMetadata",
+        side_effect=ImportError("Mocked exception"),
+    ):
+        from snowflake.snowpark_checkpoints_collector.utils.extra_config import (
+            get_checkpoint_mode,
+        )
+
+        assert get_checkpoint_mode("checkpoint-name") == 1
+
+
+def test_get_checkpoint_mode_import_error_with_parameter():
+    with patch(
+        "snowflake.snowpark_checkpoints_configuration.checkpoint_metadata.CheckpointMetadata",
+        side_effect=ImportError("Mocked exception"),
+    ):
+        from snowflake.snowpark_checkpoints_collector.utils.extra_config import (
+            get_checkpoint_mode,
+        )
+
+        assert get_checkpoint_mode("checkpoint-name", 1) == 1
+
+
+def test_get_checkpoint_mode_checkpoint_value():
+    from snowflake.snowpark_checkpoints_configuration.checkpoint_metadata import (
+        CheckpointMetadata,
+    )
+
+    metadata = MagicMock(spec=CheckpointMetadata)
+    checkpoint_mock = MagicMock()
+    checkpoint_mock.mode = 2
+    metadata.get_checkpoint.return_value = checkpoint_mock
+    with patch(
+        "snowflake.snowpark_checkpoints_collector.utils.extra_config.metadata", metadata
+    ):
+        with patch(
+            "snowflake.snowpark_checkpoints_collector.utils.extra_config.configuration_enabled",
+            True,
+        ):
+            from snowflake.snowpark_checkpoints_collector.utils.extra_config import (
+                get_checkpoint_mode,
+            )
+
+            assert get_checkpoint_mode("my-checkpoint") == 2

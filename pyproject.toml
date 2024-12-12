@@ -118,3 +118,19 @@ type = "package"
 dir = "snowpark-checkpoints-hypothesis/src"
 name = "snowpark-checkpoints-hypothesis"
 type = "package"
+
+[tool.hatch.envs.docs]
+dependencies = [
+  'sphinx',
+  'furo',
+]
+
+[tool.hatch.envs.docs.scripts]
+build = [
+  'cd ./docs && make clean',
+  'cd ./docs && make html SPHINXOPTS="-W --keep-going"'
+]
+build_pretty = [
+  'cd ./docs && make clean',
+  'cd ./docs && sphinx-build -M html ./source ./build -D html_theme=furo',
+]

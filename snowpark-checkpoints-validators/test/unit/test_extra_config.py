@@ -31,6 +31,19 @@ def test_is_checkpoint_enabled_default():
         assert actual
 
 
+def test_is_checkpoint_enabled_no_checkpoint_name():
+    with patch(
+        "snowflake.snowpark_checkpoints.utils.extra_config._get_metadata",
+        return_value=(False, None),
+    ):
+        from snowflake.snowpark_checkpoints.utils.extra_config import (
+            is_checkpoint_enabled,
+        )
+
+        actual = is_checkpoint_enabled()
+        assert actual
+
+
 def test_is_checkpoint_enabled_no_file():
     from snowflake.snowpark_checkpoints.utils.extra_config import is_checkpoint_enabled
 

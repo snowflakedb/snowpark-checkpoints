@@ -21,14 +21,72 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
 from snowflake.snowpark_checkpoints.utils.constant import (
     CHECKPOINT_NAME_IS_REQUIRED_ERROR,
     DATA_FRAME_IS_REQUIRED_ERROR,
+    INVALID_VALIDATION_MODE_ERROR,
     SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR,
+    CheckpointMode,
 )
 from snowflake.snowpark_checkpoints.utils.extra_config import is_checkpoint_enabled
 from snowflake.snowpark_checkpoints.utils.utils_checks import (
     _add_custom_checks,
+    _compare_data,
     _generate_schema,
+    _process_sampling,
     _skip_checks_on_schema,
 )
+
+
+def validate_dataframe_checkpoint(
+    df: SnowparkDataFrame,
+    checkpoint_name: str,
+    mode: CheckpointMode = CheckpointMode.SCHEMA,
+    job_context: SnowparkJobContext = None,
+    custom_checks: Optional[dict[Any, Any]] = None,
+    skip_checks: Optional[dict[Any, Any]] = None,
+    sample_frac: Optional[float] = 0.1,
+    sample_n: Optional[int] = None,
+    sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
+) -> Union[tuple[bool, PandasDataFrame], None]:
+    """Validate a Snowpark DataFrame against a specified checkpoint.
+
+    Args:
+        df (SnowparkDataFrame): The DataFrame to validate.
+        checkpoint_name (str): The name of the checkpoint to validate against.
+        mode (CheckpointMode): The mode of validation (e.g., SCHEMA, PARQUET). Defaults to SCHEMA.
+        job_context (SnowparkJobContext, optional): The job context for the validation. Required for PARQUET mode.
+        custom_checks (Optional[dict[Any, Any]], optional): Custom checks to apply during validation.
+        skip_checks (Optional[dict[Any, Any]], optional): Checks to skip during validation.
+        sample_frac (Optional[float], optional): Fraction of the DataFrame to sample for validation. Defaults to 0.1.
+        sample_n (Optional[int], optional): Number of rows to sample for validation.
+        sampling_strategy (Optional[SamplingStrategy], optional): Strategy to use for sampling.
+            Defaults to RANDOM_SAMPLE.
+
+    Returns:
+        Union[tuple[bool, PandasDataFrame], None]: A tuple containing a boolean indicating success
+        and a Pandas DataFrame with validation results, or None if validation is not applicable.
+
+    Raises:
+        ValueError: If an invalid validation mode is provided or if job_context is None for PARQUET mode.
+
+    """
+    if mode == CheckpointMode.SCHEMA:
+        return check_dataframe_schema_file(
+            df,
+            checkpoint_name,
+            job_context,
+            custom_checks,
+            skip_checks,
+            sample_frac,
+            sample_n,
+            sampling_strategy,
+        )
+    elif mode == CheckpointMode.PARQUET:
+        if job_context is None:
+            raise ValueError(
+                "Connectionless mode is not supported for Parquet validation"
+            )
+        _compare_data(df, job_context, checkpoint_name)
+    else:
+        raise ValueError(INVALID_VALIDATION_MODE_ERROR)
 
 
 def check_dataframe_schema_file(
@@ -162,21 +220,10 @@ def _check_dataframe_schema(
 
     _add_custom_checks(pandera_schema, custom_checks)
 
-    sampler = SamplingAdapter(job_context, sample_frac, sample_n, sampling_strategy)
-    sampler.process_args([df])
+    pandera_schema_upper, sample_df = _process_sampling(
+        df, pandera_schema, job_context, sample_frac, sample_n, sampling_strategy
+    )
 
-    # fix up the column casing
-    pandera_schema_upper = pandera_schema
-    new_columns: dict[Any, Any] = {}
-
-    for col in pandera_schema.columns:
-        new_columns[col.upper()] = pandera_schema.columns[col]
-
-    pandera_schema_upper = pandera_schema_upper.remove_columns(pandera_schema.columns)
-    pandera_schema_upper = pandera_schema_upper.add_columns(new_columns)
-
-    sample_df = sampler.get_sampled_pandas_args()[0]
-    sample_df.index = np.ones(sample_df.count().iloc[0])
     # Raises SchemaError on validation issues
     try:
         validator = DataFrameValidator()

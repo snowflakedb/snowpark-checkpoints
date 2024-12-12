@@ -185,3 +185,8 @@ cython_debug/
 
 # pytest outcome
 */test/outcome/
+
+
+# Ignore all directories named 'snowpark-checkpoints-output'
+snowpark-checkpoints-output/
+.vscode/

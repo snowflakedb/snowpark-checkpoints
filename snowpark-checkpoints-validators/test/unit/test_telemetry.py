@@ -7,10 +7,12 @@ import unittest
 
 
 class TelemetryManagerTest(unittest.TestCase):
-    def test_get_telemetry_manager(self):
+    def test_get_telemetry_manager_no_setted(self):
         # Arrange
-        from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryManager
-        from snowflake.snowpark_checkpoints.utils.telemetry import get_telemetry_manager
+        from snowflake.snowpark_checkpoints.utils.telemetry import (
+            TelemetryManager,
+            get_telemetry_manager,
+        )
         from snowflake.connector.telemetry import TelemetryClient
 
         _, mock_DIRS = mock_before_telemetry_import()
@@ -25,9 +27,6 @@ class TelemetryManagerTest(unittest.TestCase):
         with patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.Session", session_mock
         ), patch(
-            "snowflake.snowpark_checkpoints.utils.telemetry.type",
-            return_value=type_mock,
-        ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.snowflake_dirs", mock_DIRS
         ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_enabled",
@@ -38,9 +37,11 @@ class TelemetryManagerTest(unittest.TestCase):
         ):
             # Act
             result = get_telemetry_manager()
+            result2 = get_telemetry_manager()
 
             # Assert
             assert isinstance(result, TelemetryManager)
+            assert result is result2
 
     def test_get_metadata(self):
         # Arrange
@@ -631,6 +632,30 @@ class TelemetryManagerTest(unittest.TestCase):
             TelemetryManager._sc_log_telemetry.assert_called_once_with(
                 "event_name", "error", {"testing": "boo"}
             )
+
+    def test_telemetry_manager_sc_is_telemetry_manager(self):
+        # Arrange
+        from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryManager
+
+        rest_mock, mock_DIRS = mock_before_telemetry_import()
+        type_mock = MagicMock()
+
+        with patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.snowflake_dirs", mock_DIRS
+        ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_enabled",
+            return_value=True,
+        ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_upload_local_telemetry",
+            return_value=MagicMock(),
+        ):
+            telemetry = TelemetryManager(rest_mock)
+
+            # Act
+            result = telemetry._sc_is_telemetry_manager()
+
+            # Assert
+            assert result
 
 
 def mock_folder_path(stat):

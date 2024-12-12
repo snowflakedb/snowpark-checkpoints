@@ -185,6 +185,15 @@ class TelemetryManager(TelemetryClient):
             return False
         return self._rest is not None
 
+    def _sc_is_telemetry_manager(self) -> bool:
+        """Check if the class is telemetry manager.
+
+        Returns:
+            bool: True if the class is telemetry manager, False otherwise.
+
+        """
+        return True
+
 
 def _generate_event(
     event_name: str,
@@ -278,15 +287,11 @@ def _get_unique_id() -> str:
 def get_telemetry_manager() -> TelemetryManager:
     """Get the telemetry manager.
 
-    Args:
-        rest (SnowflakeRestful): The SnowflakeRestful object.
-
     Returns:
         TelemetryManager: The telemetry manager.
 
     """
     connection = Session.builder.getOrCreate().connection
-    is_set = type(connection._telemetry).__name__ == "TelemetryManager"
-    if not is_set:
-        connection._telemetry = TelemetryManager(connection.rest)
+    if not hasattr(connection._telemetry, "_sc_is_telemetry_manager"):
+        connection._telemetry = TelemetryManager(connection._rest)
     return connection._telemetry

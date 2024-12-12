@@ -4,10 +4,10 @@
 
 import locale
 
-from enum import Enum
+from enum import IntEnum
 
 
-class CheckpointMode(Enum):
+class CheckpointMode(IntEnum):
     SCHEMA = 1
     DATAFRAME = 2
 

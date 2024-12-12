@@ -1,6 +1,9 @@
 #
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
+from typing import Optional
+
+from snowflake.snowpark_checkpoints_collector.collection_common import CheckpointMode
 
 
 metadata = None
@@ -57,7 +60,9 @@ def get_checkpoint_sample(checkpoint_name: str, sample: float = None) -> float:
     return sample if sample is not None else default_sample
 
 
-def get_checkpoint_mode(checkpoint_name: str, mode: int = None) -> int:
+def get_checkpoint_mode(
+    checkpoint_name: str, mode: Optional[CheckpointMode] = None
+) -> CheckpointMode:
     """Get the checkpoint mode.
 
         Following this order first, the mode passed as argument, second, the mode from the checkpoint configuration,
@@ -71,10 +76,10 @@ def get_checkpoint_mode(checkpoint_name: str, mode: int = None) -> int:
         int: returns the mode for that specific checkpoint.
 
     """
-    default_mode = 1
+    default_mode = CheckpointMode.SCHEMA
 
     if configuration_enabled:
         config = metadata.get_checkpoint(checkpoint_name)
-        default_mode = config.mode if config.mode is not None else 1
+        default_mode = config.mode if config.mode is not None else default_mode
 
     return mode if mode is not None else default_mode

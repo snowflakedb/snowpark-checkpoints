@@ -4,6 +4,8 @@
 
 from unittest.mock import MagicMock, patch
 
+from snowflake.snowpark_checkpoints_collector.collection_common import CheckpointMode
+
 
 def test_is_checkpoint_import_error():
     with patch(
@@ -119,7 +121,7 @@ def test_get_checkpoint_mode_import_error():
             get_checkpoint_mode,
         )
 
-        assert get_checkpoint_mode("checkpoint-name") == 1
+        assert get_checkpoint_mode("checkpoint-name") == CheckpointMode.SCHEMA
 
 
 def test_get_checkpoint_mode_import_error_with_parameter():
@@ -131,7 +133,10 @@ def test_get_checkpoint_mode_import_error_with_parameter():
             get_checkpoint_mode,
         )
 
-        assert get_checkpoint_mode("checkpoint-name", 1) == 1
+        assert (
+            get_checkpoint_mode("checkpoint-name", CheckpointMode.SCHEMA)
+            == CheckpointMode.SCHEMA
+        )
 
 
 def test_get_checkpoint_mode_checkpoint_value():
@@ -141,7 +146,7 @@ def test_get_checkpoint_mode_checkpoint_value():
 
     metadata = MagicMock(spec=CheckpointMetadata)
     checkpoint_mock = MagicMock()
-    checkpoint_mock.mode = 2
+    checkpoint_mock.mode = CheckpointMode.DATAFRAME
     metadata.get_checkpoint.return_value = checkpoint_mock
     with patch(
         "snowflake.snowpark_checkpoints_collector.utils.extra_config.metadata", metadata
@@ -154,4 +159,4 @@ def test_get_checkpoint_mode_checkpoint_value():
                 get_checkpoint_mode,
             )
 
-            assert get_checkpoint_mode("my-checkpoint") == 2
+            assert get_checkpoint_mode("my-checkpoint") == CheckpointMode.DATAFRAME

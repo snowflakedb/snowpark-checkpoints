@@ -30,9 +30,12 @@ patch_cache = {}
 
 
 def _string_to_function(source):
+    print("Generated Source Code:\n", source)
     tree = ast.parse(source)
+    # Prune any leading imports
+    while not isinstance(tree.body[0], ast.FunctionDef):
+        tree.body.pop(0)
     if len(tree.body) != 1 or not isinstance(tree.body[0], ast.FunctionDef):
-        print("Source:\n", source)
         raise ValueError("provided code fragment is not a single function")
     co = compile(tree, "custom.py", "exec", dont_inherit=False)
     # first constant should be the code object for the function
@@ -63,7 +66,7 @@ def _translate_spark_to_snowpark(job_context, spark_source: str):
         raise e
     llm_answer.columns = ["ans"]
     llm_answer = llm_answer["ans"].iloc[0]
-    llm_answer = llm_answer.split("```")[1].replace("python\n", "")
+    llm_answer = llm_answer.split("```")[1].replace("python\n", "").replace("''", "'")
     job_context.autopbar.update(10)
     return llm_answer
 
@@ -142,6 +145,63 @@ def _patch_cache_key(spark_fn):
     return f"{filename}:{function_start}"
 
 
+def _validate_snowpark_code(
+    job_context, snowpark_fn, snowpark_sample_args, spark_results
+):
+    snowpark_test_results = None
+    snowpark_test_error = None
+    # Run the sampled data in snowpark
+    try:
+        job_context.autopbar.set_description("Collecting Snowpark Results")
+        snowpark_test_results = snowpark_fn(*snowpark_sample_args).to_pandas()
+    except Exception as e:
+        snowpark_test_error = e
+        pass
+
+    if snowpark_test_results is None:
+        # did not compile, retry
+        return ("exec_error", snowpark_test_error)
+    if spark_results is None or snowpark_test_results is None:
+        return ("cannot_compare", 0)
+    diffs = 0
+    try:
+        diffs = spark_results.compare(snowpark_test_results).size
+    except Exception as _e:
+        pass
+    return ("compare", diffs)
+
+
+def _try_runtime_fix(job_context, snowpark_fn_source, data):
+    job_context.autopbar.set_description("Asking LLM to fix runtime errors")
+
+    # escape single quotes
+    snowpark_fn_source = re.sub(r"'", "''", snowpark_fn_source)
+    runtime_error = re.sub(r"'", "''", str(data))
+
+    query_text = (
+        "SELECT SNOWFLAKE.CORTEX.COMPLETE('mistral-large2', "
+        + "'The following function produced an error during execution. "
+        + f'The error was "{runtime_error}". Please fix and return a new '
+        + "version of the function, without adding any new import statements."
+        + "Assume that ''F'' does not need to be defined, and it can be removed from the code. \n"
+        + f"```{snowpark_fn_source}```');"
+    )
+    llm_query = job_context.snowpark_session.sql(query_text)
+    llm_answer = None
+    try:
+        llm_answer = llm_query.to_pandas()
+    except Exception as e:
+        print("Unable to translate:\n", snowpark_fn_source)
+        print("Query: ", query_text)
+        print("Exception:\n ", e)
+        raise e
+    llm_answer.columns = ["ans"]
+    llm_answer = llm_answer["ans"].iloc[0]
+    llm_answer = llm_answer.split("```")[1].replace("python\n", "").replace("''", "'")
+    job_context.autopbar.update(10)
+    return (_string_to_function(llm_answer), llm_answer)
+
+
 def auto_migrate(
     job_context: SnowparkJobContext,
 ) -> Callable[[fn], fn]:
@@ -172,25 +232,47 @@ def auto_migrate(
             )
             sampler.process_args(args)
             snowpark_sample_args = sampler.get_sampled_snowpark_args()
-            # pyspark_sample_args = sampler.get_sampled_spark_args()
-
-            # Run the sampled data in snowpark
+            pyspark_sample_args = sampler.get_sampled_spark_args()
+            spark_test_results = None
             try:
-                # snowpark_test_results =
-                snowpark_fn(*snowpark_sample_args, **kwargs)
+                job_context.autopbar.update(10)
+                job_context.autopbar.set_description("Collecting Spark Results")
+                spark_test_results = spark_fn(*pyspark_sample_args, **kwargs).toPandas()
             except Exception:
-                print("Error running: \n", snowpark_fn_source)
-                # breakpoint()
-                # raise e
-            # spark_test_results = spark_fn(*pyspark_sample_args, **kwargs)
+                pass
+            snowpark_fn_curr = snowpark_fn
+            snowpark_fn_source_curr = snowpark_fn_source
+            for i in range(4):
+                job_context.autopbar.set_description(f"Trying again {i}")
+                (result, data) = _validate_snowpark_code(
+                    job_context,
+                    snowpark_fn_curr,
+                    snowpark_sample_args,
+                    spark_test_results,
+                )
+                if result == "exec_error":
+                    try:
+                        (snowpark_fn_curr, snowpark_fn_source_curr) = _try_runtime_fix(
+                            job_context, snowpark_fn_source_curr, data
+                        )
+                    except Exception as _e:
+                        pass
+                if result == "cannot_compare":
+                    # (snowpark_fn_curr, snowpark_fn_source_curr) =
+                    # _try_compare_fix(job_context, snowpark_fn_source_curr, data)
+                    break
+                if result == "compare":
+                    # (snowpark_fn_curr, snowpark_fn_source_curr) =
+                    # _try_improve_fix(job_context, snowpark_fn_source_curr, data)
+                    break
 
             # Run the original function in snowpark
             job_context.autopbar.update(50)
             job_context.autopbar.set_description("Spark Code Converted")
-            patches.append((spark_fn, snowpark_fn_source))
-            patch_cache[patch_key] = snowpark_fn
+            patches.append((spark_fn, snowpark_fn_source_curr))
+            patch_cache[patch_key] = snowpark_fn_curr
             job_context.autopbar.close()
-            return snowpark_fn(*args, **kwargs)
+            return snowpark_fn_curr(*args, **kwargs)
 
         return wrapper
 

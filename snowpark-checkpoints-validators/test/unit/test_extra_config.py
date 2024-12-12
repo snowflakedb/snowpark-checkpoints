@@ -11,16 +11,17 @@ def test_is_checkpoint_import_error():
         side_effect=ImportError("Mocked exception"),
     ):
         from snowflake.snowpark_checkpoints.utils.extra_config import (
-            configuration_enabled,
+            _get_metadata,
         )
 
-        assert configuration_enabled == False
+        enabled, _ = _get_metadata()
+        assert enabled == False
 
 
 def test_is_checkpoint_enabled_default():
     with patch(
-        "snowflake.snowpark_checkpoints_configuration.checkpoint_metadata.CheckpointMetadata",
-        side_effect=ImportError("Mocked exception"),
+        "snowflake.snowpark_checkpoints.utils.extra_config._get_metadata",
+        return_value=(False, None),
     ):
         from snowflake.snowpark_checkpoints.utils.extra_config import (
             is_checkpoint_enabled,
@@ -38,22 +39,15 @@ def test_is_checkpoint_enabled_no_file():
 
 
 def test_is_checkpoint_enabled_checkpoint_disabled():
-    from snowflake.snowpark_checkpoints_configuration.checkpoint_metadata import (
-        CheckpointMetadata,
-    )
+    metadata = MagicMock()
+    metadata.get_checkpoint.return_value = MagicMock(enabled=False)
+    with patch(
+        "snowflake.snowpark_checkpoints.utils.extra_config._get_metadata",
+        return_value=(True, metadata),
+    ):
+        from snowflake.snowpark_checkpoints.utils.extra_config import (
+            is_checkpoint_enabled,
+        )
 
-    metadata = MagicMock(spec=CheckpointMetadata)
-    checkpoint_mock = MagicMock()
-    checkpoint_mock.enabled = False
-    metadata.get_checkpoint.return_value = checkpoint_mock
-    with patch("snowflake.snowpark_checkpoints.utils.extra_config.metadata", metadata):
-        with patch(
-            "snowflake.snowpark_checkpoints.utils.extra_config.configuration_enabled",
-            True,
-        ):
-            from snowflake.snowpark_checkpoints.utils.extra_config import (
-                is_checkpoint_enabled,
-            )
-
-            actual = is_checkpoint_enabled("my-checkpoint")
-            assert actual == False
+        actual = is_checkpoint_enabled("my-checkpoint")
+        assert actual == False

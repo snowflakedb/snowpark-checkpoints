@@ -6,18 +6,18 @@ from typing import Optional
 from snowflake.snowpark_checkpoints_collector.collection_common import CheckpointMode
 
 
-metadata = None
+# noinspection DuplicatedCode
+def _get_metadata():
+    try:
+        from snowflake.snowpark_checkpoints_configuration.checkpoint_metadata import (
+            CheckpointMetadata,
+        )
 
-try:
-    from snowflake.snowpark_checkpoints_configuration.checkpoint_metadata import (
-        CheckpointMetadata,
-    )
+        metadata = CheckpointMetadata()
+        return True, metadata
 
-    configuration_enabled = True
-    metadata = CheckpointMetadata()
-
-except ImportError:
-    configuration_enabled = False
+    except ImportError:
+        return False, None
 
 
 def is_checkpoint_enabled(checkpoint_name: str) -> bool:
@@ -30,7 +30,8 @@ def is_checkpoint_enabled(checkpoint_name: str) -> bool:
         bool: True if the checkpoint is enabled, False otherwise.
 
     """
-    if configuration_enabled:
+    enabled, metadata = _get_metadata()
+    if enabled:
         config = metadata.get_checkpoint(checkpoint_name)
         return config.enabled
     else:
@@ -53,7 +54,8 @@ def get_checkpoint_sample(checkpoint_name: str, sample: float = None) -> float:
     """
     default_sample = 1.0
 
-    if configuration_enabled:
+    enabled, metadata = _get_metadata()
+    if enabled:
         config = metadata.get_checkpoint(checkpoint_name)
         default_sample = config.sample if config.sample is not None else 1.0
 
@@ -78,7 +80,8 @@ def get_checkpoint_mode(
     """
     default_mode = CheckpointMode.SCHEMA
 
-    if configuration_enabled:
+    enabled, metadata = _get_metadata()
+    if enabled:
         config = metadata.get_checkpoint(checkpoint_name)
         default_mode = config.mode if config.mode is not None else default_mode
 

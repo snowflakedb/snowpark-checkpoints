@@ -84,7 +84,7 @@ def collect_dataframe_checkpoint(
 
     except Exception as err:
         error_message = str(err)
-        raise Exception(error_message) from BaseException
+        raise Exception(error_message) from err
 
 
 def _collect_dataframe_checkpoint_mode_schema(checkpoint_name, df, sample) -> None:

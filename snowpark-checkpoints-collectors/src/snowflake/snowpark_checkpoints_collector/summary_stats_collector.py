@@ -55,7 +55,6 @@ def collect_dataframe_checkpoint(
     Raises:
         Exception: It is not possible to collect an empty DataFrame without schema.
         Exception: Invalid mode value.
-        Exception: It is not possible to collect an empty DataFrame without schema.
 
     """
     try:

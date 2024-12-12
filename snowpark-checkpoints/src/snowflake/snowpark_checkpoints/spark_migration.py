@@ -52,7 +52,7 @@ def _translate_spark_to_snowpark(job_context, spark_source: str):
         "SELECT SNOWFLAKE.CORTEX.COMPLETE('mistral-large2', "
         + "'Convert the following spark function to a single snowpark function, "
         + "keeping the function name and signature the same as the "
-        + "original but excluding any import statements inside or outside of the function.\n"
+        + "original function.\n"
         + f"```{spark_fn_source}```');"
     )
     llm_query = job_context.snowpark_session.sql(query_text)
@@ -66,7 +66,9 @@ def _translate_spark_to_snowpark(job_context, spark_source: str):
         raise e
     llm_answer.columns = ["ans"]
     llm_answer = llm_answer["ans"].iloc[0]
-    llm_answer = llm_answer.split("```")[1].replace("python\n", "").replace("''", "'")
+    llm_answer = (
+        llm_answer.split("```")[1].replace("python\n", "").replace("''", "'").lstrip()
+    )
     job_context.autopbar.update(10)
     return llm_answer
 
@@ -82,7 +84,11 @@ def _spark_fn_to_snowpark_fn(job_context, spark_fn: callable):
     )
     job_context.autopbar.update(10)
     job_context.autopbar.set_description("Initial translation complete")
-    return (_string_to_function(snowpark_fn_source), snowpark_fn_source)
+    return (
+        _string_to_function(snowpark_fn_source),
+        snowpark_fn_source,
+        original_fn_name,
+    )
 
 
 def _update_snowpark_code():
@@ -146,14 +152,22 @@ def _patch_cache_key(spark_fn):
 
 
 def _validate_snowpark_code(
-    job_context, snowpark_fn, snowpark_sample_args, spark_results
+    job_context,
+    snowpark_fn_source,
+    snowpark_fn_name,
+    snowpark_sample_args,
+    spark_results,
 ):
     snowpark_test_results = None
     snowpark_test_error = None
     # Run the sampled data in snowpark
     try:
         job_context.autopbar.set_description("Collecting Snowpark Results")
-        snowpark_test_results = snowpark_fn(*snowpark_sample_args).to_pandas()
+        exec(
+            snowpark_fn_source, globals(), globals()
+        )  # evaluate original source so imports work
+        exec(f"fn_callable = {snowpark_fn_name}", globals(), globals())
+        snowpark_test_results = fn_callable(*snowpark_sample_args).to_pandas()  # noqa
     except Exception as e:
         snowpark_test_error = e
         pass
@@ -182,8 +196,7 @@ def _try_runtime_fix(job_context, snowpark_fn_source, data):
         "SELECT SNOWFLAKE.CORTEX.COMPLETE('mistral-large2', "
         + "'The following function produced an error during execution. "
         + f'The error was "{runtime_error}". Please fix and return a new '
-        + "version of the function, without adding any new import statements."
-        + "Assume that ''F'' does not need to be defined, and it can be removed from the code. \n"
+        + "version of the function.\n"
         + f"```{snowpark_fn_source}```');"
     )
     llm_query = job_context.snowpark_session.sql(query_text)
@@ -217,7 +230,7 @@ def auto_migrate(
             return patch_cache[patch_key]
         job_context.autopbar = tqdm(total=100)
         job_context.autopbar.set_description("Translating spark -> snowpark")
-        (snowpark_fn, snowpark_fn_source) = _spark_fn_to_snowpark_fn(
+        (snowpark_fn, snowpark_fn_source, snowpark_fn_name) = _spark_fn_to_snowpark_fn(
             job_context, spark_fn
         )
 
@@ -242,11 +255,12 @@ def auto_migrate(
                 pass
             snowpark_fn_curr = snowpark_fn
             snowpark_fn_source_curr = snowpark_fn_source
-            for i in range(4):
+            for i in range(2):
                 job_context.autopbar.set_description(f"Trying again {i}")
                 (result, data) = _validate_snowpark_code(
                     job_context,
-                    snowpark_fn_curr,
+                    snowpark_fn_source_curr,
+                    snowpark_fn_name,
                     snowpark_sample_args,
                     spark_test_results,
                 )
@@ -272,7 +286,10 @@ def auto_migrate(
             patches.append((spark_fn, snowpark_fn_source_curr))
             patch_cache[patch_key] = snowpark_fn_curr
             job_context.autopbar.close()
-            return snowpark_fn_curr(*args, **kwargs)
+            # Call the final version of the function with the real data
+            exec(snowpark_fn_source_curr, globals(), globals())
+            exec(f"fn_callable = {snowpark_fn_name}", globals(), globals())
+            return fn_callable(*args)  # noqa
 
         return wrapper
 

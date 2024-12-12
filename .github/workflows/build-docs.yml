@@ -39,7 +39,6 @@ jobs:
           hatch --version
 
       - name: Build documentation
-        working-directory: ./
         run: |
           echo "Current working directory:" && pwd
           hatch run docs:build

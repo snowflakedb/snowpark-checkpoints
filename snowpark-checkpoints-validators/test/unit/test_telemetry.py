@@ -13,6 +13,7 @@ class TelemetryManagerTest(unittest.TestCase):
         from snowflake.snowpark_checkpoints.utils.telemetry import get_telemetry_manager
         from snowflake.connector.telemetry import TelemetryClient
 
+        _, mock_DIRS = mock_before_telemetry_import()
         session_mock = MagicMock()
         connection_mock = MagicMock(_telemetry=MagicMock(spec=TelemetryClient))
         session_mock.builder.getOrCreate.return_value = MagicMock(
@@ -23,13 +24,18 @@ class TelemetryManagerTest(unittest.TestCase):
 
         with patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.Session", session_mock
-        ), patch.object(
-            TelemetryManager, "__new__", return_value=MagicMock(spec=TelemetryManager)
         ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.type",
             return_value=type_mock,
+        ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.snowflake_dirs", mock_DIRS
+        ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_enabled",
+            return_value=True,
+        ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_upload_local_telemetry",
+            return_value=MagicMock(),
         ):
-
             # Act
             result = get_telemetry_manager()
 

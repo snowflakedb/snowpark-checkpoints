@@ -53,7 +53,6 @@ html_theme = "empty"
 html_theme_path = [
     "_themes",
 ]
-html_static_path = ["_static"]
 html_show_sourcelink = False
 html_show_sphinx = False
 

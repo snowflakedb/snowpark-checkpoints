@@ -3,11 +3,11 @@
 #
 
 # Skip type
-from enum import Enum
+from enum import IntEnum
 from typing import Final
 
 
-class CheckpointMode(Enum):
+class CheckpointMode(IntEnum):
     SCHEMA = 1
     DATAFRAME = 2
 
@@ -94,7 +94,7 @@ CREATE_STAGE_STATEMENT_FORMAT: Final[str] = "CREATE STAGE IF NOT EXISTS {}"
 CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME: Final[str] = "{}.json"
 CHECKPOINTS_JSON_FILE_NAME: Final[str] = "checkpoints.json"
 SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME: Final[str] = "snowpark-checkpoints-output"
-CHECKPOINT_PARQUET_OUTPUT_FILE_FORMAT_NAME = "{}.parquet"
+CHECKPOINT_PARQUET_OUTPUT_FILE_FORMAT_NAME: Final[str] = "{}.parquet"
 
 # Error messages
 SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR: Final[

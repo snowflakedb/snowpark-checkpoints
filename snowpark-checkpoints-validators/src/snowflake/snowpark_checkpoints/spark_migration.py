@@ -13,7 +13,11 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
     SamplingAdapter,
     SamplingStrategy,
 )
-from snowflake.snowpark_checkpoints.utils.telemetry import get_telemetry_manager
+from snowflake.snowpark_checkpoints.utils.telemetry import (
+    get_snowflake_schema_types,
+    get_spark_schema_types,
+    get_telemetry_manager,
+)
 
 
 fn = TypeVar("F", bound=Callable)
@@ -112,20 +116,44 @@ def _assert_return(snowpark_results, spark_results, job_context, checkpoint_name
 
         if not cmp.empty:
             telemetry.sc_log_info(
-                "DataFrame_Validator", {"type": "assert_return", "status": False}
+                "DataFrame_Validator_Mirror",
+                {
+                    "function": "assert_return",
+                    "status": False,
+                    "snowflake_schema_types": get_snowflake_schema_types(
+                        snowpark_results
+                    ),
+                    "spark_schema_types": get_spark_schema_types(spark_results),
+                },
             )
             raise SparkMigrationError(
                 "DataFrame difference:\n", job_context, checkpoint_name, cmp
             )
         else:
             telemetry.sc_log_info(
-                "DataFrame_Validator", {"type": "assert_return", "status": True}
+                "DataFrame_Validator_Mirror",
+                {
+                    "function": "assert_return",
+                    "status": True,
+                    "snowflake_schema_types": get_snowflake_schema_types(
+                        snowpark_results
+                    ),
+                    "spark_schema_types": get_spark_schema_types(spark_results),
+                },
             )
         job_context.mark_pass(checkpoint_name)
     else:
         if snowpark_results != spark_results:
             telemetry.sc_log_info(
-                "DataFrame_Validator", {"type": "assert_return", "status": False}
+                "DataFrame_Validator_Mirror",
+                {
+                    "function": "assert_return",
+                    "status": False,
+                    "snowflake_schema_types": get_snowflake_schema_types(
+                        snowpark_results
+                    ),
+                    "spark_schema_types": get_spark_schema_types(spark_results),
+                },
             )
             raise SparkMigrationError(
                 "Return value difference:\n",
@@ -135,7 +163,15 @@ def _assert_return(snowpark_results, spark_results, job_context, checkpoint_name
             )
         else:
             telemetry.sc_log_info(
-                "DataFrame_Validator", {"type": "assert_return", "status": True}
+                "DataFrame_Validator_Mirror",
+                {
+                    "function": "assert_return",
+                    "status": True,
+                    "snowflake_schema_types": get_snowflake_schema_types(
+                        snowpark_results
+                    ),
+                    "spark_schema_types": get_spark_schema_types(spark_results),
+                },
             )
 
         job_context.mark_pass(checkpoint_name)

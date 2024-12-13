@@ -99,8 +99,8 @@ def collect_dataframe_checkpoint(
         telemetry = get_telemetry_manager()
 
         telemetry_data = {
-            "error": "PysparkDFCollectorError",
-            "type": "collect_dataframe_checkpoint",
+            "function": "collect_dataframe_checkpoint",
+            "error": f"{type(err).__name__}",
         }
         column_type_dict = _get_spark_column_types(df)
         if column_type_dict is not None:
@@ -172,6 +172,8 @@ def _collect_dataframe_checkpoint_mode_schema(checkpoint_name, df, sample) -> No
     dataframe_schema_contract_json = json.dumps(dataframe_schema_contract)
     _generate_json_checkpoint_file(checkpoint_name, dataframe_schema_contract_json)
     telemetry_data = {
+        "function": "_collect_dataframe_checkpoint_mode_schema",
+        "mode": CheckpointMode.SCHEMA,
         "schema_types": [schema_type for schema_type in column_type_dict],
     }
     telemetry.sc_log_info("DataFrame_Collection", telemetry_data)

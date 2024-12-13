@@ -159,9 +159,10 @@ def check_dataframe_schema(
         )
 
         telemetry.sc_log_info(
-            "DataFrame_Validator",
+            "DataFrame_Validator_Schema",
             {
-                "type": "check_dataframe_schema",
+                "function": "check_dataframe_schema",
+                "schema_types": pandera_schema.columns.keys(),
                 "status": result,
             },
         )
@@ -172,10 +173,11 @@ def check_dataframe_schema(
         return validation
     except Exception as pandera_ex:
         telemetry_data = {
-            "type": "check_dataframe_schema",
-            "error": "SnowparkOutputSchemaValidationError",
+            "function": "check_dataframe_schema",
+            "schema_types": pandera_schema.columns.keys(),
+            "error": f"{type(pandera_ex).__name__}",
         }
-        telemetry.sc_log_error("DataFrame_Validator_Error", telemetry_data)
+        telemetry.sc_log_error("DataFrame_Validator_Schema_Error", telemetry_data)
         raise SchemaValidationError(
             SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR,
             job_context,
@@ -251,9 +253,10 @@ def check_output_schema(
                 )
 
                 telemetry.sc_log_info(
-                    "DataFrame_Validator",
+                    "DataFrame_Validator_Schema",
                     {
-                        "type": "check_output_schema",
+                        "function": "check_output_schema",
+                        "schema_types": pandera_schema.columns.keys(),
                         "status": result,
                     },
                 )
@@ -263,10 +266,13 @@ def check_output_schema(
                 print(validation)
             except Exception as pandera_ex:
                 telemetry_data = {
-                    "type": "check_output_schema",
-                    "error": "SnowparkOutputSchemaValidationError",
+                    "function": "check_output_schema",
+                    "schema_types": pandera_schema.columns.keys(),
+                    "error": f"{type(pandera_ex).__name__}",
                 }
-                telemetry.sc_log_error("DataFrame_Validator_Error", telemetry_data)
+                telemetry.sc_log_error(
+                    "DataFrame_Validator_Schema_Error", telemetry_data
+                )
                 raise SchemaValidationError(
                     SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR,
                     job_context,
@@ -353,9 +359,10 @@ def check_input_schema(
                             job_context.mark_pass(checkpoint_name)
 
                         telemetry.sc_log_info(
-                            "DataFrame_Validator",
+                            "DataFrame_Validator_Schema",
                             {
-                                "type": "check_input_schema",
+                                "function": "check_input_schema",
+                                "schema_types": pandera_schema.columns.keys(),
                                 "status": result,
                             },
                         )
@@ -363,11 +370,12 @@ def check_input_schema(
                         print(validation)
                     except Exception as pandera_ex:
                         telemetry_data = {
-                            "type": "check_input_schema",
-                            "error": "SnowparkOutputSchemaValidationError",
+                            "function": "check_input_schema",
+                            "schema_types": pandera_schema.columns.keys(),
+                            "error": f"{type(pandera_ex).__name__}",
                         }
                         telemetry.sc_log_error(
-                            "DataFrame_Validator_Error", telemetry_data
+                            "DataFrame_Validator_Schema_Error", telemetry_data
                         )
                         raise SchemaValidationError(
                             SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR,

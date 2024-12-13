@@ -11,9 +11,3 @@ __all__ = [
 from snowflake.snowpark_checkpoints_collector.summary_stats_collector import (
     collect_dataframe_checkpoint,
 )
-from snowflake.snowpark_checkpoints_collector.summary_stats_collector import (
-    collect_input_schema,
-)
-from snowflake.snowpark_checkpoints_collector.summary_stats_collector import (
-    collect_output_schema,
-)

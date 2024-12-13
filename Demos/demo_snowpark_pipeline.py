@@ -18,8 +18,12 @@ from snowflake.snowpark.types import (
     TimestampType,
 )
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
-from snowflake.snowpark_checkpoints.checkpoint import check_dataframe_schema_file
+from snowflake.snowpark_checkpoints.checkpoint import (
+    check_dataframe_schema_file,
+    validate_dataframe_checkpoint,
+)
 from snowflake.snowpark_checkpoints.spark_migration import check_with_spark
+from snowflake.snowpark_checkpoints.utils.constant import CheckpointMode
 
 session = Session.builder.getOrCreate()
 job_context = SnowparkJobContext(
@@ -45,7 +49,6 @@ schema = StructType(
         StructField("float", FloatType(), True),
         # DoubleType: Represents 8-byte double-precision floating point numbers.
         StructField("double", DoubleType(), True),
-        #
         # ! CORNER CASE
         # DecimalType: Represents arbitrary-precision signed decimal numbers. Backed internally by
         # StructField("decimal", DecimalType(10, 3), True),
@@ -53,8 +56,9 @@ schema = StructType(
         # StringType: Represents character string values.
         StructField("string", StringType(), True),
         # BinaryType
+        # ! CORNER CASE
         # BinaryType: Represents byte sequence values.
-        StructField("binary", BinaryType(), True),
+        # StructField("binary", BinaryType(), True),
         # Boolean type
         # BooleanType: Represents boolean values.
         StructField("boolean", BooleanType(), True),
@@ -63,9 +67,10 @@ schema = StructType(
         StructField("date", DateType(), True),
         # TimestampType: Timestamp with local time zone(TIMESTAMP_LTZ). It represents values comprising values of fields year, month, day, hour, minute, and second, with the session local time-zone. The timestamp value represents an absolute point in time.
         StructField("timestamp", TimestampType(), True),
+        # ! CORNER CASE
         # TimestampNTZType: Timestamp without time zone(TIMESTAMP_NTZ). It represents values comprising values of fields year, month, day, hour, minute, and second. All operations are performed without taking any time zone into account.
         # Note: TIMESTAMP in Spark is a user-specified alias associated with one of the TIMESTAMP_LTZ and TIMESTAMP_NTZ variations. Users can set the default timestamp type as TIMESTAMP_LTZ(default value) or TIMESTAMP_NTZ via the configuration spark.sql.timestampType.
-        StructField("timestamp_ntz", TimestampType(), True),
+        # StructField("timestamp_ntz", TimestampType(), True),
     ]
 )
 
@@ -79,11 +84,11 @@ data = [
         2.345678,
         # Decimal(7.891),
         "red",
-        b"info",
+        # b"info",
         True,
         datetime.strptime("2023-03-01", date_format),
         datetime.strptime("2023-03-01 12:00:00", timestamp_format),
-        datetime.strptime("2023-03-01 12:00:00", timestamp_ntz_format),
+        # datetime.strptime("2023-03-01 12:00:00", timestamp_ntz_format),
     ],
     [
         4,
@@ -94,11 +99,11 @@ data = [
         3.456789,
         # Decimal(0.123),
         "red",
-        b"test",
+        # b"test",
         False,
         datetime.strptime("2023-04-01", date_format),
         datetime.strptime("2023-04-01 12:00:00", timestamp_format),
-        datetime.strptime("2023-04-01 12:00:00", timestamp_ntz_format),
+        # datetime.strptime("2023-04-01 12:00:00", timestamp_ntz_format),
     ],
     [
         5,
@@ -109,11 +114,11 @@ data = [
         4.567890,
         # Decimal(3.456),
         "red",
-        b"example2",
+        # b"example2",
         True,
         datetime.strptime("2023-05-01", date_format),
         datetime.strptime("2023-05-01 12:00:00", timestamp_format),
-        datetime.strptime("2023-05-01 12:00:00", timestamp_ntz_format),
+        # datetime.strptime("2023-05-01 12:00:00", timestamp_ntz_format),
     ],
     [
         6,
@@ -124,11 +129,11 @@ data = [
         5.678901,
         # Decimal(6.789),
         "red",
-        b"sample2",
+        # b"sample2",
         False,
         datetime.strptime("2023-06-01", date_format),
         datetime.strptime("2023-06-01 12:00:00", timestamp_format),
-        datetime.strptime("2023-06-01 12:00:00", timestamp_ntz_format),
+        # datetime.strptime("2023-06-01 12:00:00", timestamp_ntz_format),
     ],
     [
         7,
@@ -139,11 +144,11 @@ data = [
         6.789012,
         # Decimal(9.012),
         "red",
-        b"data2",
+        # b"data2",
         True,
         datetime.strptime("2023-07-01", date_format),
         datetime.strptime("2023-07-01 12:00:00", timestamp_format),
-        datetime.strptime("2023-07-01 12:00:00", timestamp_ntz_format),
+        # datetime.strptime("2023-07-01 12:00:00", timestamp_ntz_format),
     ],
     [
         8,
@@ -154,11 +159,11 @@ data = [
         7.890123,
         # Decimal(1.234),
         "blue",
-        b"test2",
+        # b"test2",
         False,
         datetime.strptime("2023-08-01", date_format),
         datetime.strptime("2023-08-01 12:00:00", timestamp_format),
-        datetime.strptime("2023-08-01 12:00:00", timestamp_ntz_format),
+        # datetime.strptime("2023-08-01 12:00:00", timestamp_ntz_format),
     ],
     [
         9,
@@ -169,11 +174,11 @@ data = [
         8.901234,
         # Decimal(4.567),
         "blue",
-        b"example3",
+        # b"example3",
         True,
         datetime.strptime("2023-09-01", date_format),
         datetime.strptime("2023-09-01 12:00:00", timestamp_format),
-        datetime.strptime("2023-09-01 12:00:00", timestamp_ntz_format),
+        # datetime.strptime("2023-09-01 12:00:00", timestamp_ntz_format),
     ],
     [
         10,
@@ -184,11 +189,11 @@ data = [
         9.012345,
         # Decimal(7.892),
         "blue",
-        b"sample3",
+        # b"sample3",
         False,
         datetime.strptime("2023-10-01", date_format),
         datetime.strptime("2023-10-01 12:00:00", timestamp_format),
-        datetime.strptime("2023-10-01 12:00:00", timestamp_ntz_format),
+        # datetime.strptime("2023-10-01 12:00:00", timestamp_ntz_format),
     ],
     [
         11,
@@ -199,11 +204,11 @@ data = [
         0.123456,
         # Decimal(0.123),
         "green",
-        b"data3",
+        # b"data3",
         True,
         datetime.strptime("2023-11-01", date_format),
         datetime.strptime("2023-11-01 12:00:00", timestamp_format),
-        datetime.strptime("2023-11-01 12:00:00", timestamp_ntz_format),
+        # datetime.strptime("2023-11-01 12:00:00", timestamp_ntz_format),
     ],
     [
         12,
@@ -214,11 +219,11 @@ data = [
         1.234567,
         # Decimal(3.456),
         "green",
-        b"test3",
+        # b"test3",
         False,
         datetime.strptime("2023-12-01", date_format),
         datetime.strptime("2023-12-01 12:00:00", timestamp_format),
-        datetime.strptime("2023-12-01 12:00:00", timestamp_ntz_format),
+        # datetime.strptime("2023-12-01 12:00:00", timestamp_ntz_format),
     ],
     [
         1,
@@ -229,11 +234,11 @@ data = [
         1.234567,
         # Decimal(1.234),
         "green",
-        b"binary",
+        # b"binary",
         True,
         datetime.strptime("2023-01-01", date_format),
         datetime.strptime("2023-01-01 12:00:00", timestamp_format),
-        datetime.strptime("2023-01-01 12:00:00", timestamp_ntz_format),
+        # datetime.strptime("2023-01-01 12:00:00", timestamp_ntz_format),
     ],
     [
         2,
@@ -244,11 +249,11 @@ data = [
         7.890123,
         # Decimal(4.567),
         "blue",
-        b"data",
+        # b"data",
         False,
         datetime.strptime("2023-02-01", date_format),
         datetime.strptime("2023-02-01 12:00:00", timestamp_format),
-        datetime.strptime("2023-02-01 12:00:00", timestamp_ntz_format),
+        # datetime.strptime("2023-02-01 12:00:00", timestamp_ntz_format),
     ],
 ]
 
@@ -256,6 +261,12 @@ df = session.create_dataframe(data, schema)
 
 # Check a schema/stats here!
 check_dataframe_schema_file(df, "demo-initial-creation-checkpoint", job_context)
+validate_dataframe_checkpoint(
+    df,
+    "demo_initial_creation_checkpoint",
+    job_context=job_context,
+    mode=CheckpointMode.DATAFRAME,
+)
 
 
 def original_spark_code_I_dont_understand(df):
@@ -289,3 +300,6 @@ df1 = new_snowpark_code_I_do_understand(df)
 
 # Check a schema/stats here!
 check_dataframe_schema_file(df1, "demo-add-a-column", job_context)
+validate_dataframe_checkpoint(
+    df, "demo_add_a_column", job_context=job_context, mode=CheckpointMode.DATAFRAME
+)

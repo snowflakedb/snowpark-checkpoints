@@ -27,6 +27,7 @@ from snowflake.snowpark_checkpoints.utils.constant import (
     COLUMN_NOT_FOUND_FORMAT_ERROR,
     COLUMNS_KEY,
     COLUMNS_NOT_FOUND_JSON_FORMAT_ERROR,
+    CREATE_STAGE_STATEMENT_FORMAT,
     DATA_MISMATCH_ERROR,
     DATAFRAME_CUSTOM_DATA_KEY,
     DATAFRAME_PANDERA_SCHEMA_KEY,
@@ -36,11 +37,12 @@ from snowflake.snowpark_checkpoints.utils.constant import (
     MARGIN_ERROR_KEY,
     MEAN_KEY,
     NAME_KEY,
-    OVERWRITE_MODE,
     PANDERA_NOT_FOUND_JSON_FORMAT_ERROR,
+    REMOVE_STATEMENT_FORMAT,
     SKIP_ALL,
-    SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_FORMAT_NAME,
-    TEMPORARY_TABLE_TYPE,
+    SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
+    STAGE_NAME,
+    STAGE_PATH_FORMAT,
     TRUE_COUNT_KEY,
     TYPE_KEY,
     TYPE_NOT_DEFINED_FORMAT_ERROR,
@@ -196,7 +198,7 @@ def _generate_schema(checkpoint_name: str) -> DataFrameSchema:
     current_directory_path = os.getcwd()
 
     output_directory_path = os.path.join(
-        current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_FORMAT_NAME
+        current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME
     )
 
     if not os.path.exists(output_directory_path):
@@ -334,15 +336,21 @@ def _compare_data(
         SchemaValidationError: If there is a data mismatch between the DataFrame and the checkpoint table.
 
     """
-    session = job_context.snowpark_session
-
     new_table_name = CHECKPOINT_TABLE_NAME_FORMAT.format(checkpoint_name)
+    stage_directory_path = STAGE_PATH_FORMAT.format(STAGE_NAME, new_table_name)
 
-    df.write.mode(OVERWRITE_MODE).save_as_table(
-        new_table_name, table_type=TEMPORARY_TABLE_TYPE
+    _create_stage(job_context)
+
+    df.write.parquet(stage_directory_path, overwrite=True)
+    dataframe = job_context.snowpark_session.read.parquet(path=stage_directory_path)
+    job_context.snowpark_session.sql(
+        REMOVE_STATEMENT_FORMAT.format(stage_directory_path)
     )
+    dataframe.write.save_as_table(table_name=new_table_name, mode="overwrite")
 
-    expect_df = session.sql(EXCEPT_HASH_AGG_QUERY, [checkpoint_name, new_table_name])
+    expect_df = job_context.snowpark_session.sql(
+        EXCEPT_HASH_AGG_QUERY, [checkpoint_name, new_table_name]
+    )
 
     if expect_df.count() != 0:
         error_message = DATA_MISMATCH_ERROR.format(checkpoint_name)
@@ -359,3 +367,8 @@ def _compare_data(
         )
     else:
         job_context.mark_pass(checkpoint_name)
+
+
+def _create_stage(job_context: SnowparkJobContext) -> None:
+    create_stage_statement = CREATE_STAGE_STATEMENT_FORMAT.format(STAGE_NAME)
+    job_context.snowpark_session.sql(create_stage_statement).collect()

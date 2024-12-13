@@ -9,7 +9,7 @@ from typing import Final
 
 class CheckpointMode(Enum):
     SCHEMA = 1
-    PARQUET = 2
+    DATAFRAME = 2
 
 
 SKIP_ALL: Final[str] = "skip_all"
@@ -77,7 +77,7 @@ EXCEPT_HASH_AGG_QUERY: Final[
 CHECKPOINT_TABLE_NAME_FORMAT: Final[str] = "{}_snowpark"
 
 # Table type
-TEMPORARY_TABLE_TYPE: Final[str] = "temporary"
+# TEMPORARY_TABLE_TYPE: Final[str] = "temporary"
 
 # Write mode
 OVERWRITE_MODE: Final[str] = "overwrite"
@@ -86,12 +86,20 @@ OVERWRITE_MODE: Final[str] = "overwrite"
 VALIDATION_MODE_KEY: Final[str] = "validation_mode"
 PIPELINES_KEY: Final[str] = "pipelines"
 
+# Stage
+STAGE_NAME: Final[str] = "CHECKPOINT_STAGE"
+CREATE_STAGE_STATEMENT_FORMAT: Final[str] = "CREATE STAGE IF NOT EXISTS {}"
+REMOVE_STATEMENT_FORMAT: Final[str] = "REMOVE {}"
+STAGE_PATH_FORMAT: Final[str] = "'@{}/{}'"
+PUT_PARQUET_FILES_IN_STAGE_STATEMENT_FORMAT: Final[
+    str
+] = "PUT 'file://{}' {} AUTO_COMPRESS=FALSE"
+
 # File name
 CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME: Final[str] = "{}.json"
 CHECKPOINTS_JSON_FILE_NAME: Final[str] = "checkpoints.json"
-SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_FORMAT_NAME: Final[
-    str
-] = "snowpark-checkpoints-output"
+SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME: Final[str] = "snowpark-checkpoints-output"
+CHECKPOINT_PARQUET_OUTPUT_FILE_FORMAT_NAME = "{}.parquet"
 
 # Error messages
 SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR: Final[
@@ -126,3 +134,8 @@ CHECKPOINTS_JSON_FILE_NOT_FOUND_ERROR: Final[
 PIPELINES_KEY_NOT_DEFINED_ERROR: Final[str] = "Pipelines key not defined"
 VALIDATION_MODE_KEY_NOT_DEFINED_ERROR: Final[str] = "Validation mode not defined"
 DATA_MISMATCH_ERROR: Final[str] = "Data mismatch for checkpoint {}"
+
+# Misc keys
+DOT_PARQUET_EXTENSION: Final[str] = ".parquet"
+BACKSLASH_TOKEN: Final[str] = "\\"
+SLASH_TOKEN: Final[str] = "/"

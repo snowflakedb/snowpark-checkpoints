@@ -224,6 +224,7 @@ def _generate_parquet_checkpoint_file(checkpoint_name, df: SparkDataFrame) -> No
         checkpoint_name
     )
     checkpoint_file_path = os.path.join(output_directory_path, checkpoint_file_name)
+
     df.write.parquet(checkpoint_file_path, mode="overwrite")
 
 

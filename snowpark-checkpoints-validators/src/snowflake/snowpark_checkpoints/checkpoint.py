@@ -79,7 +79,7 @@ def validate_dataframe_checkpoint(
             sample_n,
             sampling_strategy,
         )
-    elif mode == CheckpointMode.PARQUET:
+    elif mode == CheckpointMode.DATAFRAME:
         if job_context is None:
             raise ValueError(
                 "Connectionless mode is not supported for Parquet validation"

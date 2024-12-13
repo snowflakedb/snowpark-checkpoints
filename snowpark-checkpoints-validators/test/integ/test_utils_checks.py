@@ -18,7 +18,7 @@ from snowflake.snowpark_checkpoints.utils.constant import (
     FLOAT_TYPE,
     NAME_KEY,
     OVERWRITE_MODE,
-    SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_FORMAT_NAME,
+    SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
     TEMPORARY_TABLE_TYPE,
     TYPE_KEY,
 )
@@ -315,7 +315,7 @@ def test_generate_schema_with_custom_data():
     current_directory_path = os.getcwd()
 
     output_directory_path = os.path.join(
-        current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_FORMAT_NAME
+        current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME
     )
 
     if not os.path.exists(output_directory_path):

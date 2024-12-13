@@ -13,7 +13,7 @@ class Checkpoint(BaseModel):
     """Checkpoint model.
 
     Args:
-        BaseModel (pydantic.BaseModel): pydantic BaseModel
+        pydantic.BaseModel (pydantic.BaseModel): pydantic BaseModel
 
     """
 
@@ -32,7 +32,7 @@ class Pipeline(BaseModel):
     """Pipeline model.
 
     Args:
-        BaseModel (pydantic.BaseModel): pydantic BaseModel
+        pydantic.BaseModel (pydantic.BaseModel): pydantic BaseModel
 
     """
 
@@ -51,7 +51,7 @@ class Checkpoints(BaseModel):
     """Checkpoints model.
 
     Args:
-        BaseModel (pydantic.BaseModel): pydantic BaseModel
+        pydantic.BaseModel (pydantic.BaseModel): pydantic BaseModel
 
     Returns:
         Checkpoints: An instance of the Checkpoints class

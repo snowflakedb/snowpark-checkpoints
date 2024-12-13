@@ -6,10 +6,9 @@ import datetime
 import hashlib
 import json
 
-from os import getenv, makedirs, path
+from os import getcwd, getenv, makedirs, path
 from pathlib import Path
 from platform import python_version
-from random import randint
 from sys import platform
 from uuid import getnode
 
@@ -22,7 +21,7 @@ from snowflake.connector import (
 from snowflake.connector.constants import DIRS as snowflake_dirs
 from snowflake.connector.network import SnowflakeRestful
 from snowflake.connector.telemetry import TelemetryClient
-from snowflake.snowpark import VERSION as SNOWPARK_VERSION
+from snowflake.snowpark import __version__ as SNOWPARK_VERSION
 from snowflake.snowpark import dataframe as snowpark_dataframe
 from snowflake.snowpark.session import Session
 
@@ -37,6 +36,7 @@ class TelemetryManager(TelemetryClient):
         self.sc_sf_path_telemetry = "/telemetry/send"
         self.sc_flush_size = 25
         self.sc_is_enabled = self._sc_is_telemetry_enabled()
+        self.sc_is_testing = self._sc_is_telemetry_testing()
         self.sc_memory_limit = 5 * 1024 * 1024
         self._sc_upload_local_telemetry()
         self.sc_log_batch = []
@@ -59,8 +59,7 @@ class TelemetryManager(TelemetryClient):
             parameters_info (dict, optional): Additional parameters for the event. Defaults to None.
 
         """
-        if randint(1, 100) <= 5:
-            self._sc_log_telemetry(event_name, "info", parameters_info)
+        self._sc_log_telemetry(event_name, "info", parameters_info)
 
     def _sc_log_telemetry(
         self, event_name: str, event_type, parameters_info=None
@@ -90,6 +89,13 @@ class TelemetryManager(TelemetryClient):
 
         """
         self.sc_log_batch.append(event)
+        if self.sc_is_testing:
+            output_folder = str(
+                Path(getcwd()) / "snowpark-checkpoints-output" / "telemetry"
+            )
+            self._sc_write_telemetry(self.sc_log_batch, output_folder=output_folder)
+            return
+
         if len(self.sc_log_batch) >= self.sc_flush_size:
             self._sc_send_batch(self.sc_log_batch)
             self.sc_log_batch = []
@@ -122,19 +128,22 @@ class TelemetryManager(TelemetryClient):
             return False
         return True
 
-    def _sc_write_telemetry(self, batch: list) -> None:
+    def _sc_write_telemetry(self, batch: list, output_folder: str = None) -> None:
         """Write telemetry events to local folder. If the folder is full, free up space for the new events.
 
         Args:
             batch (list): The batch of events to write.
+            output_folder (dict, optional): folder used for testing.
+
 
         """
-        makedirs(self.sc_folder_path, exist_ok=True)
+        folder = output_folder or self.sc_folder_path
+        makedirs(folder, exist_ok=True)
         for event in batch:
             message = event.get("message")
             if message is not None:
                 file_path = path.join(
-                    self.sc_folder_path,
+                    folder,
                     f'{datetime.datetime.now().strftime("%Y-%m-%d-%H:%M:%S")}-telemetry_{message.get("type")}.json',
                 )
                 json_content = self._sc_validate_folder_space(event)
@@ -161,7 +170,7 @@ class TelemetryManager(TelemetryClient):
 
     def _sc_upload_local_telemetry(self) -> None:
         """Send a request to the API to upload the local telemetry events."""
-        if not self.is_enabled():
+        if not self.is_enabled() or self.sc_is_testing:
             return
         batch = []
         for file in Path(self.sc_folder_path).glob("*.json"):
@@ -187,9 +196,16 @@ class TelemetryManager(TelemetryClient):
             bool: True if telemetry is enabled, False otherwise.
 
         """
+        if self._sc_is_telemetry_testing():
+            return True
         if getenv("SNOWPARK_CHECKPOINTS_TELEMETRY_ENABLED") == "false":
             return False
         return self._rest is not None
+
+    def _sc_is_telemetry_testing(self) -> bool:
+        if getenv("SNOWPARK_CHECKPOINTS_TELEMETRY_TESTING") == "true":
+            return True
+        return False
 
     def _sc_is_telemetry_manager(self) -> bool:
         """Check if the class is telemetry manager.

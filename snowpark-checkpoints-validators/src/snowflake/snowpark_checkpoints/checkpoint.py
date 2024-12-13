@@ -162,8 +162,8 @@ def check_dataframe_schema(
             "DataFrame_Validator_Schema",
             {
                 "function": "check_dataframe_schema",
-                "schema_types": pandera_schema.columns.keys(),
-                "status": result,
+                "schema_types": list(pandera_schema.columns.keys()),
+                "status": validation,
             },
         )
 
@@ -174,7 +174,7 @@ def check_dataframe_schema(
     except Exception as pandera_ex:
         telemetry_data = {
             "function": "check_dataframe_schema",
-            "schema_types": pandera_schema.columns.keys(),
+            "schema_types": list(pandera_schema.columns.keys()),
             "error": f"{type(pandera_ex).__name__}",
         }
         telemetry.sc_log_error("DataFrame_Validator_Schema_Error", telemetry_data)
@@ -256,8 +256,8 @@ def check_output_schema(
                     "DataFrame_Validator_Schema",
                     {
                         "function": "check_output_schema",
-                        "schema_types": pandera_schema.columns.keys(),
-                        "status": result,
+                        "schema_types": list(pandera_schema.columns.keys()),
+                        "status": validation,
                     },
                 )
                 if job_context is not None:
@@ -267,7 +267,7 @@ def check_output_schema(
             except Exception as pandera_ex:
                 telemetry_data = {
                     "function": "check_output_schema",
-                    "schema_types": pandera_schema.columns.keys(),
+                    "schema_types": list(pandera_schema.columns.keys()),
                     "error": f"{type(pandera_ex).__name__}",
                 }
                 telemetry.sc_log_error(
@@ -362,8 +362,8 @@ def check_input_schema(
                             "DataFrame_Validator_Schema",
                             {
                                 "function": "check_input_schema",
-                                "schema_types": pandera_schema.columns.keys(),
-                                "status": result,
+                                "schema_types": list(pandera_schema.columns.keys()),
+                                "status": validation,
                             },
                         )
 
@@ -371,7 +371,7 @@ def check_input_schema(
                     except Exception as pandera_ex:
                         telemetry_data = {
                             "function": "check_input_schema",
-                            "schema_types": pandera_schema.columns.keys(),
+                            "schema_types": list(pandera_schema.columns.keys()),
                             "error": f"{type(pandera_ex).__name__}",
                         }
                         telemetry.sc_log_error(

@@ -25,7 +25,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "pydantic>=1.8.2",
+  "pydantic>=1.8.2",
 ]
 
 description = "Migration tools for Snowpark"

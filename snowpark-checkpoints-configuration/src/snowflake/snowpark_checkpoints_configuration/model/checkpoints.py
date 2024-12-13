@@ -73,7 +73,7 @@ class Checkpoints(BaseModel):
         """Get a checkpoint by its name.
 
         Args:
-            checkpoint_name (str): pydantic BaseModel
+            checkpoint_name (str): The name of the checkpoint.
 
         Returns:
             Checkpoint: The checkpoint object if found, otherwise a new Checkpoint object

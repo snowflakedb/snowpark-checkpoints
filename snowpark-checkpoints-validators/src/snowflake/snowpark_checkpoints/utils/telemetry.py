@@ -13,6 +13,8 @@ from random import randint
 from sys import platform
 from uuid import getnode
 
+from pyspark.sql import dataframe as spark_dataframe
+
 from snowflake.connector import (
     SNOWFLAKE_CONNECTOR_VERSION,
     time_util,
@@ -20,6 +22,8 @@ from snowflake.connector import (
 from snowflake.connector.constants import DIRS as snowflake_dirs
 from snowflake.connector.network import SnowflakeRestful
 from snowflake.connector.telemetry import TelemetryClient
+from snowflake.snowpark import VERSION as SNOWPARK_VERSION
+from snowflake.snowpark import dataframe as snowpark_dataframe
 from snowflake.snowpark.session import Session
 
 
@@ -157,6 +161,8 @@ class TelemetryManager(TelemetryClient):
 
     def _sc_upload_local_telemetry(self) -> None:
         """Send a request to the API to upload the local telemetry events."""
+        if not self.is_enabled():
+            return
         batch = []
         for file in Path(self.sc_folder_path).glob("*.json"):
             with open(file) as json_file:
@@ -235,9 +241,10 @@ def _get_metadata() -> dict:
 
     """
     return {
-        "OS_Version": platform,
-        "Python_Version": python_version(),
-        "Device_ID": _get_unique_id(),
+        "os_version": platform,
+        "python_version": python_version(),
+        "snowpark_version": SNOWPARK_VERSION,
+        "device_id": _get_unique_id(),
     }
 
 
@@ -295,3 +302,29 @@ def get_telemetry_manager() -> TelemetryManager:
     if not hasattr(connection._telemetry, "_sc_is_telemetry_manager"):
         connection._telemetry = TelemetryManager(connection._rest)
     return connection._telemetry
+
+
+def get_snowflake_schema_types(df: snowpark_dataframe.DataFrame) -> list[str]:
+    """Extract the data types of the schema fields from a Snowflake DataFrame.
+
+    Args:
+        df (snowpark_dataframe.DataFrame): The Snowflake DataFrame.
+
+    Returns:
+        list[str]: A list of data type names of the schema fields.
+
+    """
+    return [schema_type.datatype.__class__.__name__ for schema_type in df.schema.fields]
+
+
+def get_spark_schema_types(df: spark_dataframe.DataFrame) -> list[str]:
+    """Extract the data types of the schema fields from a Spark DataFrame.
+
+    Args:
+        df (spark_dataframe.DataFrame): The Spark DataFrame.
+
+    Returns:
+        list[str]: A list of data type names of the schema fields.
+
+    """
+    return [schema_type.dataType.__class__.__name__ for schema_type in df.schema.fields]

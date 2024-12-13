@@ -48,12 +48,16 @@ class TelemetryManagerTest(unittest.TestCase):
         expected_os = "os"
         expected_python_version = "0.0.0"
         expected_unique_id = "1234"
+        expected_snowpark_version = "0.0.0"
 
         with patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.platform", expected_os
         ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.python_version",
             return_value=expected_python_version,
+        ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.SNOWPARK_VERSION",
+            expected_snowpark_version,
         ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry._get_unique_id",
             return_value=expected_unique_id,
@@ -65,9 +69,10 @@ class TelemetryManagerTest(unittest.TestCase):
             result = _get_metadata()
 
             # Assert
-            assert result.get("OS_Version") == expected_os
-            assert result.get("Python_Version") == expected_python_version
-            assert result.get("Device_ID") == expected_unique_id
+            assert result.get("os_version") == expected_os
+            assert result.get("python_version") == expected_python_version
+            assert result.get("snowpark_version") == expected_snowpark_version
+            assert result.get("device_id") == expected_unique_id
 
     def test_get_unique_id(self):
         # Arrange
@@ -656,6 +661,42 @@ class TelemetryManagerTest(unittest.TestCase):
 
             # Assert
             assert result
+
+    def test_get_snowflake_schema_types(self):
+        # Arrange
+        from snowflake.snowpark_checkpoints.utils.telemetry import (
+            get_snowflake_schema_types,
+        )
+        from snowflake.snowpark import dataframe as snowpark_dataframe
+        from snowflake.snowpark.types import LongType, StructField
+
+        snowpark_df = MagicMock(spec=snowpark_dataframe.DataFrame)
+        snowpark_df.schema.fields = [StructField("foo", LongType(), True)]
+
+        # Act
+
+        result = get_snowflake_schema_types(snowpark_df)
+
+        # Assert
+        assert result == ["LongType"]
+
+    def test_get_spark_schema_types(self):
+        # Arrange
+        from snowflake.snowpark_checkpoints.utils.telemetry import (
+            get_spark_schema_types,
+        )
+        from pyspark.sql import dataframe as spark_dataframe
+        from pyspark.sql.types import LongType, StructField
+
+        spark_df = MagicMock(spec=spark_dataframe.DataFrame)
+        spark_df.schema.fields = [StructField("foo", LongType(), True)]
+
+        # Act
+
+        result = get_spark_schema_types(spark_df)
+
+        # Assert
+        assert result == ["LongType"]
 
 
 def mock_folder_path(stat):

@@ -30,32 +30,6 @@ from snowflake.snowpark_checkpoints_collector.snow_connection_model import (
 )
 
 
-def collect_input_schema(df: SparkDataFrame) -> None:
-    """Collect and return the input schema of a Spark DataFrame.
-
-    Args:
-        df (SparkDataFrame): The input Spark DataFrame.
-
-    Returns:
-        Optional[StructType]: The schema of the input DataFrame.
-
-    """
-    pass
-
-
-def collect_output_schema(df: SparkDataFrame) -> None:
-    """Collect and return the output schema of a Spark DataFrame.
-
-    Args:
-        df (SparkDataFrame): The output Spark DataFrame.
-
-    Returns:
-        Optional[StructType]: The schema of the output DataFrame.
-
-    """
-    pass
-
-
 def collect_dataframe_checkpoint(
     df: SparkDataFrame, checkpoint_name, sample=1.0, mode=CheckpointMode.SCHEMA
 ) -> None:

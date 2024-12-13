@@ -330,7 +330,7 @@ def get_snowflake_schema_types(df: snowpark_dataframe.DataFrame) -> list[str]:
         list[str]: A list of data type names of the schema fields.
 
     """
-    return [schema_type.datatype.__class__.__name__ for schema_type in df.schema.fields]
+    return [str(schema_type.datatype) for schema_type in df.schema.fields]
 
 
 def get_spark_schema_types(df: spark_dataframe.DataFrame) -> list[str]:
@@ -343,4 +343,4 @@ def get_spark_schema_types(df: spark_dataframe.DataFrame) -> list[str]:
         list[str]: A list of data type names of the schema fields.
 
     """
-    return [schema_type.dataType.__class__.__name__ for schema_type in df.schema.fields]
+    return [str(schema_type.dataType) for schema_type in df.schema.fields]

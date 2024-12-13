@@ -145,14 +145,10 @@ def _assert_return(snowpark_results, spark_results, job_context, checkpoint_name
     else:
         if snowpark_results != spark_results:
             telemetry.sc_log_info(
-                "DataFrame_Validator_Mirror",
+                "Value_Validator_Mirror",
                 {
                     "function": "assert_return",
                     "status": False,
-                    "snowflake_schema_types": get_snowflake_schema_types(
-                        snowpark_results
-                    ),
-                    "spark_schema_types": get_spark_schema_types(spark_results),
                 },
             )
             raise SparkMigrationError(
@@ -163,15 +159,8 @@ def _assert_return(snowpark_results, spark_results, job_context, checkpoint_name
             )
         else:
             telemetry.sc_log_info(
-                "DataFrame_Validator_Mirror",
-                {
-                    "function": "assert_return",
-                    "status": True,
-                    "snowflake_schema_types": get_snowflake_schema_types(
-                        snowpark_results
-                    ),
-                    "spark_schema_types": get_spark_schema_types(spark_results),
-                },
+                "Value_Validator_Mirror",
+                {"function": "assert_return", "status": True},
             )
 
         job_context.mark_pass(checkpoint_name)

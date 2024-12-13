@@ -92,5 +92,13 @@ def test_checkpoint_metadata_get_checkpoint_not_exist(singleton):
     path = os.path.join(path, "valid_checkpoint")
     metadata = CheckpointMetadata(path)
     checkpoint = metadata.get_checkpoint("not-exist-checkpoint")
+    expected_checkpoint = Checkpoint(name="not-exist-checkpoint", enabled=False)
+    assert checkpoint == expected_checkpoint
+
+
+def test_checkpoint_metadata_get_checkpoint_no_file(singleton):
+    path = tempfile.gettempdir()
+    metadata = CheckpointMetadata(path)
+    checkpoint = metadata.get_checkpoint("not-exist-checkpoint")
     expected_checkpoint = Checkpoint(name="not-exist-checkpoint", enabled=True)
     assert checkpoint == expected_checkpoint

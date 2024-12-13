@@ -77,8 +77,10 @@ class Checkpoints(BaseModel):
             self._build_checkpoints_dict()
 
         checkpoint = self._checkpoints.get(checkpoint_name)
-        if checkpoint is None:
-            checkpoint = Checkpoint(name=checkpoint_name)
+        if len(self.pipelines) == 0:
+            checkpoint = Checkpoint(name=checkpoint_name, enabled=True)
+        elif checkpoint is None:
+            checkpoint = Checkpoint(name=checkpoint_name, enabled=False)
         return checkpoint
 
     def add_checkpoint(self, checkpoint: Checkpoint) -> None:

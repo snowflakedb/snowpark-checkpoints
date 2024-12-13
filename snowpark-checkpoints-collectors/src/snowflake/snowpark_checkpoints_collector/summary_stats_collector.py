@@ -36,6 +36,7 @@ from snowflake.snowpark_checkpoints_collector.utils.extra_config import (
     is_checkpoint_enabled,
 )
 
+
 def collect_dataframe_checkpoint(
     df: SparkDataFrame,
     checkpoint_name,
@@ -250,4 +251,4 @@ def _upload_to_snowflake(checkpoint_name, snow_connection) -> None:
 
     except Exception as err:
         error_message = str(err)
-        raise Exception(error_message) from BaseException
+        raise Exception(error_message) from err

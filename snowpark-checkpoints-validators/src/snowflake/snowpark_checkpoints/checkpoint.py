@@ -97,7 +97,7 @@ def check_dataframe_schema(
     sample_frac: Optional[float] = 0.1,
     sample_n: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
-) -> Union[tuple[bool, PandasDataFrame] | None]:
+) -> Union[tuple[bool, PandasDataFrame], None]:
     """Validate a DataFrame against a given Pandera schema using sampling techniques.
 
     Args:

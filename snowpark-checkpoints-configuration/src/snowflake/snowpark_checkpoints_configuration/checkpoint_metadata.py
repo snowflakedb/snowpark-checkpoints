@@ -3,7 +3,7 @@
 #
 import os
 
-from snowflake.snowpark_checkpoints_configuration.model.Checkpoints import (
+from snowflake.snowpark_checkpoints_configuration.model.checkpoints import (
     Checkpoint,
     Checkpoints,
 )

@@ -82,7 +82,7 @@ sources = [
   "snowpark-checkpoints-collectors/src",
   "snowpark-checkpoints-validators/src",
   "snowpark-checkpoints-hypothesis/src",
-    "snowpark-checkpoints-configuration/src",
+  "snowpark-checkpoints-configuration/src",
 ]
 
 [tool.hatch.build.targets.sdist]
@@ -90,7 +90,7 @@ include = [
   "snowpark-checkpoints-validators/src/**",
   "snowpark-checkpoints-collectors/src/**",
   "snowpark-checkpoints-hypothesis/src/**",
-    "snowpark-checkpoints-configuration/src/**",
+  "snowpark-checkpoints-configuration/src/**",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -99,7 +99,7 @@ packages = [
   "snowpark-checkpoints-validators/src/snowflake/snowpark_checkpoints",
   "snowpark-checkpoints-collectors/src/snowflake/snowpark_checkpoints_collector",
   "snowpark-checkpoints-hypothesis/src/snowflake/hypothesis_snowpark",
-    "snowpark-checkpoints-hypothesis/src/snowflake/snowpark_checkpoints_configuration",
+  "snowpark-checkpoints-configuration/src/snowflake/snowpark_checkpoints_configuration",
 ]
 
 [tool.hatch.version]

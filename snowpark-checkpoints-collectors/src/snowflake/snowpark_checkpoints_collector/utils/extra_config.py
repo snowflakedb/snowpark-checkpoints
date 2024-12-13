@@ -38,7 +38,9 @@ def is_checkpoint_enabled(checkpoint_name: str) -> bool:
         return True
 
 
-def get_checkpoint_sample(checkpoint_name: str, sample: float = None) -> float:
+def get_checkpoint_sample(
+    checkpoint_name: str, sample: Optional[float] = None
+) -> float:
     """Get the checkpoint sample.
 
         Following this order first, the sample passed as argument, second, the sample from the checkpoint configuration,
@@ -57,7 +59,7 @@ def get_checkpoint_sample(checkpoint_name: str, sample: float = None) -> float:
     enabled, metadata = _get_metadata()
     if enabled:
         config = metadata.get_checkpoint(checkpoint_name)
-        default_sample = config.sample if config.sample is not None else 1.0
+        default_sample = config.sample if config.sample is not None else default_sample
 
     return sample if sample is not None else default_sample
 

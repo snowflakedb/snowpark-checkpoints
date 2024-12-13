@@ -9,7 +9,7 @@ import pytest
 from snowflake.snowpark_checkpoints_configuration.checkpoint_metadata import (
     CheckpointMetadata,
 )
-from snowflake.snowpark_checkpoints_configuration.model.Checkpoints import (
+from snowflake.snowpark_checkpoints_configuration.model.checkpoints import (
     Checkpoint,
     Checkpoints,
     Pipeline,
@@ -45,7 +45,7 @@ def test_checkpoint_metadata_loading(singleton):
         enabled=True,
     )
     expected_pipeline = Pipeline(
-        entryPoint="demo_pyspark_pipeline.py",
+        entry_point="demo_pyspark_pipeline.py",
         checkpoints=[expected_checkpoint_1, expected_checkpoint_2],
     )
 

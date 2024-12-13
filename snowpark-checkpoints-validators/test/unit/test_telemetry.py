@@ -32,6 +32,9 @@ class TelemetryManagerTest(unittest.TestCase):
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_enabled",
             return_value=True,
         ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_testing",
+            return_value=False,
+        ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_upload_local_telemetry",
             return_value=MagicMock(),
         ):
@@ -161,15 +164,21 @@ class TelemetryManagerTest(unittest.TestCase):
 
         _, json_path = mock_folder_path(MagicMock(st_size=50))
 
-        with patch(
-            "snowflake.snowpark_checkpoints.utils.telemetry.snowflake_dirs", mock_DIRS
-        ), patch(
-            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_enabled",
-            return_value=False,
-        ), patch(
-            "builtins.open", mock_open(read_data='{"foo": "bar"}')
-        ), patch.object(
-            Path, "glob", return_value=[json_path]
+        with (
+            patch(
+                "snowflake.snowpark_checkpoints.utils.telemetry.snowflake_dirs",
+                mock_DIRS,
+            ),
+            patch(
+                "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_enabled",
+                return_value=False,
+            ),
+            patch(
+                "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_testing",
+                return_value=False,
+            ),
+            patch("builtins.open", mock_open(read_data='{"foo": "bar"}')),
+            patch.object(Path, "glob", return_value=[json_path]),
         ):
 
             from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryManager
@@ -199,6 +208,9 @@ class TelemetryManagerTest(unittest.TestCase):
         ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_enabled",
             return_value=True,
+        ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_testing",
+            return_value=False,
         ), patch(
             "builtins.open", mock_open(read_data='{"foo": "bar"}')
         ), patch.object(
@@ -306,6 +318,9 @@ class TelemetryManagerTest(unittest.TestCase):
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_enabled",
             return_value=True,
         ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_testing",
+            return_value=False,
+        ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_upload_local_telemetry",
             return_value=MagicMock(),
         ), patch(
@@ -369,6 +384,9 @@ class TelemetryManagerTest(unittest.TestCase):
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_enabled",
             return_value=True,
         ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_testing",
+            return_value=False,
+        ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_upload_local_telemetry",
             return_value=MagicMock(),
         ), patch(
@@ -394,6 +412,9 @@ class TelemetryManagerTest(unittest.TestCase):
         ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_enabled",
             return_value=True,
+        ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_testing",
+            return_value=False,
         ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_upload_local_telemetry",
             return_value=MagicMock(),
@@ -425,6 +446,9 @@ class TelemetryManagerTest(unittest.TestCase):
         ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_enabled",
             return_value=True,
+        ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_testing",
+            return_value=False,
         ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_upload_local_telemetry",
             return_value=MagicMock(),
@@ -461,6 +485,9 @@ class TelemetryManagerTest(unittest.TestCase):
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_enabled",
             return_value=True,
         ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_testing",
+            return_value=False,
+        ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_upload_local_telemetry",
             return_value=MagicMock(),
         ), patch(
@@ -491,6 +518,9 @@ class TelemetryManagerTest(unittest.TestCase):
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_enabled",
             return_value=True,
         ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_testing",
+            return_value=False,
+        ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_upload_local_telemetry",
             return_value=MagicMock(),
         ), patch(
@@ -520,6 +550,9 @@ class TelemetryManagerTest(unittest.TestCase):
         ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_enabled",
             return_value=True,
+        ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_testing",
+            return_value=False,
         ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_upload_local_telemetry",
             return_value=MagicMock(),
@@ -591,13 +624,11 @@ class TelemetryManagerTest(unittest.TestCase):
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_enabled",
             return_value=True,
         ), patch(
-            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_upload_local_telemetry",
-            return_value=MagicMock(),
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_testing",
+            return_value=False,
         ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_log_telemetry",
             return_value=MagicMock(),
-        ), patch(
-            "snowflake.snowpark_checkpoints.utils.telemetry.randint", return_value=1
         ):
             from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryManager
 
@@ -622,6 +653,9 @@ class TelemetryManagerTest(unittest.TestCase):
         ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_enabled",
             return_value=True,
+        ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_testing",
+            return_value=False,
         ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_upload_local_telemetry",
             return_value=MagicMock(),
@@ -651,6 +685,9 @@ class TelemetryManagerTest(unittest.TestCase):
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_enabled",
             return_value=True,
         ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_testing",
+            return_value=False,
+        ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_upload_local_telemetry",
             return_value=MagicMock(),
         ):
@@ -678,7 +715,7 @@ class TelemetryManagerTest(unittest.TestCase):
         result = get_snowflake_schema_types(snowpark_df)
 
         # Assert
-        assert result == ["LongType"]
+        assert result == ["LongType()"]
 
     def test_get_spark_schema_types(self):
         # Arrange
@@ -696,7 +733,7 @@ class TelemetryManagerTest(unittest.TestCase):
         result = get_spark_schema_types(spark_df)
 
         # Assert
-        assert result == ["LongType"]
+        assert result == ["LongType()"]
 
 
 def mock_folder_path(stat):

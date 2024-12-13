@@ -2,7 +2,7 @@
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
 
-from snowflake.snowpark_checkpoints_configuration.model.Checkpoints import (
+from snowflake.snowpark_checkpoints_configuration.model.checkpoints import (
     Checkpoint,
     Checkpoints,
     Pipeline,
@@ -60,7 +60,7 @@ def test_get_checkpoint_existing():
         location=1,
         enabled=False,
     )
-    new_pipeline = Pipeline(entryPoint="entry-point", checkpoints=[new_checkpoint])
+    new_pipeline = Pipeline(entry_point="entry-point", checkpoints=[new_checkpoint])
     checkpoints = Checkpoints(type="Collection", pipelines=[new_pipeline])
 
     assert checkpoints.get_check_point("checkpoint-name") == new_checkpoint

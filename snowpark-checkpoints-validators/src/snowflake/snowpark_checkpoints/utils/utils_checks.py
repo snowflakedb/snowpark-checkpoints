@@ -38,11 +38,9 @@ from snowflake.snowpark_checkpoints.utils.constant import (
     MEAN_KEY,
     NAME_KEY,
     PANDERA_NOT_FOUND_JSON_FORMAT_ERROR,
-    REMOVE_STATEMENT_FORMAT,
     SKIP_ALL,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
     STAGE_NAME,
-    STAGE_PATH_FORMAT,
     TRUE_COUNT_KEY,
     TYPE_KEY,
     TYPE_NOT_DEFINED_FORMAT_ERROR,
@@ -337,16 +335,10 @@ def _compare_data(
 
     """
     new_table_name = CHECKPOINT_TABLE_NAME_FORMAT.format(checkpoint_name)
-    stage_directory_path = STAGE_PATH_FORMAT.format(STAGE_NAME, new_table_name)
 
     _create_stage(job_context)
 
-    df.write.parquet(stage_directory_path, overwrite=True)
-    dataframe = job_context.snowpark_session.read.parquet(path=stage_directory_path)
-    job_context.snowpark_session.sql(
-        REMOVE_STATEMENT_FORMAT.format(stage_directory_path)
-    )
-    dataframe.write.save_as_table(table_name=new_table_name, mode="overwrite")
+    df.write.save_as_table(table_name=new_table_name, mode="overwrite")
 
     expect_df = job_context.snowpark_session.sql(
         EXCEPT_HASH_AGG_QUERY, [checkpoint_name, new_table_name]

@@ -89,11 +89,6 @@ PIPELINES_KEY: Final[str] = "pipelines"
 # Stage
 STAGE_NAME: Final[str] = "CHECKPOINT_STAGE"
 CREATE_STAGE_STATEMENT_FORMAT: Final[str] = "CREATE STAGE IF NOT EXISTS {}"
-REMOVE_STATEMENT_FORMAT: Final[str] = "REMOVE {}"
-STAGE_PATH_FORMAT: Final[str] = "'@{}/{}'"
-PUT_PARQUET_FILES_IN_STAGE_STATEMENT_FORMAT: Final[
-    str
-] = "PUT 'file://{}' {} AUTO_COMPRESS=FALSE"
 
 # File name
 CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME: Final[str] = "{}.json"

@@ -42,7 +42,7 @@ def test_upload_to_snowflake():
         )
 
     assert mocked_session.method_calls[0] == call.sql(
-        "CREATE TEMPORARY STAGE IF NOT EXISTS CHECKPOINT_STAGE"
+        "CREATE STAGE IF NOT EXISTS CHECKPOINT_STAGE"
     )
 
     assert mocked_session.method_calls[1] == call.sql(

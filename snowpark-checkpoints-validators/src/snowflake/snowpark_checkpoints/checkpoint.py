@@ -69,7 +69,7 @@ def validate_dataframe_checkpoint(
 
     """
     if mode == CheckpointMode.SCHEMA:
-        return check_dataframe_schema_file(
+        return _check_dataframe_schema_file(
             df,
             checkpoint_name,
             job_context,
@@ -89,7 +89,7 @@ def validate_dataframe_checkpoint(
         raise ValueError(INVALID_VALIDATION_MODE_ERROR)
 
 
-def check_dataframe_schema_file(
+def _check_dataframe_schema_file(
     df: SnowparkDataFrame,
     checkpoint_name: str,
     job_context: SnowparkJobContext = None,

@@ -35,6 +35,7 @@ select = [
   'E', # pycodestyle
   'F', # pyflakes
   'I', # isort
+  'N', # pep8-naming
   'RUF100', # check for valid noqa directives
   'UP', # pyupgrade
   'W', # pycodestyle

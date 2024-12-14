@@ -147,8 +147,10 @@ def _collect_dataframe_checkpoint_mode_schema(checkpoint_name, df, sample) -> No
     _generate_json_checkpoint_file(checkpoint_name, dataframe_schema_contract_json)
     telemetry_data = {
         "function": "_collect_dataframe_checkpoint_mode_schema",
-        "mode": CheckpointMode.SCHEMA,
-        "schema_types": [schema_type for schema_type in column_type_dict],
+        "mode": CheckpointMode.SCHEMA.value,
+        "schema_types": [
+            column_type_dict[schema_type] for schema_type in column_type_dict
+        ],
     }
     telemetry.sc_log_info("DataFrame_Collection", telemetry_data)
 

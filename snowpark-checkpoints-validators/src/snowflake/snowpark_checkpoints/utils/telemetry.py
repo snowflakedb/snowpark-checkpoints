@@ -6,10 +6,12 @@ import datetime
 import hashlib
 import json
 
+from enum import Enum
 from os import getcwd, getenv, makedirs, path
 from pathlib import Path
 from platform import python_version
 from sys import platform
+from typing import Optional
 from uuid import getnode
 
 from pyspark.sql import dataframe as spark_dataframe
@@ -41,7 +43,9 @@ class TelemetryManager(TelemetryClient):
         self._sc_upload_local_telemetry()
         self.sc_log_batch = []
 
-    def sc_log_error(self, event_name: str, parameters_info: dict = None):
+    def sc_log_error(
+        self, event_name: str, parameters_info: Optional[dict] = None
+    ) -> None:
         """Log an error telemetry event.
 
         Args:
@@ -51,7 +55,9 @@ class TelemetryManager(TelemetryClient):
         """
         self._sc_log_telemetry(event_name, "error", parameters_info)
 
-    def sc_log_info(self, event_name: str, parameters_info=None):
+    def sc_log_info(
+        self, event_name: str, parameters_info: Optional[dict] = None
+    ) -> None:
         """Log an information telemetry event.
 
         Args:
@@ -62,7 +68,7 @@ class TelemetryManager(TelemetryClient):
         self._sc_log_telemetry(event_name, "info", parameters_info)
 
     def _sc_log_telemetry(
-        self, event_name: str, event_type, parameters_info=None
+        self, event_name: str, event_type: str, parameters_info: Optional[dict] = None
     ) -> dict:
         """Log a telemetry event if is enabled.
 
@@ -128,12 +134,14 @@ class TelemetryManager(TelemetryClient):
             return False
         return True
 
-    def _sc_write_telemetry(self, batch: list, output_folder: str = None) -> None:
+    def _sc_write_telemetry(
+        self, batch: list, output_folder: Optional[str] = None
+    ) -> None:
         """Write telemetry events to local folder. If the folder is full, free up space for the new events.
 
         Args:
             batch (list): The batch of events to write.
-            output_folder (dict, optional): folder used for testing.
+            output_folder (str, optional): folder used for testing.
 
 
         """
@@ -150,7 +158,7 @@ class TelemetryManager(TelemetryClient):
                 with open(file_path, "w") as json_file:
                     json_file.write(json_content)
 
-    def _sc_validate_folder_space(self, event: dict):
+    def _sc_validate_folder_space(self, event: dict) -> str:
         """Validate and manage folder space for the new telemetry events.
 
         Args:
@@ -220,7 +228,7 @@ class TelemetryManager(TelemetryClient):
 def _generate_event(
     event_name: str,
     event_type: str,
-    parameters_info: dict = None,
+    parameters_info: Optional[dict] = None,
 ) -> dict:
     """Generate a telemetry event.
 
@@ -290,9 +298,8 @@ def _free_up_space(folder_path: Path, max_size: int) -> None:
     for file in files:
         if current_size <= max_size:
             break
-        else:
-            current_size -= file.stat().st_size
-            file.unlink()
+        current_size -= file.stat().st_size
+        file.unlink()
 
 
 def _get_unique_id() -> str:
@@ -344,3 +351,13 @@ def get_spark_schema_types(df: spark_dataframe.DataFrame) -> list[str]:
 
     """
     return [str(schema_type.dataType) for schema_type in df.schema.fields]
+
+
+class TelemetryEvent(Enum):
+    DATAFRAME_COLLECTION = "DataFrame_Collection"
+    DATAFRAME_VALIDATOR_MIRROR = "DataFrame_Validator_Mirror"
+    VALUE_VALIDATOR_MIRROR = "Value_Validator_Mirror"
+    DATAFRAME_VALIDATOR_SCHEMA = "DataFrame_Validator_Schema"
+
+    DATAFRAME_COLLECTION_ERROR = "DataFrame_Collection_Error"
+    DATAFRAME_VALIDATOR_SCHEMA_ERROR = "DataFrame_Validator_Schema_Error"

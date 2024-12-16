@@ -10,6 +10,7 @@ import pandera as pa
 
 from pyspark.sql import DataFrame as SparkDataFrame
 
+from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryEvent
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT,
     CHECKPOINT_PARQUET_OUTPUT_FILE_NAME_FORMAT,
@@ -89,7 +90,7 @@ def collect_dataframe_checkpoint(
         telemetry = get_telemetry_manager()
 
         telemetry_data = {
-            "function": "collect_dataframe_checkpoint",
+            "function": collect_dataframe_checkpoint.__name__,
             "error": f"{type(err).__name__}",
         }
         column_type_dict = _get_spark_column_types(df)
@@ -97,7 +98,9 @@ def collect_dataframe_checkpoint(
             telemetry_data.update(
                 {"schema_types": [schema_type for schema_type in column_type_dict]}
             )
-        telemetry.sc_log_error("DataFrame_Collection_Error", telemetry_data)
+        telemetry.sc_log_error(
+            TelemetryEvent.DATAFRAME_COLLECTION_ERROR.value, telemetry_data
+        )
         error_message = str(err)
         raise Exception(error_message) from err
 
@@ -163,13 +166,13 @@ def _collect_dataframe_checkpoint_mode_schema(checkpoint_name, df, sample) -> No
     dataframe_schema_contract_json = json.dumps(dataframe_schema_contract)
     _generate_json_checkpoint_file(checkpoint_name, dataframe_schema_contract_json)
     telemetry_data = {
-        "function": "_collect_dataframe_checkpoint_mode_schema",
+        "function": _collect_dataframe_checkpoint_mode_schema.__name__,
         "mode": CheckpointMode.SCHEMA.value,
         "schema_types": [
             column_type_dict[schema_type] for schema_type in column_type_dict
         ],
     }
-    telemetry.sc_log_info("DataFrame_Collection", telemetry_data)
+    telemetry.sc_log_info(TelemetryEvent.DATAFRAME_COLLECTION.value, telemetry_data)
 
 
 def _get_spark_column_types(df: SparkDataFrame) -> dict[str, any]:

@@ -14,6 +14,7 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
     SamplingStrategy,
 )
 from snowflake.snowpark_checkpoints.utils.telemetry import (
+    TelemetryEvent,
     get_snowflake_schema_types,
     get_spark_schema_types,
     get_telemetry_manager,
@@ -114,42 +115,35 @@ def _assert_return(snowpark_results, spark_results, job_context, checkpoint_name
         else:
             cmp = spark_df.compare(snowpark_df, result_names=("Spark", "snowpark"))
 
+        event_info = {
+            "function": _assert_return.__name__,
+            "status": True,
+            "snowflake_schema_types": get_snowflake_schema_types(snowpark_results),
+            "spark_schema_types": get_spark_schema_types(spark_results),
+        }
         if not cmp.empty:
+            event_info["status"] = False
             telemetry.sc_log_info(
-                "DataFrame_Validator_Mirror",
-                {
-                    "function": "assert_return",
-                    "status": False,
-                    "snowflake_schema_types": get_snowflake_schema_types(
-                        snowpark_results
-                    ),
-                    "spark_schema_types": get_spark_schema_types(spark_results),
-                },
+                TelemetryEvent.DATAFRAME_VALIDATOR_MIRROR.value, event_info
             )
             raise SparkMigrationError(
                 "DataFrame difference:\n", job_context, checkpoint_name, cmp
             )
         else:
             telemetry.sc_log_info(
-                "DataFrame_Validator_Mirror",
-                {
-                    "function": "assert_return",
-                    "status": True,
-                    "snowflake_schema_types": get_snowflake_schema_types(
-                        snowpark_results
-                    ),
-                    "spark_schema_types": get_spark_schema_types(spark_results),
-                },
+                TelemetryEvent.DATAFRAME_VALIDATOR_MIRROR.value, event_info
             )
         job_context.mark_pass(checkpoint_name)
     else:
+        event_info = {
+            "function": _assert_return.__name__,
+            "status": False,
+        }
         if snowpark_results != spark_results:
+            event_info["status"] = False
             telemetry.sc_log_info(
-                "Value_Validator_Mirror",
-                {
-                    "function": "assert_return",
-                    "status": False,
-                },
+                TelemetryEvent.VALUE_VALIDATOR_MIRROR.value,
+                event_info,
             )
             raise SparkMigrationError(
                 "Return value difference:\n",
@@ -159,8 +153,8 @@ def _assert_return(snowpark_results, spark_results, job_context, checkpoint_name
             )
         else:
             telemetry.sc_log_info(
-                "Value_Validator_Mirror",
-                {"function": "assert_return", "status": True},
+                TelemetryEvent.VALUE_VALIDATOR_MIRROR.value,
+                event_info,
             )
 
         job_context.mark_pass(checkpoint_name)

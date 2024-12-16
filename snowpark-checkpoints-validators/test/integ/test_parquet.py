@@ -239,6 +239,6 @@ def test_df_mode_dataframe_fail(job_context, schema, data):
             job_context=job_context,
             mode=CheckpointMode.DATAFRAME,
         )
-        assert False
+        assert False, "Should raise an exception"
     except:
         pass

@@ -11,7 +11,7 @@ from snowflake.snowpark import Session
 from snowflake.snowpark import DataFrame as SnowparkDataFrame
 
 from snowflake.snowpark_checkpoints.checkpoint import (
-    check_dataframe_schema_file,
+    _check_dataframe_schema_file,
     check_dataframe_schema,
     check_output_schema,
     check_input_schema,
@@ -22,7 +22,7 @@ from snowflake.snowpark.functions import lit
 from snowflake.snowpark_checkpoints.utils.constant import (
     CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME,
     SKIP_ALL,
-    SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_FORMAT_NAME,
+    SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
 )
 
 
@@ -158,7 +158,7 @@ def test_df_check_from_file():
     current_directory_path = os.getcwd()
 
     output_directory_path = os.path.join(
-        current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_FORMAT_NAME
+        current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME
     )
 
     if not os.path.exists(output_directory_path):
@@ -176,7 +176,7 @@ def test_df_check_from_file():
     session = Session.builder.getOrCreate()
     sp_df = session.create_dataframe(df)
 
-    check_dataframe_schema_file(sp_df, checkpoint_name)
+    _check_dataframe_schema_file(sp_df, checkpoint_name)
 
 
 def test_df_check_custom_check():

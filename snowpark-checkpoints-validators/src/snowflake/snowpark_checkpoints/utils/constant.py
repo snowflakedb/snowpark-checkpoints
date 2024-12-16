@@ -3,7 +3,13 @@
 #
 
 # Skip type
+from enum import IntEnum
 from typing import Final
+
+
+class CheckpointMode(IntEnum):
+    SCHEMA = 1
+    DATAFRAME = 2
 
 
 SKIP_ALL: Final[str] = "skip_all"
@@ -53,33 +59,36 @@ TYPE_KEY: Final[str] = "type"
 DATAFRAME_CUSTOM_DATA_KEY: Final[str] = "custom_data"
 DATAFRAME_PANDERA_SCHEMA_KEY: Final[str] = "pandera_schema"
 
+# SQL Column names
+TABLE_NAME_COL: Final[str] = "TABLE_NAME"
+CREATED_COL: Final[str] = "CREATED"
+
+# SQL Table names
+INFORMATION_SCHEMA_TABLE_NAME: Final[str] = "INFORMATION_SCHEMA"
+TABLES_TABLE_NAME: Final[str] = "TABLES"
+
+# SQL Query
+EXCEPT_HASH_AGG_QUERY: Final[
+    str
+] = "SELECT HASH_AGG(*) FROM IDENTIFIER(:1) EXCEPT SELECT HASH_AGG(*) FROM IDENTIFIER(:2)"
+
+# Table checkpoints name
+CHECKPOINT_TABLE_NAME_FORMAT: Final[str] = "{}_snowpark"
+
+# Write mode
+OVERWRITE_MODE: Final[str] = "overwrite"
+
+# Validation modes
+VALIDATION_MODE_KEY: Final[str] = "validation_mode"
+PIPELINES_KEY: Final[str] = "pipelines"
+
 # File name
 CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME: Final[str] = "{}.json"
-SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_FORMAT_NAME: Final[
-    str
-] = "snowpark-checkpoints-output"
+CHECKPOINTS_JSON_FILE_NAME: Final[str] = "checkpoints.json"
+SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME: Final[str] = "snowpark-checkpoints-output"
+CHECKPOINT_PARQUET_OUTPUT_FILE_FORMAT_NAME: Final[str] = "{}.parquet"
 
-# Error messages
-SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR: Final[
-    str
-] = "Snowpark output schema validation error"
-COLUMN_NOT_FOUND_FORMAT_ERROR: Final[str] = "Column {} not found in schema"
-BETWEEN_CHECK_ERROR_MESSAGE_FORMAT_ERROR: Final[str] = "Value must be between {} and {}"
-PANDERA_NOT_FOUND_JSON_FORMAT_ERROR: Final[
-    str
-] = "Pandera schema not found in the JSON file for checkpoint: {}"
-COLUMNS_NOT_FOUND_JSON_FORMAT_ERROR: Final[
-    str
-] = "Columns not found in the JSON file for checkpoint: {}"
-DATA_FRAME_IS_REQUIRED_ERROR: Final[str] = "DataFrame is required"
-CHECKPOINT_NAME_IS_REQUIRED_ERROR: Final[str] = "Checkpoint name is required"
-CHECKPOINT_JSON_OUTPUT_DIRECTORY_ERROR: Final[
-    str
-] = "Output directory snowpark-checkpoints-output does not exist. Please run the Snowpark checkpoint collector first."
-CHECKPOINT_JSON_OUTPUT_FILE_NOT_FOUND_ERROR: Final[
-    str
-] = "Checkpoint {} JSON file not found. Please run the Snowpark checkpoint collector first."
-COLUMN_NAME_NOT_DEFINED_FORMAT_ERROR: Final[
-    str
-] = "Column name not defined in the schema: {}"
-TYPE_NOT_DEFINED_FORMAT_ERROR: Final[str] = "Type not defined for column {}"
+# Misc keys
+DOT_PARQUET_EXTENSION: Final[str] = ".parquet"
+BACKSLASH_TOKEN: Final[str] = "\\"
+SLASH_TOKEN: Final[str] = "/"

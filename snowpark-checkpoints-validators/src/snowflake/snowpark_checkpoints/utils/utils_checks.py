@@ -7,36 +7,88 @@ import os
 
 from typing import Any, Optional
 
-import pandera as pa
+import numpy as np
 
 from pandera import Check, DataFrameSchema
 
+from snowflake.snowpark import DataFrame as SnowparkDataFrame
+from snowflake.snowpark_checkpoints.errors import SchemaValidationError
+from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
+from snowflake.snowpark_checkpoints.snowpark_sampler import (
+    SamplingAdapter,
+    SamplingStrategy,
+)
 from snowflake.snowpark_checkpoints.utils.constant import (
-    CHECKPOINT_JSON_OUTPUT_DIRECTORY_ERROR,
     CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME,
-    CHECKPOINT_JSON_OUTPUT_FILE_NOT_FOUND_ERROR,
-    COLUMN_NAME_NOT_DEFINED_FORMAT_ERROR,
-    COLUMN_NOT_FOUND_FORMAT_ERROR,
+    CHECKPOINT_TABLE_NAME_FORMAT,
     COLUMNS_KEY,
-    COLUMNS_NOT_FOUND_JSON_FORMAT_ERROR,
     DATAFRAME_CUSTOM_DATA_KEY,
     DATAFRAME_PANDERA_SCHEMA_KEY,
     DECIMAL_PRECISION_KEY,
+    EXCEPT_HASH_AGG_QUERY,
     FALSE_COUNT_KEY,
     MARGIN_ERROR_KEY,
     MEAN_KEY,
     NAME_KEY,
-    PANDERA_NOT_FOUND_JSON_FORMAT_ERROR,
     SKIP_ALL,
-    SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_FORMAT_NAME,
+    SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
     TRUE_COUNT_KEY,
     TYPE_KEY,
-    TYPE_NOT_DEFINED_FORMAT_ERROR,
 )
 from snowflake.snowpark_checkpoints.utils.supported_types import (
     BooleanTypes,
     NumericTypes,
 )
+
+
+def _process_sampling(
+    df: SnowparkDataFrame,
+    pandera_schema: DataFrameSchema,
+    job_context: Optional[SnowparkJobContext] = None,
+    sample_frac: Optional[float] = 0.1,
+    sample_number: Optional[int] = None,
+    sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
+):
+    """Process a Snowpark DataFrame by sampling it according to the specified parameters.
+
+    Adjusts the column casing of the provided Pandera schema to uppercase.
+
+    Args:
+        df (SnowparkDataFrame): The Snowpark DataFrame to be sampled.
+        pandera_schema (DataFrameSchema): The Pandera schema to validate the DataFrame.
+        job_context (SnowparkJobContext, optional): The job context for the sampling operation.
+            Defaults to None.
+        sample_frac (Optional[float], optional): The fraction of rows to sample.
+            Defaults to 0.1.
+        sample_number (Optional[int], optional): The number of rows to sample.
+            Defaults to None.
+        sampling_strategy (Optional[SamplingStrategy], optional): The strategy to use for sampling.
+            Defaults to SamplingStrategy.RANDOM_SAMPLE.
+
+    Returns:
+        Tuple[DataFrameSchema, pd.DataFrame]: A tuple containing the adjusted Pandera schema with uppercase column names
+        and the sampled pandas DataFrame.
+
+    """
+    sampler = SamplingAdapter(
+        job_context, sample_frac, sample_number, sampling_strategy
+    )
+    sampler.process_args([df])
+
+    # fix up the column casing
+    pandera_schema_upper = pandera_schema
+    new_columns: dict[Any, Any] = {}
+
+    for col in pandera_schema.columns:
+        new_columns[col.upper()] = pandera_schema.columns[col]
+
+    pandera_schema_upper = pandera_schema_upper.remove_columns(pandera_schema.columns)
+    pandera_schema_upper = pandera_schema_upper.add_columns(new_columns)
+
+    sample_df = sampler.get_sampled_pandas_args()[0]
+    sample_df.index = np.ones(sample_df.count().iloc[0])
+
+    return pandera_schema_upper, sample_df
 
 
 def _add_numeric_checks(
@@ -64,12 +116,12 @@ def _add_numeric_checks(
         return mean - std <= series_mean <= mean + std
 
     schema.columns[col].checks.append(
-        pa.Check(check_mean, element_wise=False, name="mean")
+        Check(check_mean, element_wise=False, name="mean")
     )
 
     if DECIMAL_PRECISION_KEY in additional_check:
         schema.columns[col].checks.append(
-            pa.Check(
+            Check(
                 lambda series: series.apply(
                     lambda x: len(str(x).split(".")[1]) if "." in str(x) else 0
                 )
@@ -102,12 +154,12 @@ def _add_boolean_checks(
 
     schema.columns[col].checks.extend(
         [
-            pa.Check(
+            Check(
                 lambda series: count_of_true - std
                 <= series.value_counts().get(True, 0)
                 <= count_of_true + std
             ),
-            pa.Check(
+            Check(
                 lambda series: count_of_false - std
                 <= series.value_counts().get(False, 0)
                 <= count_of_false + std
@@ -136,11 +188,14 @@ def _generate_schema(checkpoint_name: str) -> DataFrameSchema:
     current_directory_path = os.getcwd()
 
     output_directory_path = os.path.join(
-        current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_FORMAT_NAME
+        current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME
     )
 
     if not os.path.exists(output_directory_path):
-        raise ValueError(CHECKPOINT_JSON_OUTPUT_DIRECTORY_ERROR)
+        raise ValueError(
+            """Output directory snowpark-checkpoints-output does not exist.
+Please run the Snowpark checkpoint collector first."""
+        )
 
     checkpoint_file_path = os.path.join(
         output_directory_path,
@@ -149,18 +204,20 @@ def _generate_schema(checkpoint_name: str) -> DataFrameSchema:
 
     if not os.path.exists(checkpoint_file_path):
         raise ValueError(
-            CHECKPOINT_JSON_OUTPUT_FILE_NOT_FOUND_ERROR.format(checkpoint_name)
+            f"Checkpoint {checkpoint_name} JSON file not found. Please run the Snowpark checkpoint collector first."
         )
 
     with open(checkpoint_file_path) as custom_data_schema:
         custom_data_schema_json = json.load(custom_data_schema)
 
     if DATAFRAME_PANDERA_SCHEMA_KEY not in custom_data_schema_json:
-        raise ValueError(PANDERA_NOT_FOUND_JSON_FORMAT_ERROR.format(checkpoint_name))
+        raise ValueError(
+            f"Pandera schema not found in the JSON file for checkpoint: {checkpoint_name}"
+        )
 
     schema_dict = custom_data_schema_json.get(DATAFRAME_PANDERA_SCHEMA_KEY)
     schema_dict_str = json.dumps(schema_dict)
-    schema = pa.DataFrameSchema.from_json(schema_dict_str)
+    schema = DataFrameSchema.from_json(schema_dict_str)
 
     if DATAFRAME_CUSTOM_DATA_KEY not in custom_data_schema_json:
         return schema
@@ -168,7 +225,9 @@ def _generate_schema(checkpoint_name: str) -> DataFrameSchema:
     custom_data = custom_data_schema_json.get(DATAFRAME_CUSTOM_DATA_KEY)
 
     if COLUMNS_KEY not in custom_data:
-        raise ValueError(COLUMNS_NOT_FOUND_JSON_FORMAT_ERROR.format(checkpoint_name))
+        raise ValueError(
+            f"Columns not found in the JSON file for checkpoint: {checkpoint_name}"
+        )
 
     for additional_check in custom_data.get(COLUMNS_KEY):
 
@@ -176,12 +235,10 @@ def _generate_schema(checkpoint_name: str) -> DataFrameSchema:
         name = additional_check.get(NAME_KEY, None)
 
         if name is None:
-            raise ValueError(
-                COLUMN_NAME_NOT_DEFINED_FORMAT_ERROR.format(checkpoint_name)
-            )
+            raise ValueError(f"Column name not defined in the schema {checkpoint_name}")
 
         if type is None:
-            raise ValueError(TYPE_NOT_DEFINED_FORMAT_ERROR.format(name))
+            raise ValueError(f"Type not defined for column {name}")
 
         if type in NumericTypes:
             _add_numeric_checks(schema, name, additional_check)
@@ -251,4 +308,49 @@ def _add_custom_checks(
             col_schema = schema.columns[col]
             col_schema.checks.extend(checks)
         else:
-            raise ValueError(COLUMN_NOT_FOUND_FORMAT_ERROR.format(col))
+            raise ValueError(f"Column {col} not found in schema")
+
+
+def _compare_data(
+    df: SnowparkDataFrame,
+    job_context: Optional[SnowparkJobContext],
+    checkpoint_name: str,
+):
+    """Compare the data in the provided Snowpark DataFrame with the data in a checkpoint table.
+
+    This function writes the provided DataFrame to a table and compares it with an existing checkpoint table
+    using a hash aggregation query. If there is a data mismatch, it marks the job context as failed and raises a
+    SchemaValidationError. If the data matches, it marks the job context as passed.
+
+    Args:
+        df (SnowparkDataFrame): The Snowpark DataFrame to compare.
+        job_context (SnowparkJobContext): The job context containing the Snowpark session and job state.
+        checkpoint_name (str): The name of the checkpoint table to compare against.
+
+    Raises:
+        SchemaValidationError: If there is a data mismatch between the DataFrame and the checkpoint table.
+
+    """
+    new_table_name = CHECKPOINT_TABLE_NAME_FORMAT.format(checkpoint_name)
+
+    df.write.save_as_table(table_name=new_table_name, mode="overwrite")
+
+    expect_df = job_context.snowpark_session.sql(
+        EXCEPT_HASH_AGG_QUERY, [checkpoint_name, new_table_name]
+    )
+
+    if expect_df.count() != 0:
+        error_message = f"Data mismatch for checkpoint {checkpoint_name}"
+        job_context.mark_fail(
+            error_message,
+            checkpoint_name,
+            df,
+        )
+        raise SchemaValidationError(
+            error_message,
+            job_context,
+            checkpoint_name,
+            df,
+        )
+    else:
+        job_context.mark_pass(checkpoint_name)

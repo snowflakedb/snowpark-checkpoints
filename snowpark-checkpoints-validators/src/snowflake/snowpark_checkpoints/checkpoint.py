@@ -5,8 +5,6 @@
 # Wrapper around pandera which logs to snowflake
 from typing import Any, Optional, Union
 
-import numpy as np
-
 from pandas import DataFrame as PandasDataFrame
 from pandera import Check, DataFrameSchema
 from pandera_report import DataFrameValidator
@@ -19,26 +17,83 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
     SamplingStrategy,
 )
 from snowflake.snowpark_checkpoints.utils.constant import (
-    CHECKPOINT_NAME_IS_REQUIRED_ERROR,
-    DATA_FRAME_IS_REQUIRED_ERROR,
-    SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR,
+    CheckpointMode,
 )
 from snowflake.snowpark_checkpoints.utils.extra_config import is_checkpoint_enabled
 from snowflake.snowpark_checkpoints.utils.utils_checks import (
     _add_custom_checks,
+    _compare_data,
     _generate_schema,
+    _process_sampling,
     _skip_checks_on_schema,
 )
 
 
-def check_dataframe_schema_file(
+def validate_dataframe_checkpoint(
     df: SnowparkDataFrame,
     checkpoint_name: str,
-    job_context: SnowparkJobContext = None,
+    job_context: Optional[SnowparkJobContext] = None,
+    mode: Optional[CheckpointMode] = CheckpointMode.SCHEMA,
     custom_checks: Optional[dict[Any, Any]] = None,
     skip_checks: Optional[dict[Any, Any]] = None,
     sample_frac: Optional[float] = 0.1,
-    sample_n: Optional[int] = None,
+    sample_number: Optional[int] = None,
+    sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
+) -> Union[tuple[bool, PandasDataFrame], None]:
+    """Validate a Snowpark DataFrame against a specified checkpoint.
+
+    Args:
+        df (SnowparkDataFrame): The DataFrame to validate.
+        checkpoint_name (str): The name of the checkpoint to validate against.
+        job_context (SnowparkJobContext, optional): The job context for the validation. Required for PARQUET mode.
+        mode (CheckpointMode): The mode of validation (e.g., SCHEMA, PARQUET). Defaults to SCHEMA.
+        custom_checks (Optional[dict[Any, Any]], optional): Custom checks to apply during validation.
+        skip_checks (Optional[dict[Any, Any]], optional): Checks to skip during validation.
+        sample_frac (Optional[float], optional): Fraction of the DataFrame to sample for validation. Defaults to 0.1.
+        sample_number (Optional[int], optional): Number of rows to sample for validation.
+        sampling_strategy (Optional[SamplingStrategy], optional): Strategy to use for sampling.
+            Defaults to RANDOM_SAMPLE.
+
+    Returns:
+        Union[tuple[bool, PandasDataFrame], None]: A tuple containing a boolean indicating success
+        and a Pandas DataFrame with validation results, or None if validation is not applicable.
+
+    Raises:
+        ValueError: If an invalid validation mode is provided or if job_context is None for PARQUET mode.
+
+    """
+    if mode == CheckpointMode.SCHEMA:
+        return _check_dataframe_schema_file(
+            df,
+            checkpoint_name,
+            job_context,
+            custom_checks,
+            skip_checks,
+            sample_frac,
+            sample_number,
+            sampling_strategy,
+        )
+    elif mode == CheckpointMode.DATAFRAME:
+        if job_context is None:
+            raise ValueError(
+                "Connectionless mode is not supported for Parquet validation"
+            )
+        _compare_data(df, job_context, checkpoint_name)
+    else:
+        raise ValueError(
+            """Invalid validation mode.
+            Please use for schema validation use a 1 or for a full data validation use a 2 for schema validation."""
+        )
+
+
+def _check_dataframe_schema_file(
+    df: SnowparkDataFrame,
+    checkpoint_name: str,
+    job_context: Optional[SnowparkJobContext] = None,
+    custom_checks: Optional[dict[Any, Any]] = None,
+    skip_checks: Optional[dict[Any, Any]] = None,
+    sample_frac: Optional[float] = 0.1,
+    sample_number: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
 ) -> tuple[bool, PandasDataFrame]:
     """Generate and checks the schema for a given DataFrame based on a checkpoint name.
@@ -54,7 +109,7 @@ def check_dataframe_schema_file(
             Defaults to None.
         sample_frac (float, optional): Fraction of data to sample.
             Defaults to 0.1.
-        sample_n (int, optional): Number of rows to sample.
+        sample_number (int, optional): Number of rows to sample.
             Defaults to None.
         sampling_strategy (SamplingStrategy, optional): Strategy for sampling data.
             Defaults to SamplingStrategy.RANDOM_SAMPLE.
@@ -67,10 +122,10 @@ def check_dataframe_schema_file(
 
     """
     if df is None:
-        raise ValueError(DATA_FRAME_IS_REQUIRED_ERROR)
+        raise ValueError("DataFrame is required")
 
     if checkpoint_name is None:
-        raise ValueError(CHECKPOINT_NAME_IS_REQUIRED_ERROR)
+        raise ValueError("Checkpoint name is required")
 
     schema = _generate_schema(checkpoint_name)
 
@@ -82,7 +137,7 @@ def check_dataframe_schema_file(
         custom_checks,
         skip_checks,
         sample_frac,
-        sample_n,
+        sample_number,
         sampling_strategy,
     )
 
@@ -90,12 +145,12 @@ def check_dataframe_schema_file(
 def check_dataframe_schema(
     df: SnowparkDataFrame,
     pandera_schema: DataFrameSchema,
-    job_context: SnowparkJobContext = None,
+    job_context: Optional[SnowparkJobContext] = None,
     checkpoint_name: str = None,
     custom_checks: Optional[dict[str, list[Check]]] = None,
     skip_checks: Optional[dict[Any, Any]] = None,
     sample_frac: Optional[float] = 0.1,
-    sample_n: Optional[int] = None,
+    sample_number: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
 ) -> Union[tuple[bool, PandasDataFrame], None]:
     """Validate a DataFrame against a given Pandera schema using sampling techniques.
@@ -113,7 +168,7 @@ def check_dataframe_schema(
             Defaults to None.
         sample_frac (float, optional): Fraction of data to sample.
             Defaults to 0.1.
-        sample_n (int, optional): Number of rows to sample.
+        sample_number (int, optional): Number of rows to sample.
             Defaults to None.
         sampling_strategy (SamplingStrategy, optional): Strategy for sampling data.
             Defaults to SamplingStrategy.RANDOM_SAMPLE.
@@ -141,7 +196,7 @@ def check_dataframe_schema(
             custom_checks,
             skip_checks,
             sample_frac,
-            sample_n,
+            sample_number,
             sampling_strategy,
         )
 
@@ -154,7 +209,7 @@ def _check_dataframe_schema(
     custom_checks: Optional[dict[str, list[Check]]] = None,
     skip_checks: Optional[dict[Any, Any]] = None,
     sample_frac: Optional[float] = 0.1,
-    sample_n: Optional[int] = None,
+    sample_number: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
 ) -> tuple[bool, PandasDataFrame]:
 
@@ -162,21 +217,10 @@ def _check_dataframe_schema(
 
     _add_custom_checks(pandera_schema, custom_checks)
 
-    sampler = SamplingAdapter(job_context, sample_frac, sample_n, sampling_strategy)
-    sampler.process_args([df])
+    pandera_schema_upper, sample_df = _process_sampling(
+        df, pandera_schema, job_context, sample_frac, sample_number, sampling_strategy
+    )
 
-    # fix up the column casing
-    pandera_schema_upper = pandera_schema
-    new_columns: dict[Any, Any] = {}
-
-    for col in pandera_schema.columns:
-        new_columns[col.upper()] = pandera_schema.columns[col]
-
-    pandera_schema_upper = pandera_schema_upper.remove_columns(pandera_schema.columns)
-    pandera_schema_upper = pandera_schema_upper.add_columns(new_columns)
-
-    sample_df = sampler.get_sampled_pandas_args()[0]
-    sample_df.index = np.ones(sample_df.count().iloc[0])
     # Raises SchemaError on validation issues
     try:
         validator = DataFrameValidator()
@@ -190,7 +234,7 @@ def _check_dataframe_schema(
         return validation_result
     except Exception as pandera_ex:
         raise SchemaValidationError(
-            SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR,
+            "Snowpark output schema validation error",
             job_context,
             checkpoint_name,
             pandera_ex,
@@ -200,9 +244,9 @@ def _check_dataframe_schema(
 def check_output_schema(
     pandera_schema: DataFrameSchema,
     sample_frac: Optional[float] = 0.1,
-    sample_n: Optional[int] = None,
+    sample_number: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
-    job_context: SnowparkJobContext = None,
+    job_context: Optional[SnowparkJobContext] = None,
     check_name: Optional[str] = None,
 ):
     """Decorate to validate the schema of the output of a Snowpark function.
@@ -211,7 +255,7 @@ def check_output_schema(
         pandera_schema (DataFrameSchema): The Pandera schema to validate against.
         sample_frac (Optional[float], optional): Fraction of data to sample.
             Defaults to 0.1.
-        sample_n (Optional[int], optional): Number of rows to sample.
+        sample_number (Optional[int], optional): Number of rows to sample.
             Defaults to None.
         sampling_strategy (Optional[SamplingStrategy], optional): Strategy for sampling data.
             Defaults to SamplingStrategy.RANDOM_SAMPLE.
@@ -250,7 +294,7 @@ def check_output_schema(
             # Run the sampled data in snowpark
             snowpark_results = snowpark_fn(*args, **kwargs)
             sampler = SamplingAdapter(
-                job_context, sample_frac, sample_n, sampling_strategy
+                job_context, sample_frac, sample_number, sampling_strategy
             )
             sampler.process_args([snowpark_results])
             pandas_sample_args = sampler.get_sampled_pandas_args()
@@ -268,7 +312,7 @@ def check_output_schema(
                 print(validation_result)
             except Exception as pandera_ex:
                 raise SchemaValidationError(
-                    SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR,
+                    "Snowpark output schema validation error",
                     job_context,
                     checkpoint_name,
                     pandera_ex,
@@ -283,9 +327,9 @@ def check_output_schema(
 def check_input_schema(
     pandera_schema: DataFrameSchema,
     sample_frac: Optional[float] = 0.1,
-    sample_n: Optional[int] = None,
+    sample_number: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
-    job_context: SnowparkJobContext = None,
+    job_context: Optional[SnowparkJobContext] = None,
     check_name: Optional[str] = None,
 ):
     """Decorate factory for validating input DataFrame schemas before function execution.
@@ -294,7 +338,7 @@ def check_input_schema(
         pandera_schema (DataFrameSchema): The Pandera schema to validate against.
         sample_frac (Optional[float], optional): Fraction of data to sample.
             Defaults to 0.1.
-        sample_n (Optional[int], optional): Number of rows to sample.
+        sample_number (Optional[int], optional): Number of rows to sample.
             Defaults to None.
         sampling_strategy (Optional[SamplingStrategy], optional): Strategy for sampling data.
             Defaults to SamplingStrategy.RANDOM_SAMPLE.
@@ -334,7 +378,7 @@ def check_input_schema(
             """
             # Run the sampled data in snowpark
             sampler = SamplingAdapter(
-                job_context, sample_frac, sample_n, sampling_strategy
+                job_context, sample_frac, sample_number, sampling_strategy
             )
             sampler.process_args(args)
             pandas_sample_args = sampler.get_sampled_pandas_args()
@@ -354,7 +398,7 @@ def check_input_schema(
                         print(validation_result)
                     except Exception as pandera_ex:
                         raise SchemaValidationError(
-                            SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR,
+                            "Snowpark output schema validation error",
                             job_context,
                             checkpoint_name,
                             pandera_ex,

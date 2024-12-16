@@ -22,9 +22,9 @@ class SamplingError(Exception):
 class SamplingAdapter:
     def __init__(
         self,
-        job_context: SnowparkJobContext,
+        job_context: Optional[SnowparkJobContext],
         sample_frac: Optional[float] = None,
-        sample_n: Optional[int] = None,
+        sample_number: Optional[int] = None,
         sampling_strategy: SamplingStrategy = SamplingStrategy.RANDOM_SAMPLE,
     ):
         self.pandas_sample_args = []
@@ -35,7 +35,7 @@ class SamplingAdapter:
             )
 
         self.sample_frac = sample_frac
-        self.sample_n = sample_n
+        self.sample_number = sample_number
         self.sampling_strategy = sampling_strategy
 
     def process_args(self, input_args):
@@ -52,9 +52,9 @@ class SamplingAdapter:
                     if self.sample_frac:
                         df_sample = arg.sample(frac=self.sample_frac).to_pandas()
                     else:
-                        df_sample = arg.sample(n=self.sample_n).to_pandas()
+                        df_sample = arg.sample(n=self.sample_number).to_pandas()
                 else:
-                    df_sample = arg.limit(self.sample_n).to_pandas()
+                    df_sample = arg.limit(self.sample_number).to_pandas()
 
                 self.pandas_sample_args.append(df_sample)
             else:

@@ -5,8 +5,6 @@
 # Wrapper around pandera which logs to snowflake
 from typing import Any, Optional, Union
 
-import numpy as np
-
 from pandas import DataFrame as PandasDataFrame
 from pandera import Check, DataFrameSchema
 from pandera_report import DataFrameValidator
@@ -197,7 +195,7 @@ def check_dataframe_schema(
             custom_checks,
             skip_checks,
             sample_frac,
-            sample_n,
+            sample_number,
             sampling_strategy,
         )
 
@@ -210,7 +208,7 @@ def _check_dataframe_schema(
     custom_checks: Optional[dict[str, list[Check]]] = None,
     skip_checks: Optional[dict[Any, Any]] = None,
     sample_frac: Optional[float] = 0.1,
-    sample_n: Optional[int] = None,
+    sample_number: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
 ) -> tuple[bool, PandasDataFrame]:
 

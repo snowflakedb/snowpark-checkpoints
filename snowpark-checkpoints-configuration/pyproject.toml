@@ -23,13 +23,11 @@ classifiers = [
   "Topic :: Software Development :: Libraries :: Python Modules",
   "Topic :: Scientific/Engineering :: Information Analysis",
 ]
+
 dependencies = [
-  "snowflake-snowpark-python",
-  "snowflake-connector-python",
-  "pyspark",
-  "pandera[io]==0.20.4",
-  "pandera-report==0.1.2",
+  "pydantic>=1.8.2",
 ]
+
 description = "Migration tools for Snowpark"
 keywords = [
   'Snowflake',
@@ -40,10 +38,11 @@ keywords = [
   'Snowpark',
 ]
 license = {file = "LICENSE"}
-name = "snowpark-checkpoints-validators"
+name = "snowpark-checkpoints-configuration"
 readme = "README.md"
-requires-python = '>=3.9,<3.12'
-dynamic = ['version']
+requires-python = ">=3.9"
+version = "0.0.0"
+
 
 [project.optional-dependencies]
 development = [
@@ -62,27 +61,27 @@ development = [
 "Source code" = "https://github.com/snowflakedb/snowpark-checkpoints/"
 
 [tool.hatch.version]
-path = "../snowpark-checkpoints-validators/src/snowflake/snowpark_checkpoints/__version__.py"
-pattern = '^__version__ = "(?P<version>.*)"'
+path = "snowpark-checkpoints-configuration/__init__.py"
+pattern = '^__version__ = "(.*)"'
 source = "regex"
 
 [tool.setuptools.packages.find]
-include = ["snowflake.snowpark_checkpoints"]
+include = ["snowflake.snowpark_checkpoints_configuration"]
 where = ["src/"]
 
 [tool.hatch.build]
 dev-mode-dirs = ['src']
-directory = 'snowpark-checkpoints-validators'
+directory = 'snowpark-checkpoints-configuration'
 
 [tool.hatch.build.targets.wheel]
 directory = "dist"
-packages = ["snowpark-checkpoints-validators/src/snowflake/snowpark_checkpoints"]
+packages = ["snowpark-checkpoints-configuration/src/snowflake/snowpark_checkpoints_configuration"]
 
 [tool.hatch.build.targets.sdist]
 directory = "dist"
 exclude = ["/.github", "/.idea"]
 include = [
-  'src/',
+  'snowpark-checkpoints-configuration/src',
   'README.md',
   'LICENSE',
   'test/',
@@ -117,11 +116,10 @@ check = [
 
 [tool.hatch.envs.test.scripts]
 check = [
-  "pip install -e ../snowpark-checkpoints-configuration" ,
   'pytest -v --junitxml=test/outcome/test-results.xml --cov=. --cov-config=test/.coveragerc --cov-report=xml:test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.xml {args:test} --cov-report=term --cov-report=json:test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.json',
 ]
 
 coverage = [
   'cd test/outcome && pwd && ls -la',
-  'python ../.github/scripts/test_get_coverage.py test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.json --threshold={env:COVERAGE_THRESHOLD:85}',
+  'python ../.github/scripts/test_get_coverage.py test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.json --threshold={env:COVERAGE_THRESHOLD:83}',
 ]

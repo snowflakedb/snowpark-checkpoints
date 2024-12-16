@@ -115,7 +115,7 @@ class ColumnCollectorManager:
         return collected_data
 
     @column_register(DAYTIMEINTERVAL_COLUMN_TYPE)
-    def _collect_dayTimeInterval_type_custom_data(
+    def _collect_day_time_interval_type_custom_data(
         self, clm_name, clm_type, values
     ) -> dict[str, any]:
         column_collector = DayTimeIntervalColumnCollector(clm_name, values)

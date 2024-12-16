@@ -8,6 +8,14 @@
       <sourceFolder url="file://$MODULE_DIR$/snowpark-checkpoints-collector/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/snowpark-checkpoints-collector/test" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/snowpark-checkpoints/test" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/snowpark-checkpoints-configuration/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/snowpark-checkpoints-configuration/test" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/snowpark-checkpoints-collectors/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/snowpark-checkpoints-collectors/test" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/snowpark-checkpoints-hypothesis/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/snowpark-checkpoints-hypothesis/test" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/snowpark-checkpoints-validators/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/snowpark-checkpoints-validators/test" isTestSource="true" />
     </content>
     <orderEntry type="jdk" jdkName="py311" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

@@ -88,3 +88,48 @@ def get_checkpoint_mode(
         default_mode = config.mode if config.mode is not None else default_mode
 
     return mode if mode is not None else default_mode
+
+
+def get_checkpoint_location(checkpoint_name: str) -> int:
+    """Get the checkpoint location.
+
+    Following this order first, the mode from the checkpoint configuration, second, the default location value -1.
+
+    Args:
+        checkpoint_name (str): The name of the checkpoint.
+
+    Returns:
+        int: returns the location for that specific checkpoint.
+
+    """
+    default_location = -1
+    enabled, metadata = _get_metadata()
+    if enabled:
+        config = metadata.get_checkpoint(checkpoint_name)
+        location = config.location if config.location is not None else default_location
+        return location
+
+    return default_location
+
+
+def get_checkpoint_df_name(checkpoint_name: str) -> str:
+    """Get the checkpoint dataframe name.
+
+    Following this order first, the mode from the checkpoint configuration, second,the default dataframe name value
+    unknown.
+
+    Args:
+        checkpoint_name (str): The name of the checkpoint.
+
+    Returns:
+        str: returns the name of the dataframe for that specific checkpoint.
+
+    """
+    default_name = "unknown"
+    enabled, metadata = _get_metadata()
+    if enabled:
+        config = metadata.get_checkpoint(checkpoint_name)
+        df_name = config.df if config.df is not None else default_name
+        return df_name
+
+    return default_name

@@ -61,7 +61,9 @@ class SnowConnection:
         create_stage_statement = CREATE_STAGE_STATEMENT_FORMAT.format(STAGE_NAME)
         self.session.sql(create_stage_statement).collect()
 
-    def _load_files_to_stage(self, checkpoint_file_name, output_directory_path) -> None:
+    def _load_files_to_stage(
+        self, checkpoint_file_name: str, output_directory_path: str
+    ) -> None:
         parquet_files_collection = os.scandir(output_directory_path)
         stage_directory_path = STAGE_PATH_FORMAT.format(
             STAGE_NAME, checkpoint_file_name
@@ -76,6 +78,6 @@ class SnowConnection:
                 )
                 self.session.sql(put_statement).collect()
 
-    def _create_table(self, checkpoint_name, stage_directory_path) -> None:
+    def _create_table(self, checkpoint_name: str, stage_directory_path: str) -> None:
         dataframe = self.session.read.parquet(path=stage_directory_path)
         dataframe.write.save_as_table(table_name=checkpoint_name, mode="overwrite")

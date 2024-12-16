@@ -1,7 +1,9 @@
 from datetime import datetime
-from pytest import fixture
+from unittest.mock import MagicMock
+from pytest import fixture, raises
 from snowflake.snowpark import Session
 from snowflake.snowpark_checkpoints.checkpoint import validate_dataframe_checkpoint
+from snowflake.snowpark_checkpoints.errors import SchemaValidationError
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from pyspark.sql import SparkSession
 
@@ -215,30 +217,67 @@ def test_df_mode_dataframe(job_context, schema, data):
     df = job_context.snowpark_session.create_dataframe(data, schema)
     df.write.save_as_table(checkpoint_name, mode="overwrite")
 
-    try:
-        validate_dataframe_checkpoint(
-            df,
-            checkpoint_name,
-            job_context=job_context,
-            mode=CheckpointMode.DATAFRAME,
-        )
-    except:
-        assert False, "Should not raise any exception"
+    mocked_session = MagicMock()
+    job_context.mark_pass = mocked_session
+
+    validate_dataframe_checkpoint(
+        df,
+        checkpoint_name,
+        job_context=job_context,
+        mode=CheckpointMode.DATAFRAME,
+    )
+
+    mocked_session.assert_called_once_with(checkpoint_name)
 
 
-def test_df_mode_dataframe_fail(job_context, schema, data):
+def test_df_mode_dataframe_mismatch(job_context, schema, data):
     checkpoint_name = "test_mode_dataframe_checkpoint_fail"
-    data.pop()
-    df = job_context.snowpark_session.create_dataframe(data, schema)
+
+    data_copy = data.copy()
+    df = job_context.snowpark_session.create_dataframe(data_copy, schema)
     df.write.save_as_table(checkpoint_name, mode="overwrite")
 
-    try:
+    data.pop()
+    df_spark = job_context.snowpark_session.create_dataframe(data, schema)
+
+    with raises(
+        SchemaValidationError, match=f"Data mismatch for checkpoint {checkpoint_name}"
+    ):
         validate_dataframe_checkpoint(
-            df,
+            df_spark,
             checkpoint_name,
             job_context=job_context,
             mode=CheckpointMode.DATAFRAME,
         )
-        assert False, "Should raise an exception"
-    except:
-        pass
+
+
+def test_df_mode_dataframe_job_none(job_context, schema, data):
+    checkpoint_name = "test_mode_dataframe_checkpoint_fail"
+    df_spark = job_context.snowpark_session.create_dataframe(data, schema)
+
+    with raises(
+        ValueError, match="Connectionless mode is not supported for Parquet validation"
+    ):
+        validate_dataframe_checkpoint(
+            df_spark,
+            checkpoint_name,
+            job_context=None,
+            mode=CheckpointMode.DATAFRAME,
+        )
+
+
+def test_df_mode_dataframe_invalid_mode(job_context, schema, data):
+    checkpoint_name = "test_mode_dataframe_checkpoint_fail"
+    df_spark = job_context.snowpark_session.create_dataframe(data, schema)
+
+    with raises(
+        ValueError,
+        match="""Invalid validation mode.
+            Please use for schema validation use a 1 or for a full data validation use a 2 for schema validation.""",
+    ):
+        validate_dataframe_checkpoint(
+            df_spark,
+            checkpoint_name,
+            job_context=job_context,
+            mode="invalid",
+        )

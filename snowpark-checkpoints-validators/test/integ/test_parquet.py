@@ -215,12 +215,15 @@ def test_df_mode_dataframe(job_context, schema, data):
     df = job_context.snowpark_session.create_dataframe(data, schema)
     df.write.save_as_table(checkpoint_name, mode="overwrite")
 
-    validate_dataframe_checkpoint(
-        df,
-        checkpoint_name,
-        job_context=job_context,
-        mode=CheckpointMode.DATAFRAME,
-    )
+    try:
+        validate_dataframe_checkpoint(
+            df,
+            checkpoint_name,
+            job_context=job_context,
+            mode=CheckpointMode.DATAFRAME,
+        )
+    except:
+        assert False, "Should not raise any exception"
 
 
 def test_df_mode_dataframe_fail(job_context, schema, data):

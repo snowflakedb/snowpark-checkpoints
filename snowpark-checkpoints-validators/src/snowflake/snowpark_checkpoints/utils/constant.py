@@ -92,40 +92,6 @@ CHECKPOINTS_JSON_FILE_NAME: Final[str] = "checkpoints.json"
 SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME: Final[str] = "snowpark-checkpoints-output"
 CHECKPOINT_PARQUET_OUTPUT_FILE_FORMAT_NAME: Final[str] = "{}.parquet"
 
-# Error messages
-SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR: Final[
-    str
-] = "Snowpark output schema validation error"
-COLUMN_NOT_FOUND_FORMAT_ERROR: Final[str] = "Column {} not found in schema"
-BETWEEN_CHECK_ERROR_MESSAGE_FORMAT_ERROR: Final[str] = "Value must be between {} and {}"
-PANDERA_NOT_FOUND_JSON_FORMAT_ERROR: Final[
-    str
-] = "Pandera schema not found in the JSON file for checkpoint: {}"
-COLUMNS_NOT_FOUND_JSON_FORMAT_ERROR: Final[
-    str
-] = "Columns not found in the JSON file for checkpoint: {}"
-DATA_FRAME_IS_REQUIRED_ERROR: Final[str] = "DataFrame is required"
-CHECKPOINT_NAME_IS_REQUIRED_ERROR: Final[str] = "Checkpoint name is required"
-CHECKPOINT_JSON_OUTPUT_DIRECTORY_ERROR: Final[
-    str
-] = "Output directory snowpark-checkpoints-output does not exist. Please run the Snowpark checkpoint collector first."
-CHECKPOINT_JSON_OUTPUT_FILE_NOT_FOUND_ERROR: Final[
-    str
-] = "Checkpoint {} JSON file not found. Please run the Snowpark checkpoint collector first."
-COLUMN_NAME_NOT_DEFINED_FORMAT_ERROR: Final[
-    str
-] = "Column name not defined in the schema: {}"
-TYPE_NOT_DEFINED_FORMAT_ERROR: Final[str] = "Type not defined for column {}"
-INVALID_VALIDATION_MODE_ERROR: Final[
-    str
-] = "Invalid validation mode. Please use for schema validation use a 1 or for a full data validation use a 2."
-CHECKPOINTS_JSON_FILE_NOT_FOUND_ERROR: Final[
-    str
-] = "Checkpoints JSON file not found. Please run the Snowpark checkpoint collector first."
-PIPELINES_KEY_NOT_DEFINED_ERROR: Final[str] = "Pipelines key not defined"
-VALIDATION_MODE_KEY_NOT_DEFINED_ERROR: Final[str] = "Validation mode not defined"
-DATA_MISMATCH_ERROR: Final[str] = "Data mismatch for checkpoint {}"
-
 # Misc keys
 DOT_PARQUET_EXTENSION: Final[str] = ".parquet"
 BACKSLASH_TOKEN: Final[str] = "\\"

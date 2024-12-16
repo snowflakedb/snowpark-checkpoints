@@ -19,16 +19,10 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
     SamplingStrategy,
 )
 from snowflake.snowpark_checkpoints.utils.constant import (
-    CHECKPOINT_JSON_OUTPUT_DIRECTORY_ERROR,
     CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME,
-    CHECKPOINT_JSON_OUTPUT_FILE_NOT_FOUND_ERROR,
     CHECKPOINT_TABLE_NAME_FORMAT,
-    COLUMN_NAME_NOT_DEFINED_FORMAT_ERROR,
-    COLUMN_NOT_FOUND_FORMAT_ERROR,
     COLUMNS_KEY,
-    COLUMNS_NOT_FOUND_JSON_FORMAT_ERROR,
     CREATE_STAGE_STATEMENT_FORMAT,
-    DATA_MISMATCH_ERROR,
     DATAFRAME_CUSTOM_DATA_KEY,
     DATAFRAME_PANDERA_SCHEMA_KEY,
     DECIMAL_PRECISION_KEY,
@@ -37,13 +31,11 @@ from snowflake.snowpark_checkpoints.utils.constant import (
     MARGIN_ERROR_KEY,
     MEAN_KEY,
     NAME_KEY,
-    PANDERA_NOT_FOUND_JSON_FORMAT_ERROR,
     SKIP_ALL,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
     STAGE_NAME,
     TRUE_COUNT_KEY,
     TYPE_KEY,
-    TYPE_NOT_DEFINED_FORMAT_ERROR,
 )
 from snowflake.snowpark_checkpoints.utils.supported_types import (
     BooleanTypes,
@@ -202,7 +194,10 @@ def _generate_schema(checkpoint_name: str) -> DataFrameSchema:
     )
 
     if not os.path.exists(output_directory_path):
-        raise ValueError(CHECKPOINT_JSON_OUTPUT_DIRECTORY_ERROR)
+        raise ValueError(
+            """Output directory snowpark-checkpoints-output does not exist.
+Please run the Snowpark checkpoint collector first."""
+        )
 
     checkpoint_file_path = os.path.join(
         output_directory_path,
@@ -211,14 +206,16 @@ def _generate_schema(checkpoint_name: str) -> DataFrameSchema:
 
     if not os.path.exists(checkpoint_file_path):
         raise ValueError(
-            CHECKPOINT_JSON_OUTPUT_FILE_NOT_FOUND_ERROR.format(checkpoint_name)
+            f"Checkpoint {checkpoint_name} JSON file not found. Please run the Snowpark checkpoint collector first."
         )
 
     with open(checkpoint_file_path) as custom_data_schema:
         custom_data_schema_json = json.load(custom_data_schema)
 
     if DATAFRAME_PANDERA_SCHEMA_KEY not in custom_data_schema_json:
-        raise ValueError(PANDERA_NOT_FOUND_JSON_FORMAT_ERROR.format(checkpoint_name))
+        raise ValueError(
+            f"Pandera schema not found in the JSON file for checkpoint: {checkpoint_name}"
+        )
 
     schema_dict = custom_data_schema_json.get(DATAFRAME_PANDERA_SCHEMA_KEY)
     schema_dict_str = json.dumps(schema_dict)
@@ -230,7 +227,9 @@ def _generate_schema(checkpoint_name: str) -> DataFrameSchema:
     custom_data = custom_data_schema_json.get(DATAFRAME_CUSTOM_DATA_KEY)
 
     if COLUMNS_KEY not in custom_data:
-        raise ValueError(COLUMNS_NOT_FOUND_JSON_FORMAT_ERROR.format(checkpoint_name))
+        raise ValueError(
+            f"Columns not found in the JSON file for checkpoint: {checkpoint_name}"
+        )
 
     for additional_check in custom_data.get(COLUMNS_KEY):
 
@@ -238,12 +237,10 @@ def _generate_schema(checkpoint_name: str) -> DataFrameSchema:
         name = additional_check.get(NAME_KEY, None)
 
         if name is None:
-            raise ValueError(
-                COLUMN_NAME_NOT_DEFINED_FORMAT_ERROR.format(checkpoint_name)
-            )
+            raise ValueError(f"Column name not defined in the schema {checkpoint_name}")
 
         if type is None:
-            raise ValueError(TYPE_NOT_DEFINED_FORMAT_ERROR.format(name))
+            raise ValueError(f"Type not defined for column {name}")
 
         if type in NumericTypes:
             _add_numeric_checks(schema, name, additional_check)
@@ -313,7 +310,7 @@ def _add_custom_checks(
             col_schema = schema.columns[col]
             col_schema.checks.extend(checks)
         else:
-            raise ValueError(COLUMN_NOT_FOUND_FORMAT_ERROR.format(col))
+            raise ValueError(f"Column {col} not found in schema")
 
 
 def _compare_data(
@@ -347,7 +344,7 @@ def _compare_data(
     )
 
     if expect_df.count() != 0:
-        error_message = DATA_MISMATCH_ERROR.format(checkpoint_name)
+        error_message = f"Data mismatch for checkpoint {checkpoint_name}"
         job_context.mark_fail(
             error_message,
             checkpoint_name,

@@ -19,10 +19,6 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
     SamplingStrategy,
 )
 from snowflake.snowpark_checkpoints.utils.constant import (
-    CHECKPOINT_NAME_IS_REQUIRED_ERROR,
-    DATA_FRAME_IS_REQUIRED_ERROR,
-    INVALID_VALIDATION_MODE_ERROR,
-    SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR,
     CheckpointMode,
 )
 from snowflake.snowpark_checkpoints.utils.extra_config import is_checkpoint_enabled
@@ -86,7 +82,9 @@ def validate_dataframe_checkpoint(
             )
         _compare_data(df, job_context, checkpoint_name)
     else:
-        raise ValueError(INVALID_VALIDATION_MODE_ERROR)
+        raise ValueError(
+            "Invalid validation mode. Please use for schema validation use a 1 or for a full data validation use a 2."
+        )
 
 
 def _check_dataframe_schema_file(
@@ -125,10 +123,10 @@ def _check_dataframe_schema_file(
 
     """
     if df is None:
-        raise ValueError(DATA_FRAME_IS_REQUIRED_ERROR)
+        raise ValueError("DataFrame is required")
 
     if checkpoint_name is None:
-        raise ValueError(CHECKPOINT_NAME_IS_REQUIRED_ERROR)
+        raise ValueError("Checkpoint name is required")
 
     schema = _generate_schema(checkpoint_name)
 
@@ -237,7 +235,7 @@ def _check_dataframe_schema(
         return validation_result
     except Exception as pandera_ex:
         raise SchemaValidationError(
-            SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR,
+            "Snowpark output schema validation error",
             job_context,
             checkpoint_name,
             pandera_ex,
@@ -315,7 +313,7 @@ def check_output_schema(
                 print(validation_result)
             except Exception as pandera_ex:
                 raise SchemaValidationError(
-                    SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR,
+                    "Snowpark output schema validation error",
                     job_context,
                     checkpoint_name,
                     pandera_ex,
@@ -401,7 +399,7 @@ def check_input_schema(
                         print(validation_result)
                     except Exception as pandera_ex:
                         raise SchemaValidationError(
-                            SNOWPARK_OUTPUT_SCHEMA_VALIDATOR_ERROR,
+                            "Snowpark output schema validation error",
                             job_context,
                             checkpoint_name,
                             pandera_ex,

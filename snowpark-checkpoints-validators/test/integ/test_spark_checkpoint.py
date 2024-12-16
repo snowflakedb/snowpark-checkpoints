@@ -93,7 +93,7 @@ def test_spark_checkpoint_limit_sample(job_context):
     @check_with_spark(
         job_context=job_context,
         spark_function=my_spark_fn,
-        sample_n=10,
+        sample_number=10,
         sampling_strategy=SamplingStrategy.LIMIT,
     )
     def my_snowpark_fn(df: SnowparkDataFrame):
@@ -113,7 +113,7 @@ def test_spark_checkpoint_random_sample(job_context):
     @check_with_spark(
         job_context=job_context,
         spark_function=my_spark_fn,
-        sample_n=10,
+        sample_number=10,
         sampling_strategy=SamplingStrategy.RANDOM_SAMPLE,
     )
     def my_snowpark_fn(df: SnowparkDataFrame):

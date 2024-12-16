@@ -26,10 +26,10 @@ fn = TypeVar("F", bound=Callable)
 
 
 def check_with_spark(
-    job_context: SnowparkJobContext,
+    job_context: Optional[SnowparkJobContext],
     spark_function: fn,
     check_name: Optional[str] = None,
-    sample_n: Optional[int] = 100,
+    sample_number: Optional[int] = 100,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
     check_dtypes: Optional[bool] = True,
     check_with_precision: Optional[float] = True,
@@ -45,7 +45,7 @@ def check_with_spark(
         job_context (SnowparkJobContext): The job context containing configuration and details for the validation.
         spark_function (fn): The equivalent PySpark function to compare against the Snowpark implementation.
         check_name (Optional[str], optional): A name for the checkpoint. Defaults to None.
-        sample_n (Optional[int], optional): The number of rows for validation. Defaults to 100.
+        sample_number (Optional[int], optional): The number of rows for validation. Defaults to 100.
         sampling_strategy (Optional[SamplingStrategy], optional): The strategy used for sampling data.
             Defaults to SamplingStrategy.RANDOM_SAMPLE.
         check_dtypes (Optional[bool], optional): Enable data type consistency checks between Snowpark and PySpark.
@@ -65,7 +65,9 @@ def check_with_spark(
 
         def wrapper(*args, **kwargs):
             sampler = SamplingAdapter(
-                job_context, sample_n=sample_n, sampling_strategy=sampling_strategy
+                job_context,
+                sample_number=sample_number,
+                sampling_strategy=sampling_strategy,
             )
             sampler.process_args(args)
             snowpark_sample_args = sampler.get_sampled_snowpark_args()

@@ -32,8 +32,8 @@ from snowflake.snowpark_checkpoints.utils.utils_checks import (
 def validate_dataframe_checkpoint(
     df: SnowparkDataFrame,
     checkpoint_name: str,
-    mode: Optional[CheckpointMode] = CheckpointMode.SCHEMA,
     job_context: Optional[SnowparkJobContext] = None,
+    mode: Optional[CheckpointMode] = CheckpointMode.SCHEMA,
     custom_checks: Optional[dict[Any, Any]] = None,
     skip_checks: Optional[dict[Any, Any]] = None,
     sample_frac: Optional[float] = 0.1,
@@ -45,8 +45,8 @@ def validate_dataframe_checkpoint(
     Args:
         df (SnowparkDataFrame): The DataFrame to validate.
         checkpoint_name (str): The name of the checkpoint to validate against.
-        mode (CheckpointMode): The mode of validation (e.g., SCHEMA, PARQUET). Defaults to SCHEMA.
         job_context (SnowparkJobContext, optional): The job context for the validation. Required for PARQUET mode.
+        mode (CheckpointMode): The mode of validation (e.g., SCHEMA, PARQUET). Defaults to SCHEMA.
         custom_checks (Optional[dict[Any, Any]], optional): Custom checks to apply during validation.
         skip_checks (Optional[dict[Any, Any]], optional): Checks to skip during validation.
         sample_frac (Optional[float], optional): Fraction of the DataFrame to sample for validation. Defaults to 0.1.
@@ -81,7 +81,8 @@ def validate_dataframe_checkpoint(
         _compare_data(df, job_context, checkpoint_name)
     else:
         raise ValueError(
-            "Invalid validation mode. Please use for schema validation use a 1 or for a full data validation use a 2."
+            """Invalid validation mode.
+            Please use for schema validation use a 1 or for a full data validation use a 2 for schema validation."""
         )
 
 

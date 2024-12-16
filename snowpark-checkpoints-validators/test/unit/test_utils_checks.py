@@ -13,14 +13,12 @@ from snowflake.snowpark_checkpoints.utils.constant import (
     BOOLEAN_TYPE,
     CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME,
     CHECKPOINT_TABLE_NAME_FORMAT,
-    CREATE_STAGE_STATEMENT_FORMAT,
     DATAFRAME_CUSTOM_DATA_KEY,
     EXCEPT_HASH_AGG_QUERY,
     FLOAT_TYPE,
     NAME_KEY,
     OVERWRITE_MODE,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
-    STAGE_NAME,
     TYPE_KEY,
 )
 from pandera import Column, Check, DataFrameSchema
@@ -497,7 +495,6 @@ def test_process_sampling_no_job_context():
 def test_compare_data_match():
     checkpoint_name = "test_checkpoint"
     new_checkpoint_name = CHECKPOINT_TABLE_NAME_FORMAT.format(checkpoint_name)
-    create_stage_statement = CREATE_STAGE_STATEMENT_FORMAT.format(STAGE_NAME)
 
     # Mock Snowpark DataFrame
     df = MagicMock(spec=SnowparkDataFrame)
@@ -518,8 +515,6 @@ def test_compare_data_match():
         table_name=new_checkpoint_name, mode=OVERWRITE_MODE
     )
     calls = [
-        call(create_stage_statement),
-        call().collect(),
         call(EXCEPT_HASH_AGG_QUERY, [checkpoint_name, new_checkpoint_name]),
         call().count(),
     ]
@@ -531,7 +526,6 @@ def test_compare_data_match():
 def test_compare_data_mismatch():
     checkpoint_name = "test_checkpoint"
     new_checkpoint_name = CHECKPOINT_TABLE_NAME_FORMAT.format(checkpoint_name)
-    create_stage_statement = CREATE_STAGE_STATEMENT_FORMAT.format(STAGE_NAME)
 
     # Mock Snowpark DataFrame
     df = MagicMock(spec=SnowparkDataFrame)
@@ -557,8 +551,6 @@ def test_compare_data_mismatch():
         table_name=new_checkpoint_name, mode=OVERWRITE_MODE
     )
     calls = [
-        call(create_stage_statement),
-        call().collect(),
         call(EXCEPT_HASH_AGG_QUERY, [checkpoint_name, new_checkpoint_name]),
         call().count(),
     ]

@@ -82,10 +82,6 @@ OVERWRITE_MODE: Final[str] = "overwrite"
 VALIDATION_MODE_KEY: Final[str] = "validation_mode"
 PIPELINES_KEY: Final[str] = "pipelines"
 
-# Stage
-STAGE_NAME: Final[str] = "CHECKPOINT_STAGE"
-CREATE_STAGE_STATEMENT_FORMAT: Final[str] = "CREATE STAGE IF NOT EXISTS {}"
-
 # File name
 CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME: Final[str] = "{}.json"
 CHECKPOINTS_JSON_FILE_NAME: Final[str] = "checkpoints.json"

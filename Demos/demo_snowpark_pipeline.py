@@ -19,7 +19,6 @@ from snowflake.snowpark.types import (
 )
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from snowflake.snowpark_checkpoints.checkpoint import (
-    _check_dataframe_schema_file,
     validate_dataframe_checkpoint,
 )
 from snowflake.snowpark_checkpoints.spark_migration import check_with_spark

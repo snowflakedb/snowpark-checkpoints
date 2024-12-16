@@ -22,7 +22,6 @@ from snowflake.snowpark_checkpoints.utils.constant import (
     CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME,
     CHECKPOINT_TABLE_NAME_FORMAT,
     COLUMNS_KEY,
-    CREATE_STAGE_STATEMENT_FORMAT,
     DATAFRAME_CUSTOM_DATA_KEY,
     DATAFRAME_PANDERA_SCHEMA_KEY,
     DECIMAL_PRECISION_KEY,
@@ -33,7 +32,6 @@ from snowflake.snowpark_checkpoints.utils.constant import (
     NAME_KEY,
     SKIP_ALL,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
-    STAGE_NAME,
     TRUE_COUNT_KEY,
     TYPE_KEY,
 )
@@ -320,7 +318,7 @@ def _compare_data(
 ):
     """Compare the data in the provided Snowpark DataFrame with the data in a checkpoint table.
 
-    This function writes the provided DataFrame to a temporary table and compares it with an existing checkpoint table
+    This function writes the provided DataFrame to a table and compares it with an existing checkpoint table
     using a hash aggregation query. If there is a data mismatch, it marks the job context as failed and raises a
     SchemaValidationError. If the data matches, it marks the job context as passed.
 
@@ -334,8 +332,6 @@ def _compare_data(
 
     """
     new_table_name = CHECKPOINT_TABLE_NAME_FORMAT.format(checkpoint_name)
-
-    _create_stage(job_context)
 
     df.write.save_as_table(table_name=new_table_name, mode="overwrite")
 
@@ -358,8 +354,3 @@ def _compare_data(
         )
     else:
         job_context.mark_pass(checkpoint_name)
-
-
-def _create_stage(job_context: Optional[SnowparkJobContext]) -> None:
-    create_stage_statement = CREATE_STAGE_STATEMENT_FORMAT.format(STAGE_NAME)
-    job_context.snowpark_session.sql(create_stage_statement).collect()

@@ -10,7 +10,6 @@ import pandera as pa
 
 from pyspark.sql import DataFrame as SparkDataFrame
 
-from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryEvent
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT,
     CHECKPOINT_PARQUET_OUTPUT_FILE_NAME_FORMAT,
@@ -37,6 +36,7 @@ from snowflake.snowpark_checkpoints_collector.utils.extra_config import (
     is_checkpoint_enabled,
 )
 from snowflake.snowpark_checkpoints_collector.utils.telemetry import (
+    TelemetryEvent,
     get_telemetry_manager,
 )
 

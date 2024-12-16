@@ -18,10 +18,10 @@ from snowflake.connector import (
     SNOWFLAKE_CONNECTOR_VERSION,
     time_util,
 )
-from snowflake.connector.constants import DIRS as snowflake_dirs
+from snowflake.connector.constants import DIRS as SNOWFLAKE_DIRS
 from snowflake.connector.network import SnowflakeRestful
 from snowflake.connector.telemetry import TelemetryClient
-from snowflake.snowpark import __version__ as SNOWPARK_VERSION
+from snowflake.snowpark import VERSION as SNOWPARK_VERSION
 from snowflake.snowpark import dataframe as snowpark_dataframe
 from snowflake.snowpark.session import Session
 
@@ -31,7 +31,7 @@ class TelemetryManager(TelemetryClient):
         """TelemetryManager class to log telemetry events."""
         super().__init__(rest)
         self.sc_folder_path = str(
-            snowflake_dirs.user_config_path / "snowpark-checkpoints-telemetry"
+            SNOWFLAKE_DIRS.user_config_path / "snowpark-checkpoints-telemetry"
         )
         self.sc_sf_path_telemetry = "/telemetry/send"
         self.sc_flush_size = 25
@@ -259,7 +259,7 @@ def _get_metadata() -> dict:
     return {
         "os_version": platform,
         "python_version": python_version(),
-        "snowpark_version": SNOWPARK_VERSION,
+        "snowpark_version": ".".join(str(x) for x in SNOWPARK_VERSION if x is not None),
         "device_id": _get_unique_id(),
     }
 

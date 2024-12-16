@@ -68,16 +68,12 @@ INFORMATION_SCHEMA_TABLE_NAME: Final[str] = "INFORMATION_SCHEMA"
 TABLES_TABLE_NAME: Final[str] = "TABLES"
 
 # SQL Query
-# "SELECT HASH_AGG(*) FROM Identifier(:1) EXCEPT SELECT HASH_AGG(*) FROM Identifier(:2)"
 EXCEPT_HASH_AGG_QUERY: Final[
     str
 ] = "SELECT HASH_AGG(*) FROM IDENTIFIER(:1) EXCEPT SELECT HASH_AGG(*) FROM IDENTIFIER(:2)"
 
 # Table checkpoints name
 CHECKPOINT_TABLE_NAME_FORMAT: Final[str] = "{}_snowpark"
-
-# Table type
-# TEMPORARY_TABLE_TYPE: Final[str] = "temporary"
 
 # Write mode
 OVERWRITE_MODE: Final[str] = "overwrite"

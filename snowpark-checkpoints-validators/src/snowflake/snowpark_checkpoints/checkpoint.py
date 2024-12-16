@@ -38,12 +38,12 @@ from snowflake.snowpark_checkpoints.utils.utils_checks import (
 def validate_dataframe_checkpoint(
     df: SnowparkDataFrame,
     checkpoint_name: str,
-    mode: CheckpointMode = CheckpointMode.SCHEMA,
-    job_context: SnowparkJobContext = None,
+    mode: Optional[CheckpointMode] = CheckpointMode.SCHEMA,
+    job_context: Optional[SnowparkJobContext] = None,
     custom_checks: Optional[dict[Any, Any]] = None,
     skip_checks: Optional[dict[Any, Any]] = None,
     sample_frac: Optional[float] = 0.1,
-    sample_n: Optional[int] = None,
+    sample_number: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
 ) -> Union[tuple[bool, PandasDataFrame], None]:
     """Validate a Snowpark DataFrame against a specified checkpoint.
@@ -56,7 +56,7 @@ def validate_dataframe_checkpoint(
         custom_checks (Optional[dict[Any, Any]], optional): Custom checks to apply during validation.
         skip_checks (Optional[dict[Any, Any]], optional): Checks to skip during validation.
         sample_frac (Optional[float], optional): Fraction of the DataFrame to sample for validation. Defaults to 0.1.
-        sample_n (Optional[int], optional): Number of rows to sample for validation.
+        sample_number (Optional[int], optional): Number of rows to sample for validation.
         sampling_strategy (Optional[SamplingStrategy], optional): Strategy to use for sampling.
             Defaults to RANDOM_SAMPLE.
 
@@ -76,7 +76,7 @@ def validate_dataframe_checkpoint(
             custom_checks,
             skip_checks,
             sample_frac,
-            sample_n,
+            sample_number,
             sampling_strategy,
         )
     elif mode == CheckpointMode.DATAFRAME:
@@ -92,11 +92,11 @@ def validate_dataframe_checkpoint(
 def _check_dataframe_schema_file(
     df: SnowparkDataFrame,
     checkpoint_name: str,
-    job_context: SnowparkJobContext = None,
+    job_context: Optional[SnowparkJobContext] = None,
     custom_checks: Optional[dict[Any, Any]] = None,
     skip_checks: Optional[dict[Any, Any]] = None,
     sample_frac: Optional[float] = 0.1,
-    sample_n: Optional[int] = None,
+    sample_number: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
 ) -> tuple[bool, PandasDataFrame]:
     """Generate and checks the schema for a given DataFrame based on a checkpoint name.
@@ -112,7 +112,7 @@ def _check_dataframe_schema_file(
             Defaults to None.
         sample_frac (float, optional): Fraction of data to sample.
             Defaults to 0.1.
-        sample_n (int, optional): Number of rows to sample.
+        sample_number (int, optional): Number of rows to sample.
             Defaults to None.
         sampling_strategy (SamplingStrategy, optional): Strategy for sampling data.
             Defaults to SamplingStrategy.RANDOM_SAMPLE.
@@ -140,7 +140,7 @@ def _check_dataframe_schema_file(
         custom_checks,
         skip_checks,
         sample_frac,
-        sample_n,
+        sample_number,
         sampling_strategy,
     )
 
@@ -148,12 +148,12 @@ def _check_dataframe_schema_file(
 def check_dataframe_schema(
     df: SnowparkDataFrame,
     pandera_schema: DataFrameSchema,
-    job_context: SnowparkJobContext = None,
+    job_context: Optional[SnowparkJobContext] = None,
     checkpoint_name: str = None,
     custom_checks: Optional[dict[str, list[Check]]] = None,
     skip_checks: Optional[dict[Any, Any]] = None,
     sample_frac: Optional[float] = 0.1,
-    sample_n: Optional[int] = None,
+    sample_number: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
 ) -> Union[tuple[bool, PandasDataFrame], None]:
     """Validate a DataFrame against a given Pandera schema using sampling techniques.
@@ -171,7 +171,7 @@ def check_dataframe_schema(
             Defaults to None.
         sample_frac (float, optional): Fraction of data to sample.
             Defaults to 0.1.
-        sample_n (int, optional): Number of rows to sample.
+        sample_number (int, optional): Number of rows to sample.
             Defaults to None.
         sampling_strategy (SamplingStrategy, optional): Strategy for sampling data.
             Defaults to SamplingStrategy.RANDOM_SAMPLE.
@@ -221,7 +221,7 @@ def _check_dataframe_schema(
     _add_custom_checks(pandera_schema, custom_checks)
 
     pandera_schema_upper, sample_df = _process_sampling(
-        df, pandera_schema, job_context, sample_frac, sample_n, sampling_strategy
+        df, pandera_schema, job_context, sample_frac, sample_number, sampling_strategy
     )
 
     # Raises SchemaError on validation issues
@@ -247,9 +247,9 @@ def _check_dataframe_schema(
 def check_output_schema(
     pandera_schema: DataFrameSchema,
     sample_frac: Optional[float] = 0.1,
-    sample_n: Optional[int] = None,
+    sample_number: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
-    job_context: SnowparkJobContext = None,
+    job_context: Optional[SnowparkJobContext] = None,
     check_name: Optional[str] = None,
 ):
     """Decorate to validate the schema of the output of a Snowpark function.
@@ -258,7 +258,7 @@ def check_output_schema(
         pandera_schema (DataFrameSchema): The Pandera schema to validate against.
         sample_frac (Optional[float], optional): Fraction of data to sample.
             Defaults to 0.1.
-        sample_n (Optional[int], optional): Number of rows to sample.
+        sample_number (Optional[int], optional): Number of rows to sample.
             Defaults to None.
         sampling_strategy (Optional[SamplingStrategy], optional): Strategy for sampling data.
             Defaults to SamplingStrategy.RANDOM_SAMPLE.
@@ -297,7 +297,7 @@ def check_output_schema(
             # Run the sampled data in snowpark
             snowpark_results = snowpark_fn(*args, **kwargs)
             sampler = SamplingAdapter(
-                job_context, sample_frac, sample_n, sampling_strategy
+                job_context, sample_frac, sample_number, sampling_strategy
             )
             sampler.process_args([snowpark_results])
             pandas_sample_args = sampler.get_sampled_pandas_args()
@@ -330,9 +330,9 @@ def check_output_schema(
 def check_input_schema(
     pandera_schema: DataFrameSchema,
     sample_frac: Optional[float] = 0.1,
-    sample_n: Optional[int] = None,
+    sample_number: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
-    job_context: SnowparkJobContext = None,
+    job_context: Optional[SnowparkJobContext] = None,
     check_name: Optional[str] = None,
 ):
     """Decorate factory for validating input DataFrame schemas before function execution.
@@ -341,7 +341,7 @@ def check_input_schema(
         pandera_schema (DataFrameSchema): The Pandera schema to validate against.
         sample_frac (Optional[float], optional): Fraction of data to sample.
             Defaults to 0.1.
-        sample_n (Optional[int], optional): Number of rows to sample.
+        sample_number (Optional[int], optional): Number of rows to sample.
             Defaults to None.
         sampling_strategy (Optional[SamplingStrategy], optional): Strategy for sampling data.
             Defaults to SamplingStrategy.RANDOM_SAMPLE.
@@ -381,7 +381,7 @@ def check_input_schema(
             """
             # Run the sampled data in snowpark
             sampler = SamplingAdapter(
-                job_context, sample_frac, sample_n, sampling_strategy
+                job_context, sample_frac, sample_number, sampling_strategy
             )
             sampler.process_args(args)
             pandas_sample_args = sampler.get_sampled_pandas_args()

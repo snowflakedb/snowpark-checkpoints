@@ -4,7 +4,7 @@
 
 import json
 import os
-from unittest.mock import patch, mock_open
+from unittest.mock import call, patch, mock_open
 from numpy import float64
 from pandera import DataFrameSchema
 
@@ -13,13 +13,14 @@ from snowflake.snowpark_checkpoints.utils.constant import (
     BOOLEAN_TYPE,
     CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME,
     CHECKPOINT_TABLE_NAME_FORMAT,
+    CREATE_STAGE_STATEMENT_FORMAT,
     DATAFRAME_CUSTOM_DATA_KEY,
     EXCEPT_HASH_AGG_QUERY,
     FLOAT_TYPE,
     NAME_KEY,
     OVERWRITE_MODE,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
-    TEMPORARY_TABLE_TYPE,
+    STAGE_NAME,
     TYPE_KEY,
 )
 from pandera import Column, Check, DataFrameSchema
@@ -378,6 +379,12 @@ def test_generate_schema_invalid_json():
 def test_process_sampling_with_default_params():
     # Mock Snowpark DataFrame
     df = MagicMock(spec=SnowparkDataFrame)
+    df.write = MagicMock()
+    df.write.mode = MagicMock(return_value=df.write)
+    df.write.save_as_table = MagicMock()
+    df.write = MagicMock()
+    df.write.mode = MagicMock(return_value=df.write)
+    df.write.save_as_table = MagicMock()
     df.count.return_value = 10
 
     # Mock Pandera schema
@@ -442,7 +449,7 @@ def test_process_sampling_with_custom_params():
             pandera_schema,
             job_context,
             sample_frac=0.2,
-            sample_n=5,
+            sample_number=5,
             sampling_strategy=SamplingStrategy.RANDOM_SAMPLE,
         )
 
@@ -488,6 +495,10 @@ def test_process_sampling_no_job_context():
 
 
 def test_compare_data_match():
+    checkpoint_name = "test_checkpoint"
+    new_checkpoint_name = CHECKPOINT_TABLE_NAME_FORMAT.format(checkpoint_name)
+    create_stage_statement = CREATE_STAGE_STATEMENT_FORMAT.format(STAGE_NAME)
+
     # Mock Snowpark DataFrame
     df = MagicMock(spec=SnowparkDataFrame)
 
@@ -500,26 +511,28 @@ def test_compare_data_match():
     session.sql.return_value.count.return_value = 0
 
     # Call the function
-    _compare_data(df, job_context, "test_checkpoint")
+    _compare_data(df, job_context, checkpoint_name)
 
     # Assertions
-    df.write.mode.assert_called_once_with(OVERWRITE_MODE)
-    df.write.mode().save_as_table.assert_called_once_with(
-        CHECKPOINT_TABLE_NAME_FORMAT.format("test_checkpoint"),
-        table_type=TEMPORARY_TABLE_TYPE,
+    df.write.save_as_table.assert_called_once_with(
+        table_name=new_checkpoint_name, mode=OVERWRITE_MODE
     )
-    session.sql.assert_called_once_with(
-        EXCEPT_HASH_AGG_QUERY,
-        [
-            "test_checkpoint",
-            CHECKPOINT_TABLE_NAME_FORMAT.format("test_checkpoint"),
-        ],
-    )
-    job_context.mark_pass.assert_called_once_with("test_checkpoint")
+    calls = [
+        call(create_stage_statement),
+        call().collect(),
+        call(EXCEPT_HASH_AGG_QUERY, [checkpoint_name, new_checkpoint_name]),
+        call().count(),
+    ]
+    session.sql.assert_has_calls(calls)
+    job_context.mark_pass.assert_called_once_with(checkpoint_name)
     job_context.mark_fail.assert_not_called()
 
 
 def test_compare_data_mismatch():
+    checkpoint_name = "test_checkpoint"
+    new_checkpoint_name = CHECKPOINT_TABLE_NAME_FORMAT.format(checkpoint_name)
+    create_stage_statement = CREATE_STAGE_STATEMENT_FORMAT.format(STAGE_NAME)
+
     # Mock Snowpark DataFrame
     df = MagicMock(spec=SnowparkDataFrame)
 
@@ -527,30 +540,28 @@ def test_compare_data_mismatch():
     job_context = MagicMock(spec=SnowparkJobContext)
     session = MagicMock()
     job_context.snowpark_session = session
-    job_context.job_name = "test_checkpoint"
+    job_context.job_name = checkpoint_name
 
     # Mock session.sql to return a non-empty DataFrame (indicating a mismatch)
     session.sql.return_value.count.return_value = 1
 
     # Call the function and expect a SchemaValidationError
     try:
-        _compare_data(df, job_context, "test_checkpoint")
+        _compare_data(df, job_context, checkpoint_name)
         assert False, "Expected SchemaValidationError"
     except SchemaValidationError:
         pass
 
     # Assertions
-    df.write.mode.assert_called_once_with(OVERWRITE_MODE)
-    df.write.mode().save_as_table.assert_called_once_with(
-        CHECKPOINT_TABLE_NAME_FORMAT.format("test_checkpoint"),
-        table_type=TEMPORARY_TABLE_TYPE,
+    df.write.save_as_table.assert_called_once_with(
+        table_name=new_checkpoint_name, mode=OVERWRITE_MODE
     )
-    session.sql.assert_called_once_with(
-        EXCEPT_HASH_AGG_QUERY,
-        [
-            "test_checkpoint",
-            CHECKPOINT_TABLE_NAME_FORMAT.format("test_checkpoint"),
-        ],
-    )
+    calls = [
+        call(create_stage_statement),
+        call().collect(),
+        call(EXCEPT_HASH_AGG_QUERY, [checkpoint_name, new_checkpoint_name]),
+        call().count(),
+    ]
+    session.sql.assert_has_calls(calls)
     job_context.mark_fail.assert_called()
     job_context.mark_pass.assert_not_called()

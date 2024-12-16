@@ -42,9 +42,9 @@ check_dataframe_schema_file(df: SnowparkDataFrame,
                             checkpoint_name: str,
                             custom_checks: Optional[dict[Any, Any]] = None,
                             skip_checks: Optional[dict[Any, Any]] = None,
-                            job_context: SnowparkJobContext = None,
+                            job_context: Optional[SnowparkJobContext] = None,
                             sample_frac: Optional[float] = 0.1,
-                            sample_n: Optional[int] = None,
+                            sample_number: Optional[int] = None,
                             sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE)
 ```
 
@@ -53,7 +53,7 @@ check_dataframe_schema_file(df: SnowparkDataFrame,
 - skip_checks - Checks to be skipped.
 - job_context - Context for job-related operations.
 - sample_frac - Fraction of data to sample.
-- sample_n - Number of rows to sample.
+- sample_number - Number of rows to sample.
 - sampling_strategy - Strategy for sampling data.
 
 ## check_with_spark Decorator
@@ -70,10 +70,10 @@ identical this allows for verification of those functions on real,
 sampled data.
 
 ```python
-check_with_spark(job_context: SnowparkJobContext,
+check_with_spark(job_context: Optional[SnowparkJobContext],
                  spark_function: Callable,
                  check_name: Optional[str] = None,
-                 sample_n: Optional[int] = 100,
+                 sample_number: Optional[int] = 100,
                  sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
                  check_dtypes: Optional[bool] = False,
                  check_with_precision: Optional[bool] = False)
@@ -83,7 +83,7 @@ check_with_spark(job_context: SnowparkJobContext,
 - job_context - The context for job-related operations.
 - spark_function - The function to be executed with PySpark.
 - check_name - The name of the checkpoint.
-- sample_n - Number of rows to sample from each Snowpark DataFrame.
+- sample_number - Number of rows to sample from each Snowpark DataFrame.
 - sampling_strategy - Strategy for sampling data.
 - check_dtypes - Check data types.
 - check_with_precision - Check with precision.

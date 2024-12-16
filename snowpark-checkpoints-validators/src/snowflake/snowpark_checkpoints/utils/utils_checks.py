@@ -54,9 +54,9 @@ from snowflake.snowpark_checkpoints.utils.supported_types import (
 def _process_sampling(
     df: SnowparkDataFrame,
     pandera_schema: DataFrameSchema,
-    job_context: SnowparkJobContext = None,
+    job_context: Optional[SnowparkJobContext] = None,
     sample_frac: Optional[float] = 0.1,
-    sample_n: Optional[int] = None,
+    sample_number: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
 ):
     """Process a Snowpark DataFrame by sampling it according to the specified parameters.
@@ -70,7 +70,7 @@ def _process_sampling(
             Defaults to None.
         sample_frac (Optional[float], optional): The fraction of rows to sample.
             Defaults to 0.1.
-        sample_n (Optional[int], optional): The number of rows to sample.
+        sample_number (Optional[int], optional): The number of rows to sample.
             Defaults to None.
         sampling_strategy (Optional[SamplingStrategy], optional): The strategy to use for sampling.
             Defaults to SamplingStrategy.RANDOM_SAMPLE.
@@ -80,7 +80,9 @@ def _process_sampling(
         and the sampled pandas DataFrame.
 
     """
-    sampler = SamplingAdapter(job_context, sample_frac, sample_n, sampling_strategy)
+    sampler = SamplingAdapter(
+        job_context, sample_frac, sample_number, sampling_strategy
+    )
     sampler.process_args([df])
 
     # fix up the column casing
@@ -316,7 +318,7 @@ def _add_custom_checks(
 
 def _compare_data(
     df: SnowparkDataFrame,
-    job_context: SnowparkJobContext,
+    job_context: Optional[SnowparkJobContext],
     checkpoint_name: str,
 ):
     """Compare the data in the provided Snowpark DataFrame with the data in a checkpoint table.
@@ -361,6 +363,6 @@ def _compare_data(
         job_context.mark_pass(checkpoint_name)
 
 
-def _create_stage(job_context: SnowparkJobContext) -> None:
+def _create_stage(job_context: Optional[SnowparkJobContext]) -> None:
     create_stage_statement = CREATE_STAGE_STATEMENT_FORMAT.format(STAGE_NAME)
     job_context.snowpark_session.sql(create_stage_statement).collect()

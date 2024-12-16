@@ -152,7 +152,7 @@ class TelemetryManagerTest(unittest.TestCase):
             assert result.get("message").get("driver_type") == "PythonConnector"
             assert result.get("message").get("source") == "snowpark-checkpoints"
             assert result.get("message").get("metadata") == {}
-            assert result.get("message").get("data") == '{\n    "testing": "boo"\n}'
+            assert result.get("message").get("data") == '{"testing": "boo"}'
             assert result.get("timestamp") == "0"
             assert result.get("message").get("driver_version") == "0.0.0"
 

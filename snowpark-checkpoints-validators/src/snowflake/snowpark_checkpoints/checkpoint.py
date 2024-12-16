@@ -200,7 +200,7 @@ def _check_dataframe_schema(
         if job_context is not None:
             job_context.mark_pass(checkpoint_name)
 
-        return validation
+        return result
     except Exception as pandera_ex:
         telemetry_data = {
             "function": _check_dataframe_schema.__name__,
@@ -295,7 +295,7 @@ def check_output_schema(
                 if job_context is not None:
                     job_context.mark_pass(checkpoint_name)
 
-                print(validation)
+                print(result)
             except Exception as pandera_ex:
                 telemetry_data = {
                     "function": check_output_schema.__name__,
@@ -400,7 +400,7 @@ def check_input_schema(
                             },
                         )
 
-                        print(validation)
+                        print(result)
                     except Exception as pandera_ex:
                         telemetry_data = {
                             "function": check_input_schema.__name__,

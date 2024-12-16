@@ -95,9 +95,7 @@ def collect_dataframe_checkpoint(
         }
         column_type_dict = _get_spark_column_types(df)
         if column_type_dict is not None:
-            telemetry_data.update(
-                {"schema_types": [schema_type for schema_type in column_type_dict]}
-            )
+            telemetry_data.update({"schema_types": list(column_type_dict)})
         telemetry.sc_log_error(
             TelemetryEvent.DATAFRAME_COLLECTION_ERROR.value, telemetry_data
         )

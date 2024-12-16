@@ -361,3 +361,13 @@ class TelemetryEvent(Enum):
 
     DATAFRAME_COLLECTION_ERROR = "DataFrame_Collection_Error"
     DATAFRAME_VALIDATOR_SCHEMA_ERROR = "DataFrame_Validator_Schema_Error"
+
+
+class TelemetryKeys(Enum):
+    function = "function"
+    status = "status"
+    schema_types = "schema_types"
+    error = "error"
+    mode = "mode"
+    snowflake_schema_types = "snowflake_schema_types"
+    spark_schema_types = "spark_schema_types"

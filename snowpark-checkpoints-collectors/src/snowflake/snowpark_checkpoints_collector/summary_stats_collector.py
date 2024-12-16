@@ -37,6 +37,7 @@ from snowflake.snowpark_checkpoints_collector.utils.extra_config import (
 )
 from snowflake.snowpark_checkpoints_collector.utils.telemetry import (
     TelemetryEvent,
+    TelemetryKeys,
     get_telemetry_manager,
 )
 
@@ -90,8 +91,8 @@ def collect_dataframe_checkpoint(
         telemetry = get_telemetry_manager()
 
         telemetry_data = {
-            "function": collect_dataframe_checkpoint.__name__,
-            "error": f"{type(err).__name__}",
+            TelemetryKeys.function.value: collect_dataframe_checkpoint.__name__,
+            TelemetryKeys.error.value: f"{type(err).__name__}",
         }
         column_type_dict = _get_spark_column_types(df)
         if column_type_dict is not None:
@@ -164,9 +165,9 @@ def _collect_dataframe_checkpoint_mode_schema(checkpoint_name, df, sample) -> No
     dataframe_schema_contract_json = json.dumps(dataframe_schema_contract)
     _generate_json_checkpoint_file(checkpoint_name, dataframe_schema_contract_json)
     telemetry_data = {
-        "function": _collect_dataframe_checkpoint_mode_schema.__name__,
-        "mode": CheckpointMode.SCHEMA.value,
-        "schema_types": [
+        TelemetryKeys.function.value: _collect_dataframe_checkpoint_mode_schema.__name__,
+        TelemetryKeys.mode.value: CheckpointMode.SCHEMA.value,
+        TelemetryKeys.schema_types.value: [
             column_type_dict[schema_type] for schema_type in column_type_dict
         ],
     }

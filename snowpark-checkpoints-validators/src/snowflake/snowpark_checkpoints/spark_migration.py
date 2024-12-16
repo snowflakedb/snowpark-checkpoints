@@ -15,6 +15,7 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
 )
 from snowflake.snowpark_checkpoints.utils.telemetry import (
     TelemetryEvent,
+    TelemetryKeys,
     get_snowflake_schema_types,
     get_spark_schema_types,
     get_telemetry_manager,
@@ -116,10 +117,14 @@ def _assert_return(snowpark_results, spark_results, job_context, checkpoint_name
             cmp = spark_df.compare(snowpark_df, result_names=("Spark", "snowpark"))
 
         event_info = {
-            "function": _assert_return.__name__,
-            "status": True,
-            "snowflake_schema_types": get_snowflake_schema_types(snowpark_results),
-            "spark_schema_types": get_spark_schema_types(spark_results),
+            TelemetryKeys.function.value: _assert_return.__name__,
+            TelemetryKeys.status.value: True,
+            TelemetryKeys.snowflake_schema_types.value: get_snowflake_schema_types(
+                snowpark_results
+            ),
+            TelemetryKeys.spark_schema_types.value: get_spark_schema_types(
+                spark_results
+            ),
         }
         if not cmp.empty:
             event_info["status"] = False
@@ -136,8 +141,8 @@ def _assert_return(snowpark_results, spark_results, job_context, checkpoint_name
         job_context.mark_pass(checkpoint_name)
     else:
         event_info = {
-            "function": _assert_return.__name__,
-            "status": False,
+            TelemetryKeys.function.value: _assert_return.__name__,
+            TelemetryKeys.status.value: False,
         }
         if snowpark_results != spark_results:
             event_info["status"] = False

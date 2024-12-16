@@ -26,6 +26,7 @@ from snowflake.snowpark_checkpoints.utils.constant import (
 from snowflake.snowpark_checkpoints.utils.extra_config import is_checkpoint_enabled
 from snowflake.snowpark_checkpoints.utils.telemetry import (
     TelemetryEvent,
+    TelemetryKeys,
     get_telemetry_manager,
 )
 from snowflake.snowpark_checkpoints.utils.utils_checks import (
@@ -191,9 +192,9 @@ def _check_dataframe_schema(
         telemetry.sc_log_info(
             TelemetryEvent.DATAFRAME_VALIDATOR_SCHEMA.value,
             {
-                "function": _check_dataframe_schema.__name__,
-                "schema_types": list(pandera_schema.columns.keys()),
-                "status": validation,
+                TelemetryKeys.function.value: _check_dataframe_schema.__name__,
+                TelemetryKeys.schema_types.value: list(pandera_schema.columns.keys()),
+                TelemetryKeys.status.value: validation,
             },
         )
 
@@ -203,9 +204,9 @@ def _check_dataframe_schema(
         return result
     except Exception as pandera_ex:
         telemetry_data = {
-            "function": _check_dataframe_schema.__name__,
-            "schema_types": list(pandera_schema.columns.keys()),
-            "error": f"{type(pandera_ex).__name__}",
+            TelemetryKeys.function.value: _check_dataframe_schema.__name__,
+            TelemetryKeys.schema_types.value: list(pandera_schema.columns.keys()),
+            TelemetryKeys.error.value: f"{type(pandera_ex).__name__}",
         }
         telemetry.sc_log_error(
             TelemetryEvent.DATAFRAME_VALIDATOR_SCHEMA_ERROR.value, telemetry_data
@@ -287,9 +288,11 @@ def check_output_schema(
                 telemetry.sc_log_info(
                     TelemetryEvent.DATAFRAME_VALIDATOR_SCHEMA.value,
                     {
-                        "function": check_output_schema.__name__,
-                        "schema_types": list(pandera_schema.columns.keys()),
-                        "status": validation,
+                        TelemetryKeys.function.value: check_output_schema.__name__,
+                        TelemetryKeys.schema_types.value: list(
+                            pandera_schema.columns.keys()
+                        ),
+                        TelemetryKeys.status.value: validation,
                     },
                 )
                 if job_context is not None:
@@ -298,9 +301,11 @@ def check_output_schema(
                 print(result)
             except Exception as pandera_ex:
                 telemetry_data = {
-                    "function": check_output_schema.__name__,
-                    "schema_types": list(pandera_schema.columns.keys()),
-                    "error": f"{type(pandera_ex).__name__}",
+                    TelemetryKeys.function.value: check_output_schema.__name__,
+                    TelemetryKeys.schema_types.value: list(
+                        pandera_schema.columns.keys()
+                    ),
+                    TelemetryKeys.error.value: f"{type(pandera_ex).__name__}",
                 }
                 telemetry.sc_log_error(
                     TelemetryEvent.DATAFRAME_VALIDATOR_SCHEMA_ERROR.value,
@@ -394,18 +399,22 @@ def check_input_schema(
                         telemetry.sc_log_info(
                             TelemetryEvent.DATAFRAME_VALIDATOR_SCHEMA.value,
                             {
-                                "function": check_input_schema.__name__,
-                                "schema_types": list(pandera_schema.columns.keys()),
-                                "status": validation,
+                                TelemetryKeys.function.value: check_input_schema.__name__,
+                                TelemetryKeys.schema_types.value: list(
+                                    pandera_schema.columns.keys()
+                                ),
+                                TelemetryKeys.status.value: validation,
                             },
                         )
 
                         print(result)
                     except Exception as pandera_ex:
                         telemetry_data = {
-                            "function": check_input_schema.__name__,
-                            "schema_types": list(pandera_schema.columns.keys()),
-                            "error": f"{type(pandera_ex).__name__}",
+                            TelemetryKeys.function.value: check_input_schema.__name__,
+                            TelemetryKeys.schema_types.value: list(
+                                pandera_schema.columns.keys()
+                            ),
+                            TelemetryKeys.error.value: f"{type(pandera_ex).__name__}",
                         }
                         telemetry.sc_log_error(
                             TelemetryEvent.DATAFRAME_VALIDATOR_SCHEMA_ERROR.value,

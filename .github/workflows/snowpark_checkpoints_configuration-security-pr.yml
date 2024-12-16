@@ -1,14 +1,14 @@
-name: Run Security Scans [hypothesis.snowpark]
+name: Run Security Scans PR [snowpark_checkpoints_configuration]
 
 on:
-  push:
+  pull_request:
     branches:
-      - "main"
+      - "**"
     paths:
       - "**"
       - "!snowpark-checkpoints-validators/**"
-      - "!snowpark-checkpoints-configuration/**"
       - "!snowpark-checkpoints-collectors/**"
+      - "!snowpark-checkpoints-hypothesis/**"
       - "!Demos/**"
 
 permissions:
@@ -58,8 +58,8 @@ jobs:
           python -m pip install -r requirements.txt
           pip list
         env:
-          DIR_NAME: "snowpark-checkpoints-hypothesis"
+          DIR_NAME: "snowpark-checkpoints-configuration"
 
-      - name: Run Snyk monitor
+      - name: Run Snyk test
         run: |
-          snyk monitor --all-projects --detection-depth=10 --severity-threshold=high
+          snyk test --all-projects --detection-depth=10 --severity-threshold=high

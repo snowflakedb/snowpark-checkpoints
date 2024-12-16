@@ -4,8 +4,6 @@
 
 __all__ = [
     "collect_dataframe_checkpoint",
-    "collect_input_schema",
-    "collect_output_schema",
 ]
 
 from snowflake.snowpark_checkpoints_collector.summary_stats_collector import (

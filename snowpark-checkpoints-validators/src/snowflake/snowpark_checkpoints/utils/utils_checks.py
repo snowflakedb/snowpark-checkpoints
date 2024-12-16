@@ -195,7 +195,7 @@ def _generate_schema(checkpoint_name: str) -> DataFrameSchema:
 def _skip_checks_on_schema(
     pandera_schema: DataFrameSchema,
     skip_checks: Optional[dict[str, list[str]]] = None,
-):
+) -> None:
     """Modify a Pandera DataFrameSchema to skip specified checks on certain columns.
 
     Args:

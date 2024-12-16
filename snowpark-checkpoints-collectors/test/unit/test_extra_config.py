@@ -1,0 +1,136 @@
+#
+# Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
+#
+
+from unittest.mock import MagicMock, patch
+
+from snowflake.snowpark_checkpoints_collector.collection_common import CheckpointMode
+
+
+def test_is_checkpoint_import_error():
+    with patch(
+        "snowflake.snowpark_checkpoints_configuration.checkpoint_metadata.CheckpointMetadata",
+        side_effect=ImportError("Mocked exception"),
+    ):
+        from snowflake.snowpark_checkpoints_collector.utils.extra_config import (
+            _get_metadata,
+        )
+
+        enabled, _ = _get_metadata()
+        assert enabled == False
+
+
+def test_is_checkpoint_enabled_default():
+    with patch(
+        "snowflake.snowpark_checkpoints_collector.utils.extra_config._get_metadata",
+        return_value=(False, None),
+    ):
+        from snowflake.snowpark_checkpoints_collector.utils.extra_config import (
+            is_checkpoint_enabled,
+        )
+
+        actual = is_checkpoint_enabled("demo-initial-creation-checkpoint")
+        assert actual
+
+
+def test_is_checkpoint_enabled_no_file():
+    from snowflake.snowpark_checkpoints_collector.utils.extra_config import (
+        is_checkpoint_enabled,
+    )
+
+    actual = is_checkpoint_enabled("demo-initial-creation-checkpoint")
+    assert actual == True
+
+
+def test_is_checkpoint_enabled_checkpoint_disabled():
+    metadata_mock = MagicMock()
+    metadata_mock.get_checkpoint.return_value = MagicMock(enabled=False)
+    with patch(
+        "snowflake.snowpark_checkpoints_collector.utils.extra_config._get_metadata",
+        return_value=(True, metadata_mock),
+    ):
+        from snowflake.snowpark_checkpoints_collector.utils.extra_config import (
+            is_checkpoint_enabled,
+        )
+
+        actual = is_checkpoint_enabled("my-checkpoint")
+        assert actual == False
+
+
+def test_get_checkpoint_sample_import_error():
+    with patch(
+        "snowflake.snowpark_checkpoints_configuration.checkpoint_metadata.CheckpointMetadata",
+        side_effect=ImportError("Mocked exception"),
+    ):
+        from snowflake.snowpark_checkpoints_collector.utils.extra_config import (
+            get_checkpoint_sample,
+        )
+
+        assert get_checkpoint_sample("checkpoint-name") == 1.0
+
+
+def test_get_checkpoint_sample_import_error_with_parameter():
+    with patch(
+        "snowflake.snowpark_checkpoints_configuration.checkpoint_metadata.CheckpointMetadata",
+        side_effect=ImportError("Mocked exception"),
+    ):
+        from snowflake.snowpark_checkpoints_collector.utils.extra_config import (
+            get_checkpoint_sample,
+        )
+
+        assert get_checkpoint_sample("checkpoint-name", 0.5) == 0.5
+
+
+def test_get_checkpoint_sample_checkpoint_value():
+    metadata_mock = MagicMock()
+    metadata_mock.get_checkpoint.return_value = MagicMock(sample=0.6)
+    with patch(
+        "snowflake.snowpark_checkpoints_collector.utils.extra_config._get_metadata",
+        return_value=(True, metadata_mock),
+    ):
+        from snowflake.snowpark_checkpoints_collector.utils.extra_config import (
+            get_checkpoint_sample,
+        )
+
+        assert get_checkpoint_sample("my-checkpoint") == 0.6
+
+
+def test_get_checkpoint_mode_import_error():
+    with patch(
+        "snowflake.snowpark_checkpoints_configuration.checkpoint_metadata.CheckpointMetadata",
+        side_effect=ImportError("Mocked exception"),
+    ):
+        from snowflake.snowpark_checkpoints_collector.utils.extra_config import (
+            get_checkpoint_mode,
+        )
+
+        assert get_checkpoint_mode("checkpoint-name") == CheckpointMode.SCHEMA
+
+
+def test_get_checkpoint_mode_import_error_with_parameter():
+    with patch(
+        "snowflake.snowpark_checkpoints_configuration.checkpoint_metadata.CheckpointMetadata",
+        side_effect=ImportError("Mocked exception"),
+    ):
+        from snowflake.snowpark_checkpoints_collector.utils.extra_config import (
+            get_checkpoint_mode,
+        )
+
+        assert (
+            get_checkpoint_mode("checkpoint-name", CheckpointMode.SCHEMA)
+            == CheckpointMode.SCHEMA
+        )
+
+
+def test_get_checkpoint_mode_checkpoint_value():
+    metadata_mock = MagicMock()
+    metadata_mock.get_checkpoint.return_value = MagicMock(mode=2)
+    with patch(
+        "snowflake.snowpark_checkpoints_collector.utils.extra_config._get_metadata",
+        return_value=(True, metadata_mock),
+    ):
+        from snowflake.snowpark_checkpoints_collector.utils.extra_config import (
+            get_checkpoint_mode,
+        )
+
+        assert get_checkpoint_mode("my-checkpoint") == CheckpointMode.DATAFRAME

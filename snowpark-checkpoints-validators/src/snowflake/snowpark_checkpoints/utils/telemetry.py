@@ -249,7 +249,7 @@ def _generate_event(
         "driver_version": SNOWFLAKE_CONNECTOR_VERSION,
         "source": "snowpark-checkpoints",
         "metadata": metadata,
-        "data": json.dumps(parameters_info or {}, indent=4),
+        "data": json.dumps(parameters_info or {}),
     }
     timestamp = time_util.get_time_millis()
     event_base = {"message": message, "timestamp": str(timestamp)}

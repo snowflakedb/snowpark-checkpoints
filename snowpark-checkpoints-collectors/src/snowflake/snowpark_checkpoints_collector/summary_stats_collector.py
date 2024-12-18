@@ -35,11 +35,7 @@ from snowflake.snowpark_checkpoints_collector.utils.extra_config import (
     get_checkpoint_sample,
     is_checkpoint_enabled,
 )
-from snowflake.snowpark_checkpoints_collector.utils.telemetry import (
-    TelemetryEvent,
-    TelemetryKeys,
-    get_telemetry_manager,
-)
+from snowflake.snowpark_checkpoints_collector.utils.telemetry import report_telemetry
 
 
 def collect_dataframe_checkpoint(
@@ -76,7 +72,10 @@ def collect_dataframe_checkpoint(
             _mode = get_checkpoint_mode(checkpoint_name, mode)
 
             if _mode == CheckpointMode.SCHEMA:
-                _collect_dataframe_checkpoint_mode_schema(checkpoint_name, df, _sample)
+                column_type_dict = _get_spark_column_types(df)
+                _collect_dataframe_checkpoint_mode_schema(
+                    checkpoint_name, df, _sample, column_type_dict
+                )
 
             elif _mode == CheckpointMode.DATAFRAME:
                 snow_connection = SnowConnection()
@@ -88,24 +87,14 @@ def collect_dataframe_checkpoint(
                 raise Exception("Invalid mode value.")
 
     except Exception as err:
-        telemetry = get_telemetry_manager()
-
-        telemetry_data = {
-            TelemetryKeys.function.value: collect_dataframe_checkpoint.__name__,
-            TelemetryKeys.error.value: f"{type(err).__name__}",
-        }
-        column_type_dict = _get_spark_column_types(df)
-        if column_type_dict is not None:
-            telemetry_data.update({"schema_types": list(column_type_dict)})
-        telemetry.sc_log_error(
-            TelemetryEvent.DATAFRAME_COLLECTION_ERROR.value, telemetry_data
-        )
         error_message = str(err)
         raise Exception(error_message) from err
 
 
-def _collect_dataframe_checkpoint_mode_schema(checkpoint_name, df, sample) -> None:
-    telemetry = get_telemetry_manager()
+@report_telemetry(params_list=["column_type_dict"])
+def _collect_dataframe_checkpoint_mode_schema(
+    checkpoint_name, df, sample, column_type_dict
+) -> None:
     source_df = df.sample(sample)
     if source_df.isEmpty():
         source_df = df
@@ -115,7 +104,6 @@ def _collect_dataframe_checkpoint_mode_schema(checkpoint_name, df, sample) -> No
         pa.infer_schema(pandas_df) if not is_empty_df_with_string_column else {}
     )
 
-    column_type_dict = _get_spark_column_types(df)
     column_name_collection = df.schema.names
     columns_to_remove_from_pandera_schema_collection = []
     column_custom_data_collection = []
@@ -164,14 +152,6 @@ def _collect_dataframe_checkpoint_mode_schema(checkpoint_name, df, sample) -> No
 
     dataframe_schema_contract_json = json.dumps(dataframe_schema_contract)
     _generate_json_checkpoint_file(checkpoint_name, dataframe_schema_contract_json)
-    telemetry_data = {
-        TelemetryKeys.function.value: _collect_dataframe_checkpoint_mode_schema.__name__,
-        TelemetryKeys.mode.value: CheckpointMode.SCHEMA.value,
-        TelemetryKeys.schema_types.value: [
-            column_type_dict[schema_type] for schema_type in column_type_dict
-        ],
-    }
-    telemetry.sc_log_info(TelemetryEvent.DATAFRAME_COLLECTION.value, telemetry_data)
 
 
 def _get_spark_column_types(df: SparkDataFrame) -> dict[str, any]:

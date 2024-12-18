@@ -1,7 +1,6 @@
 #
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
-
 from typing import Callable, Optional, TypeVar
 
 from pyspark.sql import DataFrame as SparkDataFrame
@@ -13,13 +12,7 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
     SamplingAdapter,
     SamplingStrategy,
 )
-from snowflake.snowpark_checkpoints.utils.telemetry import (
-    TelemetryEvent,
-    TelemetryKeys,
-    get_snowflake_schema_types,
-    get_spark_schema_types,
-    get_telemetry_manager,
-)
+from snowflake.snowpark_checkpoints.utils.telemetry import STATUS_KEY, report_telemetry
 
 
 fn = TypeVar("F", bound=Callable)
@@ -75,9 +68,11 @@ def check_with_spark(
             # Run the sampled data in snowpark
             snowpark_test_results = snowpark_fn(*snowpark_sample_args, **kwargs)
             spark_test_results = spark_function(*pyspark_sample_args, **kwargs)
-            _assert_return(
+            result, exception = _assert_return(
                 snowpark_test_results, spark_test_results, job_context, checkpoint_name
             )
+            if not result:
+                raise exception
             # Run the original function in snowpark
             return snowpark_fn(*args, **kwargs)
 
@@ -86,7 +81,14 @@ def check_with_spark(
     return check_with_spark_decorator
 
 
-def _assert_return(snowpark_results, spark_results, job_context, checkpoint_name):
+@report_telemetry(
+    params_list=["snowpark_results", "spark_results"],
+    return_indexes=[(STATUS_KEY, 0)],
+    multiple_return=True,
+)
+def _assert_return(
+    snowpark_results, spark_results, job_context, checkpoint_name
+) -> tuple[bool, Optional[Exception]]:
     """Assert and validate the results from Snowpark and Spark transformations.
 
     Args:
@@ -100,7 +102,6 @@ def _assert_return(snowpark_results, spark_results, job_context, checkpoint_name
         TypeError: If the results cannot be compared.
 
     """
-    telemetry = get_telemetry_manager()
     if isinstance(snowpark_results, SnowparkDataFrame) and isinstance(
         spark_results, SparkDataFrame
     ):
@@ -118,50 +119,22 @@ def _assert_return(snowpark_results, spark_results, job_context, checkpoint_name
         else:
             cmp = spark_df.compare(snowpark_df, result_names=("Spark", "snowpark"))
 
-        event_info = {
-            TelemetryKeys.function.value: _assert_return.__name__,
-            TelemetryKeys.status.value: True,
-            TelemetryKeys.snowflake_schema_types.value: get_snowflake_schema_types(
-                snowpark_results
-            ),
-            TelemetryKeys.spark_schema_types.value: get_spark_schema_types(
-                spark_results
-            ),
-        }
         if not cmp.empty:
-            event_info["status"] = False
-            telemetry.sc_log_info(
-                TelemetryEvent.DATAFRAME_VALIDATOR_MIRROR.value, event_info
-            )
-            raise SparkMigrationError(
+            exception_result = SparkMigrationError(
                 "DataFrame difference:\n", job_context, checkpoint_name, cmp
             )
-        else:
-            telemetry.sc_log_info(
-                TelemetryEvent.DATAFRAME_VALIDATOR_MIRROR.value, event_info
-            )
+            return False, exception_result
         job_context.mark_pass(checkpoint_name)
+        return True, None
     else:
-        event_info = {
-            TelemetryKeys.function.value: _assert_return.__name__,
-            TelemetryKeys.status.value: False,
-        }
+
         if snowpark_results != spark_results:
-            event_info["status"] = False
-            telemetry.sc_log_info(
-                TelemetryEvent.VALUE_VALIDATOR_MIRROR.value,
-                event_info,
-            )
-            raise SparkMigrationError(
+            exception_result = SparkMigrationError(
                 "Return value difference:\n",
                 job_context,
                 checkpoint_name,
                 f"{snowpark_results} != {spark_results}",
             )
-        else:
-            telemetry.sc_log_info(
-                TelemetryEvent.VALUE_VALIDATOR_MIRROR.value,
-                event_info,
-            )
-
+            return False, exception_result
         job_context.mark_pass(checkpoint_name)
+        return True, None

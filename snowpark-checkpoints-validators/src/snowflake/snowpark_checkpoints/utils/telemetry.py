@@ -4,14 +4,14 @@
 
 import datetime
 import hashlib
+import inspect
 import json
 
-from enum import Enum
 from os import getcwd, getenv, makedirs, path
 from pathlib import Path
 from platform import python_version
 from sys import platform
-from typing import Optional
+from typing import Callable, Optional, TypeVar
 from uuid import getnode
 
 from pyspark.sql import dataframe as spark_dataframe
@@ -26,6 +26,7 @@ from snowflake.connector.telemetry import TelemetryClient
 from snowflake.snowpark import VERSION as SNOWPARK_VERSION
 from snowflake.snowpark import dataframe as snowpark_dataframe
 from snowflake.snowpark.session import Session
+from snowflake.snowpark_checkpoints.utils.constant import CheckpointMode
 
 
 class TelemetryManager(TelemetryClient):
@@ -353,21 +354,150 @@ def get_spark_schema_types(df: spark_dataframe.DataFrame) -> list[str]:
     return [str(schema_type.dataType) for schema_type in df.schema.fields]
 
 
-class TelemetryEvent(Enum):
-    DATAFRAME_COLLECTION = "DataFrame_Collection"
-    DATAFRAME_VALIDATOR_MIRROR = "DataFrame_Validator_Mirror"
-    VALUE_VALIDATOR_MIRROR = "Value_Validator_Mirror"
-    DATAFRAME_VALIDATOR_SCHEMA = "DataFrame_Validator_Schema"
-
-    DATAFRAME_COLLECTION_ERROR = "DataFrame_Collection_Error"
-    DATAFRAME_VALIDATOR_SCHEMA_ERROR = "DataFrame_Validator_Schema_Error"
+fn = TypeVar("fn", bound=Callable)
 
 
-class TelemetryKeys(Enum):
-    function = "function"
-    status = "status"
-    schema_types = "schema_types"
-    error = "error"
-    mode = "mode"
-    snowflake_schema_types = "snowflake_schema_types"
-    spark_schema_types = "spark_schema_types"
+def report_telemetry(
+    params_list: list[str] = None,
+    return_indexes: list[tuple[str, int]] = None,
+    multiple_return: bool = False,
+) -> Callable[[fn], fn]:
+    """Report telemetry events for a function.
+
+    Args:
+        params_list (list[str], optional): The list of parameters to report. Defaults to None.
+        return_indexes (list[tuple[str, int]], optional): The list of return values to report. Defaults to None.
+        multiple_return (bool, optional): Whether the function returns multiple values. Defaults to False.
+
+    Returns:
+        Callable[[fn], fn]: The decorator function.
+
+    """
+
+    def report_telemetry_decorator(func):
+        func_name = func.__name__
+
+        def wrapper(*args, **kwargs):
+            param_data = {}
+            parameters = inspect.signature(func).parameters
+            if params_list:
+                for _, param in enumerate(params_list):
+                    index = list(parameters.keys()).index(param)
+                    param_data[param] = args[index]
+
+            try:
+                telemetry_m = get_telemetry_manager()
+                result = func(*args, **kwargs)
+
+                if result and return_indexes:
+                    if multiple_return:
+                        for name, index in return_indexes:
+                            param_data[name] = result[index]
+                    else:
+                        param_data[return_indexes[0][0]] = result[return_indexes[0][1]]
+
+                telemetry_data = {
+                    FUNCTION_KEY: func_name,
+                }
+
+                if func_name == "_check_dataframe_schema":
+                    telemetry_data[STATUS_KEY] = param_data[STATUS_KEY]
+                    telemetry_data[SCHEMA_TYPES_KEY] = list(
+                        param_data["pandera_schema"].columns.keys()
+                    )
+                    telemetry_m.sc_log_info(DATAFRAME_VALIDATOR_SCHEMA, telemetry_data)
+                elif (
+                    func_name == "check_output_schema"
+                    or func_name == "check_input_schema"
+                ):
+                    telemetry_data[SCHEMA_TYPES_KEY] = list(
+                        param_data["pandera_schema"].columns.keys()
+                    )
+                    telemetry_m.sc_log_info(DATAFRAME_VALIDATOR_SCHEMA, telemetry_data)
+                elif func_name == "_collect_dataframe_checkpoint_mode_schema":
+                    telemetry_data[MODE_KEY] = CheckpointMode.SCHEMA.value
+                    column_type_dict = param_data["column_type_dict"]
+                    telemetry_data[SCHEMA_TYPES_KEY] = [
+                        column_type_dict[schema_type]
+                        for schema_type in column_type_dict
+                    ]
+                    telemetry_m.sc_log_info(DATAFRAME_COLLECTION, telemetry_data)
+                elif func_name == "_assert_return":
+                    telemetry_data[STATUS_KEY] = param_data[STATUS_KEY]
+                    if isinstance(
+                        param_data["snowpark_results"], snowpark_dataframe.DataFrame
+                    ) and isinstance(
+                        param_data["spark_results"], spark_dataframe.DataFrame
+                    ):
+                        telemetry_data[
+                            SNOWFLAKE_SCHEMA_TYPES_KEY
+                        ] = get_snowflake_schema_types(param_data["snowpark_results"])
+                        telemetry_data[SPARK_SCHEMA_TYPES_KEY] = get_spark_schema_types(
+                            param_data["spark_results"]
+                        )
+                        telemetry_m.sc_log_info(
+                            DATAFRAME_VALIDATOR_MIRROR, telemetry_data
+                        )
+                    else:
+                        telemetry_m.sc_log_info(VALUE_VALIDATOR_MIRROR, telemetry_data)
+
+                return result
+            except Exception as err:
+                telemetry_m = get_telemetry_manager()
+                telemetry_data = {
+                    FUNCTION_KEY: func_name,
+                    ERROR_KEY: type(err).__name__,
+                }
+                if func_name == "_collect_dataframe_checkpoint_mode_schema":
+                    column_type_dict = param_data["column_type_dict"]
+                    telemetry_data[SCHEMA_TYPES_KEY] = [
+                        column_type_dict[schema_type]
+                        for schema_type in column_type_dict
+                    ]
+                    telemetry_m.sc_log_error(DATAFRAME_COLLECTION_ERROR, telemetry_data)
+                elif (
+                    func_name == "_check_dataframe_schema"
+                    or func_name == "check_output_schema"
+                    or func_name == "check_input_schema"
+                ):
+                    telemetry_data[SCHEMA_TYPES_KEY] = list(
+                        param_data["pandera_schema"].columns.keys()
+                    )
+                    telemetry_m.sc_log_error(DATAFRAME_VALIDATOR_ERROR, telemetry_data)
+                elif func_name == "_assert_return":
+                    if isinstance(
+                        param_data["snowpark_results"], snowpark_dataframe.DataFrame
+                    ) and isinstance(
+                        param_data["spark_results"], spark_dataframe.DataFrame
+                    ):
+                        telemetry_data[
+                            SNOWFLAKE_SCHEMA_TYPES_KEY
+                        ] = get_snowflake_schema_types(param_data["snowpark_results"])
+                        telemetry_data[SPARK_SCHEMA_TYPES_KEY] = get_spark_schema_types(
+                            param_data["spark_results"]
+                        )
+                        telemetry_m.sc_log_error(
+                            DATAFRAME_VALIDATOR_ERROR, telemetry_data
+                        )
+                raise err
+
+        return wrapper
+
+    return report_telemetry_decorator
+
+
+# Constants for telemetry
+DATAFRAME_COLLECTION = "DataFrame_Collection"
+DATAFRAME_VALIDATOR_MIRROR = "DataFrame_Validator_Mirror"
+VALUE_VALIDATOR_MIRROR = "Value_Validator_Mirror"
+DATAFRAME_VALIDATOR_SCHEMA = "DataFrame_Validator_Schema"
+DATAFRAME_COLLECTION_ERROR = "DataFrame_Collection_Error"
+DATAFRAME_VALIDATOR_ERROR = "DataFrame_Validator_Error"
+
+FUNCTION_KEY = "function"
+STATUS_KEY = "status"
+SCHEMA_TYPES_KEY = "schema_types"
+ERROR_KEY = "error"
+MODE_KEY = "mode"
+SNOWFLAKE_SCHEMA_TYPES_KEY = "snowflake_schema_types"
+SPARK_SCHEMA_TYPES_KEY = "spark_schema_types"

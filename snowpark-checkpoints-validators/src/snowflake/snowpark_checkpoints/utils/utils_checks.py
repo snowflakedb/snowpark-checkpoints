@@ -2,9 +2,11 @@
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
 
+import inspect
 import json
 import os
 
+from datetime import datetime
 from typing import Any, Optional
 
 import numpy as np
@@ -25,20 +27,30 @@ from snowflake.snowpark_checkpoints.utils.constant import (
     DATAFRAME_CUSTOM_DATA_KEY,
     DATAFRAME_PANDERA_SCHEMA_KEY,
     DECIMAL_PRECISION_KEY,
+    DEFAULT_KEY,
     EXCEPT_HASH_AGG_QUERY,
+    FAIL_STATUS,
     FALSE_COUNT_KEY,
     MARGIN_ERROR_KEY,
     MEAN_KEY,
     NAME_KEY,
+    PASS_STATUS,
     SKIP_ALL,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
     TRUE_COUNT_KEY,
     TYPE_KEY,
 )
+from snowflake.snowpark_checkpoints.utils.extra_config import (
+    get_checkpoint_by_name,
+)
 from snowflake.snowpark_checkpoints.utils.supported_types import (
     BooleanTypes,
     NumericTypes,
 )
+from snowflake.snowpark_checkpoints.validation_result_metadata import (
+    PipelineResultMetadata,
+)
+from snowflake.snowpark_checkpoints.validation_results import ValidationResult
 
 
 def _process_sampling(
@@ -346,6 +358,7 @@ def _compare_data(
             checkpoint_name,
             df,
         )
+        _update_validation_result(checkpoint_name, FAIL_STATUS)
         raise SchemaValidationError(
             error_message,
             job_context,
@@ -353,4 +366,43 @@ def _compare_data(
             df,
         )
     else:
+        _update_validation_result(checkpoint_name, PASS_STATUS)
         job_context.mark_pass(checkpoint_name)
+
+
+def _update_validation_result(checkpoint_name: str, validation_status: str) -> None:
+    """Update the validation result file with the status of a given checkpoint.
+
+    Args:
+        checkpoint_name (str): The name of the checkpoint to update.
+        validation_status (str): The validation status to record for the checkpoint.
+
+    Returns:
+        None
+
+    """
+    checkpoint_config = get_checkpoint_by_name(checkpoint_name)
+
+    pipeline_result_metadata = PipelineResultMetadata()
+
+    file_name = checkpoint_config.file
+    if file_name is None:
+        stack = inspect.stack()
+        if len(stack) > 1:
+            file_name = stack[1].filename
+        else:
+            file_name = DEFAULT_KEY
+
+    validation_result: ValidationResult = ValidationResult(
+        result=validation_status,
+        timestamp=datetime.now().isoformat(),
+        file=file_name,
+        function=checkpoint_config.function,
+        location=checkpoint_config.location,
+    )
+
+    pipeline_result_metadata.update_validation_result(
+        file_name, checkpoint_name, validation_result
+    )
+
+    pipeline_result_metadata.save()

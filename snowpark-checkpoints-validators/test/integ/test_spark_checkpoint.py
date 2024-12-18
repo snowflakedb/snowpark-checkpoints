@@ -25,7 +25,11 @@ def test_spark_checkpoint_scalar_passing(job_context):
     def my_spark_scalar_fn(df: SparkDataFrame):
         return df.count()
 
-    @check_with_spark(job_context=job_context, spark_function=my_spark_scalar_fn)
+    @check_with_spark(
+        job_context=job_context,
+        spark_function=my_spark_scalar_fn,
+        checkpoint_name="test_spark_scalar_fn",
+    )
     def my_snowpark_scalar_fn(df: SnowparkDataFrame):
         return df.count()
 
@@ -40,7 +44,11 @@ def test_spark_checkpoint_scalar_fail(job_context):
     def my_spark_scalar_fn(df: SparkDataFrame):
         return df.count() + 1
 
-    @check_with_spark(job_context=job_context, spark_function=my_spark_scalar_fn)
+    @check_with_spark(
+        job_context=job_context,
+        spark_function=my_spark_scalar_fn,
+        checkpoint_name="test_spark_scalar_fn",
+    )
     def my_snowpark_scalar_fn(df: SnowparkDataFrame):
         return df.count()
 
@@ -58,7 +66,11 @@ def test_spark_checkpoint_df_pass(job_context):
     def my_spark_fn(df: SparkDataFrame):
         return df.filter(df.A > 2)
 
-    @check_with_spark(job_context=job_context, spark_function=my_spark_fn)
+    @check_with_spark(
+        job_context=job_context,
+        spark_function=my_spark_fn,
+        checkpoint_name="test_spark_scalar_fn",
+    )
     def my_snowpark_fn(df: SnowparkDataFrame):
         return df.filter(df.a > 2)
 
@@ -72,7 +84,11 @@ def test_spark_checkpoint_df_fail(job_context):
     def my_spark_fn(df: SparkDataFrame):
         return df.filter(df.A > 2)
 
-    @check_with_spark(job_context=job_context, spark_function=my_spark_fn)
+    @check_with_spark(
+        job_context=job_context,
+        spark_function=my_spark_fn,
+        checkpoint_name="test_spark_scalar_fn",
+    )
     def my_snowpark_fn(df: SnowparkDataFrame):
         return df.filter(df.a < 2)
 
@@ -93,6 +109,7 @@ def test_spark_checkpoint_limit_sample(job_context):
     @check_with_spark(
         job_context=job_context,
         spark_function=my_spark_fn,
+        checkpoint_name="test_spark_scalar_fn",
         sample_number=10,
         sampling_strategy=SamplingStrategy.LIMIT,
     )
@@ -113,6 +130,7 @@ def test_spark_checkpoint_random_sample(job_context):
     @check_with_spark(
         job_context=job_context,
         spark_function=my_spark_fn,
+        checkpoint_name="test_spark_scalar_fn",
         sample_number=10,
         sampling_strategy=SamplingStrategy.RANDOM_SAMPLE,
     )

@@ -2,23 +2,31 @@
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
 
+from datetime import date
+import datetime
 import json
 import os
-from unittest.mock import call, patch, mock_open
+from unittest.mock import ANY, Mock, call, patch, mock_open, MagicMock
 from numpy import float64
 from pandera import DataFrameSchema
 
+from pytest import raises
 from snowflake.snowpark_checkpoints.errors import SchemaValidationError
 from snowflake.snowpark_checkpoints.utils.constant import (
     BOOLEAN_TYPE,
     CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME,
     CHECKPOINT_TABLE_NAME_FORMAT,
     DATAFRAME_CUSTOM_DATA_KEY,
+    DEFAULT_KEY,
     EXCEPT_HASH_AGG_QUERY,
+    FAIL_STATUS,
     FLOAT_TYPE,
     NAME_KEY,
     OVERWRITE_MODE,
+    PASS_STATUS,
+    RESULT_KEY,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
+    TIMESTAMP_KEY,
     TYPE_KEY,
 )
 from pandera import Column, Check, DataFrameSchema
@@ -29,6 +37,7 @@ from snowflake.snowpark import DataFrame as SnowparkDataFrame
 from snowflake.snowpark_checkpoints.utils.utils_checks import (
     _compare_data,
     _process_sampling,
+    _update_validation_result,
 )
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from snowflake.snowpark_checkpoints.snowpark_sampler import SamplingStrategy
@@ -47,6 +56,7 @@ from snowflake.snowpark_checkpoints.utils.utils_checks import (
     FALSE_COUNT_KEY,
     MARGIN_ERROR_KEY,
 )
+from snowflake.snowpark_checkpoints.validation_results import ValidationResult
 
 
 def test_skip_specific_check():
@@ -507,8 +517,27 @@ def test_compare_data_match():
     # Mock session.sql to return an empty DataFrame (indicating no mismatch)
     session.sql.return_value.count.return_value = 0
 
-    # Call the function
-    _compare_data(df, job_context, checkpoint_name)
+    checkpoint_name = "test_checkpoint"
+    validation_status = PASS_STATUS
+
+    # Mock the metadata and checkpoint config
+    checkpoint_config = MagicMock()
+    checkpoint_config.file = "test_file.py"
+    checkpoint_config.function = "test_function"
+    checkpoint_config.location = "test_location"
+
+    with (
+        patch(
+            "snowflake.snowpark_checkpoints.utils.utils_checks.get_checkpoint_by_name",
+            return_value=checkpoint_config,
+        ),
+        patch("os.getcwd", return_value="/mocked/path"),
+        patch("os.path.exists", return_value=False),
+        patch("builtins.open", mock_open()),
+        patch("json.dump"),
+    ):
+        # Call the function
+        _compare_data(df, job_context, checkpoint_name)
 
     # Assertions
     df.write.save_as_table.assert_called_once_with(
@@ -539,12 +568,28 @@ def test_compare_data_mismatch():
     # Mock session.sql to return a non-empty DataFrame (indicating a mismatch)
     session.sql.return_value.count.return_value = 1
 
-    # Call the function and expect a SchemaValidationError
-    try:
-        _compare_data(df, job_context, checkpoint_name)
-        assert False, "Expected SchemaValidationError"
-    except SchemaValidationError:
-        pass
+    # Mock the metadata and checkpoint config
+    checkpoint_config = MagicMock()
+    checkpoint_config.file = "test_file.py"
+    checkpoint_config.function = "test_function"
+    checkpoint_config.location = "test_location"
+
+    with (
+        patch(
+            "snowflake.snowpark_checkpoints.utils.utils_checks.get_checkpoint_by_name",
+            return_value=checkpoint_config,
+        ),
+        patch("os.getcwd", return_value="/mocked/path"),
+        patch("os.path.exists", return_value=False),
+        patch("builtins.open", mock_open()),
+        patch("json.dump"),
+    ):
+        # Call the function and expect a SchemaValidationError
+        with raises(
+            SchemaValidationError,
+            match=f"Data mismatch for checkpoint {checkpoint_name}",
+        ):
+            _compare_data(df, job_context, checkpoint_name)
 
     # Assertions
     df.write.save_as_table.assert_called_once_with(
@@ -557,3 +602,102 @@ def test_compare_data_mismatch():
     session.sql.assert_has_calls(calls)
     job_context.mark_fail.assert_called()
     job_context.mark_pass.assert_not_called()
+
+
+def test_update_validation_result_with_file():
+    checkpoint_name = "test_checkpoint"
+    validation_status = PASS_STATUS
+
+    # Mock the checkpoint config
+    checkpoint_config = MagicMock()
+    checkpoint_config.file = "test_file.py"
+    checkpoint_config.function = "test_function"
+    checkpoint_config.location = "test_location"
+
+    # Mock the metadata and validation result
+    metadata = MagicMock()
+    MockValidationResult = MagicMock()
+
+    with (
+        patch(
+            "snowflake.snowpark_checkpoints.utils.utils_checks.get_checkpoint_by_name",
+            return_value=checkpoint_config,
+        ),
+        patch(
+            "snowflake.snowpark_checkpoints.utils.utils_checks.PipelineResultMetadata"
+        ) as MockPipelineResultMetadata,
+        patch(
+            "snowflake.snowpark_checkpoints.utils.utils_checks.ValidationResult",
+        ) as MockValidationResult,
+    ):
+        mock_pipeline_result_metadata = MockPipelineResultMetadata.return_value
+
+        # Call the function
+        _update_validation_result(checkpoint_name, validation_status)
+
+        # Assertions
+        MockPipelineResultMetadata.assert_called_once()
+        MockValidationResult.assert_called_once_with(
+            result=validation_status,
+            timestamp=ANY,
+            file=checkpoint_config.file,
+            function=checkpoint_config.function,
+            location=checkpoint_config.location,
+        )
+        mock_pipeline_result_metadata.update_validation_result.assert_called_once_with(
+            checkpoint_config.file, checkpoint_name, MockValidationResult()
+        )
+        mock_pipeline_result_metadata.save.assert_called_once()
+
+
+def test_update_validation_result_without_file():
+    checkpoint_name = "test_checkpoint"
+    validation_status = PASS_STATUS
+
+    # Mock the checkpoint config
+    checkpoint_config = MagicMock()
+    checkpoint_config.file = None
+    checkpoint_config.function = "test_function"
+    checkpoint_config.location = "test_location"
+
+    # Mock the metadata and validation result
+    metadata = MagicMock()
+    MockValidationResult = MagicMock()
+
+    with (
+        patch(
+            "snowflake.snowpark_checkpoints.utils.utils_checks.get_checkpoint_by_name",
+            return_value=checkpoint_config,
+        ),
+        patch(
+            "snowflake.snowpark_checkpoints.utils.utils_checks.PipelineResultMetadata"
+        ) as MockPipelineResultMetadata,
+        patch(
+            "snowflake.snowpark_checkpoints.utils.utils_checks.ValidationResult",
+        ) as MockValidationResult,
+        patch(
+            "snowflake.snowpark_checkpoints.utils.utils_checks.inspect.stack",
+            return_value=[
+                MagicMock(),
+                MagicMock(filename="test_file.py"),
+            ],
+        ),
+    ):
+        mock_pipeline_result_metadata = MockPipelineResultMetadata.return_value
+
+        # Call the function
+        _update_validation_result(checkpoint_name, validation_status)
+
+        # Assertions
+        MockPipelineResultMetadata.assert_called_once()
+        MockValidationResult.assert_called_once_with(
+            result=validation_status,
+            timestamp=ANY,
+            file="test_file.py",
+            function=checkpoint_config.function,
+            location=checkpoint_config.location,
+        )
+        mock_pipeline_result_metadata.update_validation_result.assert_called_once_with(
+            "test_file.py", checkpoint_name, MockValidationResult()
+        )
+        mock_pipeline_result_metadata.save.assert_called_once()

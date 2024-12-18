@@ -12,6 +12,17 @@ class CheckpointMode(IntEnum):
     DATAFRAME = 2
 
 
+# Validation status
+PASS_STATUS: Final[str] = "pass"
+FAIL_STATUS: Final[str] = "fail"
+
+# Validation result keys
+RESULT_KEY: Final[str] = "result"
+TIMESTAMP_KEY: Final[str] = "timestamp"
+DEFAULT_KEY: Final[str] = "default"
+
+
+# Skip type
 SKIP_ALL: Final[str] = "skip_all"
 
 # Supported types
@@ -87,6 +98,7 @@ CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME: Final[str] = "{}.json"
 CHECKPOINTS_JSON_FILE_NAME: Final[str] = "checkpoints.json"
 SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME: Final[str] = "snowpark-checkpoints-output"
 CHECKPOINT_PARQUET_OUTPUT_FILE_FORMAT_NAME: Final[str] = "{}.parquet"
+VALIDATION_RESULTS_JSON_FILE_NAME: Final[str] = "checkpoint_validation_results.json"
 
 # Misc keys
 DOT_PARQUET_EXTENSION: Final[str] = ".parquet"

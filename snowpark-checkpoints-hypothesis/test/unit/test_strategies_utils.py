@@ -4,7 +4,6 @@
 
 import json
 
-from collections.abc import Generator
 from pathlib import Path
 import random
 
@@ -30,7 +29,7 @@ from snowflake.snowpark.types import (
 )
 
 
-def test_load_json_schema_valid_file(tmp_path: Generator[Path, None, None]):
+def test_load_json_schema_valid_file(tmp_path: Path):
     json_content = {"key": "value"}
     json_file = tmp_path / "valid_file.json"
     json_file.write_text(json.dumps(json_content))
@@ -44,7 +43,7 @@ def test_load_json_schema_invalid_path():
         load_json_schema(json_file)
 
 
-def test_load_json_schema_invalid_json(tmp_path: Generator[Path, None, None]):
+def test_load_json_schema_invalid_json(tmp_path: Path):
     invalid_json_file = tmp_path / "invalid_json.json"
     invalid_json_file.write_text("{invalid_json}")
     with pytest.raises(ValueError, match="Error reading JSON schema file:"):

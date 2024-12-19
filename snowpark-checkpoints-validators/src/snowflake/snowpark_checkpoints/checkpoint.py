@@ -230,7 +230,7 @@ def _check_dataframe_schema(
     )
 
     # Raises SchemaError on validation issues
-    validation_status = PASS_STATUS
+    validation_result_status = PASS_STATUS
     try:
         validator = DataFrameValidator()
         validation_result = validator.validate(
@@ -242,7 +242,7 @@ def _check_dataframe_schema(
 
         return validation_result
     except Exception as pandera_ex:
-        validation_status = FAIL_STATUS
+        validation_result_status = FAIL_STATUS
         raise SchemaValidationError(
             "Snowpark output schema validation error",
             job_context,
@@ -250,7 +250,7 @@ def _check_dataframe_schema(
             pandera_ex,
         ) from pandera_ex
     finally:
-        _update_validation_result(checkpoint_name, validation_status)
+        _update_validation_result(checkpoint_name, validation_result_status)
 
 
 @report_telemetry(params_list=["pandera_schema"])
@@ -312,7 +312,7 @@ def check_output_schema(
             pandas_sample_args = sampler.get_sampled_pandas_args()
 
             # Raises SchemaError on validation issues
-            validation_result = PASS_STATUS
+            validation_result_status = PASS_STATUS
             try:
                 validator = DataFrameValidator()
                 validation_result = validator.validate(
@@ -324,7 +324,7 @@ def check_output_schema(
 
                 print(validation_result)
             except Exception as pandera_ex:
-                validation_result = FAIL_STATUS
+                validation_result_status = FAIL_STATUS
                 raise SchemaValidationError(
                     "Snowpark output schema validation error",
                     job_context,
@@ -332,7 +332,7 @@ def check_output_schema(
                     pandera_ex,
                 ) from pandera_ex
             finally:
-                _update_validation_result(checkpoint_name, validation_result)
+                _update_validation_result(checkpoint_name, validation_result_status)
             return snowpark_results
 
         return wrapper
@@ -402,6 +402,7 @@ def check_input_schema(
 
             # Raises SchemaError on validation issues
             for arg in pandas_sample_args:
+                validation_result_status = PASS_STATUS
                 if isinstance(arg, PandasDataFrame):
                     try:
                         validator = DataFrameValidator()
@@ -414,6 +415,7 @@ def check_input_schema(
 
                         print(validation_result)
                     except Exception as pandera_ex:
+                        validation_result_status = FAIL_STATUS
                         raise SchemaValidationError(
                             "Snowpark output schema validation error",
                             job_context,
@@ -421,7 +423,9 @@ def check_input_schema(
                             pandera_ex,
                         ) from pandera_ex
                     finally:
-                        _update_validation_result(_checkpoint_name, validation_result)
+                        _update_validation_result(
+                            _checkpoint_name, validation_result_status
+                        )
             return snowpark_fn(*args, **kwargs)
 
         return wrapper

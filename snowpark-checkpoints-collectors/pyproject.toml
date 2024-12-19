@@ -25,6 +25,7 @@ classifiers = [
 ]
 dependencies = [
   "snowflake-snowpark-python",
+  "snowflake-connector-python",
   "pyspark",
   "pandera[io]==0.20.4",
 ]

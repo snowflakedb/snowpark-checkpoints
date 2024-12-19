@@ -20,6 +20,7 @@ from snowflake.snowpark_checkpoints.utils.constant import (
     CheckpointMode,
 )
 from snowflake.snowpark_checkpoints.utils.extra_config import is_checkpoint_enabled
+from snowflake.snowpark_checkpoints.utils.telemetry import STATUS_KEY, report_telemetry
 from snowflake.snowpark_checkpoints.utils.utils_checks import (
     _add_custom_checks,
     _compare_data,
@@ -201,6 +202,11 @@ def check_dataframe_schema(
         )
 
 
+@report_telemetry(
+    params_list=["pandera_schema"],
+    return_indexes=[(STATUS_KEY, 0)],
+    multiple_return=True,
+)
 def _check_dataframe_schema(
     df: SnowparkDataFrame,
     pandera_schema: DataFrameSchema,
@@ -212,7 +218,6 @@ def _check_dataframe_schema(
     sample_number: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
 ) -> tuple[bool, PandasDataFrame]:
-
     _skip_checks_on_schema(pandera_schema, skip_checks)
 
     _add_custom_checks(pandera_schema, custom_checks)
@@ -241,6 +246,7 @@ def _check_dataframe_schema(
         ) from pandera_ex
 
 
+@report_telemetry(params_list=["pandera_schema"])
 def check_output_schema(
     pandera_schema: DataFrameSchema,
     sample_frac: Optional[float] = 0.1,
@@ -324,6 +330,7 @@ def check_output_schema(
     return check_output_with_decorator
 
 
+@report_telemetry(params_list=["pandera_schema"])
 def check_input_schema(
     pandera_schema: DataFrameSchema,
     sample_frac: Optional[float] = 0.1,

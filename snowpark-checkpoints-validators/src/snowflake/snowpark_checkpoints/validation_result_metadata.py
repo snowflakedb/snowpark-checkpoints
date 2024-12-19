@@ -29,6 +29,16 @@ class PipelineResultMetadata:
         self._load(path)
 
     def _load(self, path: Optional[str] = None):
+        """Load validation results from a JSON file.
+
+        Args:
+            path (Optional[str]): The directory path where the validation results file is located.
+                                  If not provided, the current working directory is used.
+
+        Raises:
+            Exception: If there is an error reading the validation results file.
+
+        """
         directory = path if path is not None else os.getcwd()
 
         self.pipeline_result = {}
@@ -50,7 +60,17 @@ class PipelineResultMetadata:
     def update_validation_result(
         self, file_name: str, checkpoint_name: str, validation_result: ValidationResult
     ):
+        """Update the validation result for a given file and checkpoint.
 
+        Args:
+            file_name (str): The name of the file for which the validation result is being updated.
+            checkpoint_name (str): The name of the checkpoint for which the validation result is being updated.
+            validation_result (ValidationResult): The validation result to be added.
+
+        Returns:
+            None
+
+        """
         file_result = self.pipeline_result.get(file_name, {})
         checkpoint_results = file_result.get(checkpoint_name, [])
 
@@ -61,6 +81,16 @@ class PipelineResultMetadata:
         self.pipeline_result[file_name] = file_result
 
     def save(self):
+        """Save the validation results to a JSON file.
+
+        The file is saved in the current working directory with a predefined
+        file name. The validation results are serialized using the
+        ValidationResultEncoder.
+
+        Raises:
+            OSError: If the file cannot be opened or written to.
+
+        """
         validation_results_file = os.path.join(
             os.getcwd(), VALIDATION_RESULTS_JSON_FILE_NAME
         )

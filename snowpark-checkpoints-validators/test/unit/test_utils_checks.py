@@ -3,10 +3,9 @@
 #
 
 from datetime import date
-import datetime
 import json
 import os
-from unittest.mock import ANY, Mock, call, patch, mock_open, MagicMock
+from unittest.mock import ANY, call, patch, mock_open, MagicMock
 from numpy import float64
 from pandera import DataFrameSchema
 
@@ -17,16 +16,13 @@ from snowflake.snowpark_checkpoints.utils.constant import (
     CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME,
     CHECKPOINT_TABLE_NAME_FORMAT,
     DATAFRAME_CUSTOM_DATA_KEY,
-    DEFAULT_KEY,
     EXCEPT_HASH_AGG_QUERY,
     FAIL_STATUS,
     FLOAT_TYPE,
     NAME_KEY,
     OVERWRITE_MODE,
     PASS_STATUS,
-    RESULT_KEY,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
-    TIMESTAMP_KEY,
     TYPE_KEY,
 )
 from pandera import Column, Check, DataFrameSchema
@@ -535,11 +531,17 @@ def test_compare_data_match():
         patch("os.path.exists", return_value=False),
         patch("builtins.open", mock_open()),
         patch("json.dump"),
+        patch(
+            "snowflake.snowpark_checkpoints.utils.utils_checks._update_validation_result"
+        ) as mock_update_validation_result,
     ):
         # Call the function
         _compare_data(df, job_context, checkpoint_name)
 
     # Assertions
+    mock_update_validation_result.assert_called_once_with(
+        checkpoint_name, validation_status
+    )
     df.write.save_as_table.assert_called_once_with(
         table_name=new_checkpoint_name, mode=OVERWRITE_MODE
     )
@@ -583,6 +585,9 @@ def test_compare_data_mismatch():
         patch("os.path.exists", return_value=False),
         patch("builtins.open", mock_open()),
         patch("json.dump"),
+        patch(
+            "snowflake.snowpark_checkpoints.utils.utils_checks._update_validation_result"
+        ) as mock_update_validation_result,
     ):
         # Call the function and expect a SchemaValidationError
         with raises(
@@ -592,6 +597,7 @@ def test_compare_data_mismatch():
             _compare_data(df, job_context, checkpoint_name)
 
     # Assertions
+    mock_update_validation_result.assert_called_once_with(checkpoint_name, FAIL_STATUS)
     df.write.save_as_table.assert_called_once_with(
         table_name=new_checkpoint_name, mode=OVERWRITE_MODE
     )

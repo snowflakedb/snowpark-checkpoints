@@ -72,7 +72,7 @@ def check_with_spark(
                 snowpark_test_results, spark_test_results, job_context, checkpoint_name
             )
             if not result:
-                raise exception
+                raise exception from None
             # Run the original function in snowpark
             return snowpark_fn(*args, **kwargs)
 

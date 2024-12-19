@@ -93,7 +93,10 @@ def collect_dataframe_checkpoint(
 
 @report_telemetry(params_list=["column_type_dict"])
 def _collect_dataframe_checkpoint_mode_schema(
-    checkpoint_name, df, sample, column_type_dict
+    checkpoint_name: str,
+    df: SparkDataFrame,
+    sample: float,
+    column_type_dict: dict[str, any],
 ) -> None:
     source_df = df.sample(sample)
     if source_df.isEmpty():

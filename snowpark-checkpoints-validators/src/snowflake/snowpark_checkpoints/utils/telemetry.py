@@ -7,6 +7,7 @@ import hashlib
 import inspect
 import json
 
+from enum import IntEnum
 from os import getcwd, getenv, makedirs, path
 from pathlib import Path
 from platform import python_version
@@ -26,7 +27,6 @@ from snowflake.connector.telemetry import TelemetryClient
 from snowflake.snowpark import VERSION as SNOWPARK_VERSION
 from snowflake.snowpark import dataframe as snowpark_dataframe
 from snowflake.snowpark.session import Session
-from snowflake.snowpark_checkpoints.utils.constant import CheckpointMode
 
 
 class TelemetryManager(TelemetryClient):
@@ -501,3 +501,8 @@ ERROR_KEY = "error"
 MODE_KEY = "mode"
 SNOWFLAKE_SCHEMA_TYPES_KEY = "snowflake_schema_types"
 SPARK_SCHEMA_TYPES_KEY = "spark_schema_types"
+
+
+class CheckpointMode(IntEnum):
+    SCHEMA = 1
+    DATAFRAME = 2

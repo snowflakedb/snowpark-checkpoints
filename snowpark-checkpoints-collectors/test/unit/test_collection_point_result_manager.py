@@ -11,7 +11,6 @@ from snowflake.snowpark_checkpoints_collector.collection_result.model import (
 )
 from snowflake.snowpark_checkpoints_collector.collection_result.model.collection_point_result import (
     TIMESTAMP_KEY,
-    FILE_KEY,
 )
 from snowflake.snowpark_checkpoints_collector.utils import file_utils
 from snowflake.snowpark_checkpoints_configuration.singleton import Singleton
@@ -56,7 +55,6 @@ def test_add_result(singleton):
     assert model_dict.get(relative_path) is not None
     assert model_dict[relative_path].get(checkpoint_name) is not None
 
-    file_path_to_ignore = f"root['{FILE_KEY}']"
     timestamp_path_to_ignore = f"root['{TIMESTAMP_KEY}']"
 
     collection_result_data = model_dict[relative_path][checkpoint_name][0]
@@ -66,7 +64,7 @@ def test_add_result(singleton):
         expected_collection_result_data,
         collection_result_data,
         ignore_order=True,
-        exclude_paths=[file_path_to_ignore, timestamp_path_to_ignore],
+        exclude_paths=[timestamp_path_to_ignore],
     )
 
     assert diff == {}

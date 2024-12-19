@@ -240,7 +240,7 @@ def _collect_dataframe_checkpoint_mode_dataframe(
     checkpoint_name, df: SparkDataFrame, snow_connection
 ) -> None:
     _generate_parquet_checkpoint_file(checkpoint_name, df)
-    # _upload_to_snowflake(checkpoint_name, snow_connection)
+    _upload_to_snowflake(checkpoint_name, snow_connection)
 
 
 def _generate_parquet_checkpoint_file(checkpoint_name, df: SparkDataFrame) -> None:

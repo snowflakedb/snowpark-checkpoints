@@ -135,10 +135,12 @@ dependencies = [
 
 [tool.hatch.envs.docs.scripts]
 build = [
+  'pip install -e snowpark-checkpoints-configuration',
   'cd ./docs && make clean',
   'cd ./docs && make html SPHINXOPTS="-W --keep-going"'
 ]
 build_pretty = [
+  'pip install -e snowpark-checkpoints-configuration',
   'cd ./docs && make clean',
   'cd ./docs && sphinx-build -M html ./source ./build -D html_theme=furo',
 ]

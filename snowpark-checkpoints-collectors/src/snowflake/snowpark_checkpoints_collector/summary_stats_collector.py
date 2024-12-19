@@ -37,8 +37,6 @@ from snowflake.snowpark_checkpoints_collector.snow_connection_model import (
 )
 from snowflake.snowpark_checkpoints_collector.utils import file_utils
 from snowflake.snowpark_checkpoints_collector.utils.extra_config import (
-    get_checkpoint_df_name,
-    get_checkpoint_location,
     get_checkpoint_mode,
     get_checkpoint_sample,
     is_checkpoint_enabled,
@@ -68,10 +66,12 @@ def collect_dataframe_checkpoint(
 
     """
     collection_point_file_path = inspect.stack()[1].filename
-    location = get_checkpoint_location(checkpoint_name)
-    df_name = get_checkpoint_df_name(checkpoint_name)
+    collection_point_line_of_code = inspect.stack()[1].lineno
     collection_point_result = CollectionPointResult(
-        collection_point_file_path, checkpoint_name, df.schema, location, df_name
+        collection_point_file_path,
+        checkpoint_name,
+        df.schema,
+        collection_point_line_of_code,
     )
     file_utils.create_output_directory()
 

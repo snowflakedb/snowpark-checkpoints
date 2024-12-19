@@ -17,10 +17,8 @@ from snowflake.snowpark_checkpoints_collector.utils import file_utils
 from snowflake.snowpark_checkpoints_configuration.singleton import Singleton
 
 EXPECTED_MODEL = (
-    '{"timestamp": "2024-12-19 09:43:37", "schema_df": {"type": "struct", "fields": [{"name": "field1", '
-    '"type": "string", "nullable": false, "metadata": {}}]}, "result": "PASS", "location": 2, '
-    '"file": "unit/test_collection_point_result_manager.py", "function": "test_dataframe", '
-    '"type": "collection"}'
+    '{"timestamp": "2024-12-19 14:31:44", "schema_df": {"type": "struct", "fields": [{"name": "field1", '
+    '"type": "string", "nullable": false, "metadata": {}}]}, "result": "PASS", "line_of_code": 10}'
 )
 
 
@@ -33,10 +31,9 @@ def generate_collection_point_result_object():
     file_path = __file__
     checkpoint_name = "checkpoint_test"
     schema = StructType([StructField("field1", StringType(), False)])
-    location = 2
-    df_name = "test_dataframe"
+    line_of_code = 10
     collection_result = CollectionPointResult(
-        file_path, checkpoint_name, schema, location, df_name
+        file_path, checkpoint_name, schema, line_of_code
     )
     collection_result.set_collection_point_result_to_pass()
     return collection_result

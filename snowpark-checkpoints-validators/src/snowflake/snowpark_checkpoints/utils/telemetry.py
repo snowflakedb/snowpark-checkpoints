@@ -15,8 +15,6 @@ from sys import platform
 from typing import Any, Callable, Optional, TypeVar
 from uuid import getnode
 
-from pyspark.sql import dataframe as spark_dataframe
-
 from snowflake.connector import (
     SNOWFLAKE_CONNECTOR_VERSION,
     time_util,
@@ -27,6 +25,24 @@ from snowflake.connector.telemetry import TelemetryClient
 from snowflake.snowpark import VERSION as SNOWPARK_VERSION
 from snowflake.snowpark import dataframe as snowpark_dataframe
 from snowflake.snowpark.session import Session
+
+
+try:
+    from pyspark.sql import dataframe as spark_dataframe
+
+    def _is_spark_dataframe(df: Any) -> bool:
+        return isinstance(df, spark_dataframe.DataFrame)
+
+    def _get_spark_schema_types(df: spark_dataframe.DataFrame) -> list[str]:
+        return [str(schema_type.dataType) for schema_type in df.schema.fields]
+
+except Exception:
+
+    def _is_spark_dataframe(df: Any):
+        pass
+
+    def _get_spark_schema_types(df: Any):
+        pass
 
 
 class TelemetryManager(TelemetryClient):
@@ -360,19 +376,6 @@ def get_snowflake_schema_types(df: snowpark_dataframe.DataFrame) -> list[str]:
     return [str(schema_type.datatype) for schema_type in df.schema.fields]
 
 
-def get_spark_schema_types(df: spark_dataframe.DataFrame) -> list[str]:
-    """Extract the data types of the schema fields from a Spark DataFrame.
-
-    Args:
-        df (spark_dataframe.DataFrame): The Spark DataFrame.
-
-    Returns:
-        list[str]: A list of data type names of the schema fields.
-
-    """
-    return [str(schema_type.dataType) for schema_type in df.schema.fields]
-
-
 def get_load_json(json_schema: str) -> dict:
     """Load and parse a JSON schema file.
 
@@ -473,11 +476,11 @@ def handle_result(
         telemetry_data[STATUS_KEY] = param_data[STATUS_KEY]
         if isinstance(
             param_data["snowpark_results"], snowpark_dataframe.DataFrame
-        ) and isinstance(param_data["spark_results"], spark_dataframe.DataFrame):
+        ) and _is_spark_dataframe(param_data["spark_results"]):
             telemetry_data[SNOWFLAKE_SCHEMA_TYPES_KEY] = get_snowflake_schema_types(
                 param_data["snowpark_results"]
             )
-            telemetry_data[SPARK_SCHEMA_TYPES_KEY] = get_spark_schema_types(
+            telemetry_data[SPARK_SCHEMA_TYPES_KEY] = _get_spark_schema_types(
                 param_data["spark_results"]
             )
             telemetry_m.sc_log_info(DATAFRAME_VALIDATOR_MIRROR, telemetry_data)
@@ -529,8 +532,8 @@ def handle_exception(func_name: str, param_data: dict, err: Exception) -> None:
             telemetry_data[SNOWFLAKE_SCHEMA_TYPES_KEY] = get_snowflake_schema_types(
                 param_data["snowpark_results"]
             )
-        if isinstance(param_data["spark_results"], spark_dataframe.DataFrame):
-            telemetry_data[SPARK_SCHEMA_TYPES_KEY] = get_spark_schema_types(
+        if _is_spark_dataframe(param_data["spark_results"]):
+            telemetry_data[SPARK_SCHEMA_TYPES_KEY] = _get_spark_schema_types(
                 param_data["spark_results"]
             )
         telemetry_m.sc_log_error(DATAFRAME_VALIDATOR_ERROR, telemetry_data)

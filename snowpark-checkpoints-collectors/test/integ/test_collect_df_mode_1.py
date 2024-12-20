@@ -61,9 +61,6 @@ def spark_session():
 def test_collect_dataframe(spark_session):
     sample_size = 1.0
     checkpoint_name = "test_full_df"
-    checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
-        checkpoint_name
-    )
 
     pyspark_df = spark_session.createDataFrame(
         [("Raul", 21), ("John", 34), ("Rose", 50)], schema="name string, age integer"
@@ -73,15 +70,12 @@ def test_collect_dataframe(spark_session):
         pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size
     )
 
-    validate_checkpoint_file_output(checkpoint_file_name)
+    validate_checkpoint_file_output(checkpoint_name)
 
 
 def test_collect_dataframe_all_column_types(spark_session):
     sample_size = 1.0
     checkpoint_name = "test_full_df_all_column_type"
-    checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
-        checkpoint_name
-    )
 
     day_time_interval_data = timedelta(days=13)
     date_data = date(2000, 1, 1)
@@ -160,15 +154,12 @@ def test_collect_dataframe_all_column_types(spark_session):
         pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size
     )
 
-    validate_checkpoint_file_output(checkpoint_file_name)
+    validate_checkpoint_file_output(checkpoint_name)
 
 
 def test_collect_empty_dataframe_with_schema(spark_session):
     sample_size = 1.0
     checkpoint_name = "test_empty_df_with_schema"
-    checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
-        checkpoint_name
-    )
 
     data = []
     columns = StructType(
@@ -183,15 +174,12 @@ def test_collect_empty_dataframe_with_schema(spark_session):
         pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size
     )
 
-    validate_checkpoint_file_output(checkpoint_file_name)
+    validate_checkpoint_file_output(checkpoint_name)
 
 
 def test_collect_empty_dataframe_with_string_column(spark_session):
     sample_size = 1.0
     checkpoint_name = "test_empty_df_with_string_column"
-    checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
-        checkpoint_name
-    )
     data = []
     columns = StructType(
         [
@@ -205,15 +193,12 @@ def test_collect_empty_dataframe_with_string_column(spark_session):
         pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size
     )
 
-    validate_checkpoint_file_output(checkpoint_file_name)
+    validate_checkpoint_file_output(checkpoint_name)
 
 
 def test_collect_dataframe_with_unsupported_pandera_column_type(spark_session):
     sample_size = 1.0
     checkpoint_name = "test_dataframe_with_unsupported_pandera_column_type"
-    checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
-        checkpoint_name
-    )
     data = [
         ["A1", decimal.Decimal("1.123456789")],
         ["A2", decimal.Decimal("2.12345678")],
@@ -233,15 +218,12 @@ def test_collect_dataframe_with_unsupported_pandera_column_type(spark_session):
         pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size
     )
 
-    validate_checkpoint_file_output(checkpoint_file_name)
+    validate_checkpoint_file_output(checkpoint_name)
 
 
 def test_collect_dataframe_with_null_values(spark_session):
     sample_size = 1.0
     checkpoint_name = "test_df_with_null_values"
-    checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
-        checkpoint_name
-    )
 
     pyspark_df = spark_session.createDataFrame(
         [
@@ -258,7 +240,7 @@ def test_collect_dataframe_with_null_values(spark_session):
         pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size
     )
 
-    validate_checkpoint_file_output(checkpoint_file_name)
+    validate_checkpoint_file_output(checkpoint_name)
 
 
 def test_collect_sampled_dataframe(spark_session):
@@ -267,7 +249,6 @@ def test_collect_sampled_dataframe(spark_session):
     checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
         checkpoint_name
     )
-
     pandas_df = pd.DataFrame(
         {
             "name": ["Peter", "Frank", "Rose", "Arthur", "Gloria"],
@@ -358,39 +339,76 @@ def test_collect_empty_dataframe_without_schema(spark_session):
     )
 
 
-def validate_checkpoint_file_output(checkpoint_file_name) -> None:
-    schema_contract_expected = get_expected_schema_contract(checkpoint_file_name)
-    schema_contract_output = get_output_schema_contract(checkpoint_file_name)
+def validate_checkpoint_file_output(checkpoint_name) -> None:
+    checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
+        checkpoint_name
+    )
+    telemetry_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
+        checkpoint_name + "_telemetry"
+    )
+    schema_contract_expected = get_expected(checkpoint_file_name)
+    schema_contract_output = get_output(checkpoint_file_name)
+    telemetry_expected = get_expected(telemetry_file_name)
+    telemetry_output = get_output_telemetry()
     expected_obj = json.loads(schema_contract_expected)
     actual_obj = json.loads(schema_contract_output)
 
+    telemetry_expected_obj = json.loads(telemetry_expected)
+    telemetry_output_obj = json.loads(telemetry_output)
+
     exclude_paths = "root['pandera_schema']['version']"
+    exclude_telemetry_paths = [
+        "root['timestamp']",
+        "root['message']['metadata']['device_id']",
+        "root['message']['metadata']",
+        "root['message']['driver_version']",
+    ]
 
     diff = DeepDiff(
         expected_obj, actual_obj, ignore_order=True, exclude_paths=[exclude_paths]
     )
+    diff_telemetry = DeepDiff(
+        telemetry_expected_obj,
+        telemetry_output_obj,
+        ignore_order=True,
+        exclude_paths=exclude_telemetry_paths,
+    )
     remove_output_directory()
 
     assert diff == {}
+    assert diff_telemetry == {}
 
 
-def get_output_schema_contract(checkpoint_file_name) -> str:
+def get_output(file_name) -> str:
     current_directory_path = os.getcwd()
     output_file_path = os.path.join(
         current_directory_path,
         SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
-        checkpoint_file_name,
+        file_name,
     )
     with open(output_file_path) as f:
         return f.read().strip()
 
 
-def get_expected_schema_contract(checkpoint_file_name) -> str:
+def get_output_telemetry() -> str:
+    current_directory_path = os.getcwd()
+    telemetry_directory_path = os.path.join(
+        current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME, "telemetry"
+    )
+    for file in os.listdir(telemetry_directory_path):
+        if file.endswith(".json"):
+            output_file_path = os.path.join(telemetry_directory_path, file)
+            with open(output_file_path) as f:
+                return f.read().strip()
+    return ""
+
+
+def get_expected(file_name) -> str:
     current_directory_path = os.path.dirname(__file__)
     expected_file_path = os.path.join(
         current_directory_path,
         TEST_COLLECT_DF_MODE_1_EXPECTED_DIRECTORY_NAME,
-        checkpoint_file_name,
+        file_name,
     )
 
     with open(expected_file_path) as f:

@@ -95,18 +95,11 @@ def execute_dataframe_collection(spark_session, mode):
 
 def validate_collection_point_result_file(expected_result_value: CollectionResult):
     result_file_path = file_utils.get_output_file_path()
-    exists_result_file = os.path.exists(result_file_path)
-    assert exists_result_file == True
-
     with open(result_file_path) as f:
         result_file_content = f.read()
 
-    result_file_content_dict = json.loads(result_file_content)
-    relative_file_path_key = file_utils.get_relative_file_path(__file__)
-    file_checkpoint_collection = result_file_content_dict[relative_file_path_key]
-    for checkpoint_name_key in file_checkpoint_collection:
-        collection_point_result = file_checkpoint_collection[checkpoint_name_key]
-        for collection_point in collection_point_result:
-            assert collection_point[RESULT_KEY] == expected_result_value.value
+    result_file_collection = json.loads(result_file_content)
+    for result_file in result_file_collection:
+        assert result_file[RESULT_KEY] == expected_result_value.value
 
     integration_test_utils.remove_output_directory()

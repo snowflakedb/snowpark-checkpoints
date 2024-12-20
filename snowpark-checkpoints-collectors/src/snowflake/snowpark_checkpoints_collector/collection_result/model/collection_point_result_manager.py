@@ -19,7 +19,7 @@ class CollectionPointResultManager(metaclass=Singleton):
 
     def __init__(self) -> None:
         """Init CollectionPointResultManager."""
-        self.result_collection: dict[str, dict[str, list[any]]] = {}
+        self.result_collection: list[any] = []
         self.output_file_path = file_utils.get_output_file_path()
 
     def add_result(self, result: CollectionPointResult) -> None:
@@ -29,19 +29,8 @@ class CollectionPointResultManager(metaclass=Singleton):
             result (CollectionPointResult): the CollectionPointResult to add.
 
         """
-        relative_path = file_utils.get_relative_file_path(result.file_path)
-
-        if self.result_collection.get(relative_path) is None:
-            self.result_collection[relative_path] = {}
-
-        result_data = result.get_collection_result_data()
-
-        if self.result_collection[relative_path].get(result.checkpoint_name) is None:
-            self.result_collection[relative_path][result.checkpoint_name] = []
-
-        self.result_collection[relative_path][result.checkpoint_name].append(
-            result_data
-        )
+        result_json = result.get_collection_result_data()
+        self.result_collection.append(result_json)
         self._save_result()
 
     def to_json(self) -> str:

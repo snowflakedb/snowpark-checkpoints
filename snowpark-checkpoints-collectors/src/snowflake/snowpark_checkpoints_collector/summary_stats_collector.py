@@ -68,10 +68,7 @@ def collect_dataframe_checkpoint(
     collection_point_file_path = inspect.stack()[1].filename
     collection_point_line_of_code = inspect.stack()[1].lineno
     collection_point_result = CollectionPointResult(
-        collection_point_file_path,
-        checkpoint_name,
-        df.schema,
-        collection_point_line_of_code,
+        collection_point_file_path, collection_point_line_of_code, checkpoint_name
     )
     file_utils.create_output_directory()
 

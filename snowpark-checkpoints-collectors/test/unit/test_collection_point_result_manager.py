@@ -3,7 +3,6 @@ from unittest import mock
 
 import pytest
 from deepdiff import DeepDiff
-from pyspark.sql.types import StructType, StructField, StringType
 
 from snowflake.snowpark_checkpoints_collector.collection_result.model import (
     CollectionPointResult,
@@ -11,13 +10,14 @@ from snowflake.snowpark_checkpoints_collector.collection_result.model import (
 )
 from snowflake.snowpark_checkpoints_collector.collection_result.model.collection_point_result import (
     TIMESTAMP_KEY,
+    FILE_KEY,
 )
-from snowflake.snowpark_checkpoints_collector.utils import file_utils
+
 from snowflake.snowpark_checkpoints_configuration.singleton import Singleton
 
 EXPECTED_MODEL = (
-    '{"timestamp": "2024-12-19 14:31:44", "schema_df": {"type": "struct", "fields": [{"name": "field1", '
-    '"type": "string", "nullable": false, "metadata": {}}]}, "result": "PASS", "line_of_code": 10}'
+    '{"timestamp": "2024-12-20 14:50:49", "file": "unit/test_collection_point_result_manager.py", '
+    '"line_of_code": 10, "checkpoint_name": "checkpoint_test", "result": "PASS"}'
 )
 
 
@@ -29,11 +29,8 @@ def singleton():
 def generate_collection_point_result_object():
     file_path = __file__
     checkpoint_name = "checkpoint_test"
-    schema = StructType([StructField("field1", StringType(), False)])
     line_of_code = 10
-    collection_result = CollectionPointResult(
-        file_path, checkpoint_name, schema, line_of_code
-    )
+    collection_result = CollectionPointResult(file_path, line_of_code, checkpoint_name)
     collection_result.set_collection_point_result_to_pass()
     return collection_result
 
@@ -47,24 +44,19 @@ def test_add_result(singleton):
         mock_open.assert_called()
 
     model_json = manager.to_json()
-    model_dict = json.loads(model_json)
-
-    relative_path = file_utils.get_relative_file_path(__file__)
-    checkpoint_name = collection_result.checkpoint_name
-
-    assert model_dict.get(relative_path) is not None
-    assert model_dict[relative_path].get(checkpoint_name) is not None
+    model = json.loads(model_json)
+    collection_point_dict = model[0]
 
     timestamp_path_to_ignore = f"root['{TIMESTAMP_KEY}']"
+    file_path_to_ignore = f"root['{FILE_KEY}']"
 
-    collection_result_data = model_dict[relative_path][checkpoint_name][0]
-    expected_collection_result_data = json.loads(EXPECTED_MODEL)
+    expected_collection_point_dict = json.loads(EXPECTED_MODEL)
 
     diff = DeepDiff(
-        expected_collection_result_data,
-        collection_result_data,
+        expected_collection_point_dict,
+        collection_point_dict,
         ignore_order=True,
-        exclude_paths=[timestamp_path_to_ignore],
+        exclude_paths=[timestamp_path_to_ignore, file_path_to_ignore],
     )
 
     assert diff == {}

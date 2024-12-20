@@ -1,0 +1,17 @@
+{
+    "message": {
+        "data": "{\"function\": \"dataframe_strategy\", \"schema_types\": [\"boolean\", \"byte\", \"double\", \"float\", \"integer\", \"long\", \"short\", \"string\", \"timestamp\"]}",
+        "driver_type": "PythonConnector",
+        "driver_version": "3.12.3",
+        "event_name": "Hypothesis_Input_Schema",
+        "metadata": {
+            "device_id": "f6015d7dd95662e65d3ed3bdd1ed87492607b7e9d8e5c05832116c69b59d7cd7",
+            "os_version": "darwin",
+            "python_version": "3.11.2",
+            "snowpark_version": "1.25.0"
+        },
+        "source": "snowpark-checkpoints",
+        "type": "info"
+    },
+    "timestamp": "1734728555559"
+}

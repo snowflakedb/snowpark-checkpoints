@@ -33,9 +33,11 @@ from snowflake.hypothesis_snowpark.strategies_utils import (
     generate_snowpark_dataframe,
     load_json_schema,
 )
+from snowflake.hypothesis_snowpark.telemetry.telemetry import report_telemetry
 from snowflake.snowpark import DataFrame, Session
 
 
+@report_telemetry(params_list=["json_schema"])
 def dataframe_strategy(
     json_schema: str, session: Session, size: Optional[int] = None
 ) -> SearchStrategy[DataFrame]:

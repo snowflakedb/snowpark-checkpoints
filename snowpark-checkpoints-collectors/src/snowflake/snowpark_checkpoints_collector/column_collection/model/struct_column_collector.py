@@ -61,7 +61,7 @@ class StructColumnCollector(ColumnCollectorBase):
 
         return field_metadata_collection
 
-    def _compute_rows_count_by_column(self, clm_name) -> dict[str, int]:
+    def _compute_rows_count_by_column(self, clm_name: str) -> dict[str, int]:
         rows_count = 0
         rows_not_null_count = 0
         rows_null_count = 0

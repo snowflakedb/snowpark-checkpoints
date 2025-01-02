@@ -1,7 +1,6 @@
 #
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
-import inspect
 import json
 import os
 
@@ -65,8 +64,8 @@ def collect_dataframe_checkpoint(
         Exception: Invalid mode value.
 
     """
-    collection_point_file_path = inspect.stack()[1].filename
-    collection_point_line_of_code = inspect.stack()[1].lineno
+    collection_point_file_path = file_utils.get_collection_point_source_file_path()
+    collection_point_line_of_code = file_utils.get_collection_point_line_of_code()
     collection_point_result = CollectionPointResult(
         collection_point_file_path, collection_point_line_of_code, checkpoint_name
     )

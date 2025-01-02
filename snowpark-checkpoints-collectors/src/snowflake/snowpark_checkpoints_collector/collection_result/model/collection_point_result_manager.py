@@ -12,7 +12,7 @@ class CollectionPointResultManager(metaclass=Singleton):
     """Class for manage the checkpoint collection results. It is a singleton.
 
     Attributes:
-        result_collection (dict[str, dict[str, list[any]]]): the collection of the checkpoint results.
+        result_collection (list[any]): the collection of the checkpoint results.
         output_file_path (str): the full path of the output file.
 
     """

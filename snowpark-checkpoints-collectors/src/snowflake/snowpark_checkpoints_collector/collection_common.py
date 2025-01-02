@@ -116,6 +116,9 @@ COLLECTION_RESULT_FILE_NAME = "checkpoint_collection_results.json"
 # MISC KEYS
 DECIMAL_TOKEN_KEY = "decimal_point"
 DOT_PARQUET_EXTENSION = ".parquet"
+DOT_IPYNB_EXTENSION = ".ipynb"
+UNKNOWN_SOURCE_FILE = "unknown"
+UNKNOWN_LINE_OF_CODE = -1
 BACKSLASH_TOKEN = "\\"
 SLASH_TOKEN = "/"
 

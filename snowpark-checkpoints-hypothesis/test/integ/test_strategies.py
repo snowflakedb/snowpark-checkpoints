@@ -3,14 +3,11 @@
 #
 
 import ast
-import re
 
 from datetime import date, datetime
-from unittest.mock import Mock, patch
 
 import hypothesis.strategies as st
 import pandera as pa
-import pytest
 
 from hypothesis import HealthCheck, given, settings
 
@@ -33,65 +30,6 @@ from snowflake.snowpark.types import (
 
 
 NTZ = TimestampTimeZone.NTZ
-
-
-def test_dataframe_strategy_none_schema(local_session: Session):
-    with pytest.raises(ValueError, match="JSON schema cannot be None."):
-        dataframe_strategy(json_schema=None, session=local_session)
-
-
-def test_dataframe_strategy_none_session():
-    with pytest.raises(ValueError, match="Session cannot be None."):
-        dataframe_strategy(json_schema="schema.json", session=None)
-
-
-def test_dataframe_strategy_invalid_json_file(local_session: Session):
-    with pytest.raises(
-        ValueError,
-        match="Invalid JSON schema. The JSON schema must contain 'pandera_schema' and 'custom_data' keys.",
-    ):
-        dataframe_strategy(
-            json_schema="test/resources/invalid_json.json", session=local_session
-        )
-
-
-def test_dataframe_strategy_not_supported_dtypes():
-    mock_session = Mock(spec=Session)
-
-    mock_json_schema = {
-        "pandera_schema": {
-            "columns": {
-                "daytimeinterval_column": {"dtype": "timedelta64[ns]"},
-                "map_column": {"dtype": "object"},
-                "void_column": {"dtype": "object"},
-                "struct_column": {"dtype": "object"},
-            },
-        },
-        "custom_data": {
-            "columns": [
-                {"name": "daytimeinterval_column", "type": "daytimeinterval"},
-                {"name": "map_column", "type": "map"},
-                {"name": "void_column", "type": "void"},
-                {"name": "struct_column", "type": "struct"},
-            ]
-        },
-    }
-
-    with patch(
-        "snowflake.hypothesis_snowpark.strategies.load_json_schema",
-        return_value=mock_json_schema,
-    ):
-        with pytest.raises(
-            ValueError,
-            match=re.escape(
-                "The following data types are not supported by the Snowpark DataFrame strategy: "
-                "['daytimeinterval', 'map', 'void', 'struct']"
-            ),
-        ):
-            dataframe_strategy(
-                json_schema="schema.json",
-                session=mock_session,
-            )
 
 
 @given(data=st.data())

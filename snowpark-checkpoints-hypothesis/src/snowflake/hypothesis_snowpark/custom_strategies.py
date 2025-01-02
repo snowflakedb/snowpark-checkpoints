@@ -161,8 +161,8 @@ def float_strategy(
 
     Args:
         draw: The Hypothesis draw function.
-        min_value:  The minimum value of the float.
-        max_value:  The maximum value of the float.
+        min_value: The minimum value of the float.
+        max_value: The maximum value of the float.
 
     Returns:
         A float value within a given range.
@@ -275,13 +275,13 @@ def update_pandas_df_strategy(
         if column_dtype == PYSPARK_ARRAY_TYPE:
             strategy_kwargs = {
                 "dtype": column.get(CUSTOM_DATA_VALUE_TYPE_KEY),
-                "min_size": column.get(CUSTOM_DATA_MIN_SIZE_KEY),
-                "max_size": column.get(CUSTOM_DATA_MAX_SIZE_KEY),
+                "min_size": column.get(CUSTOM_DATA_MIN_SIZE_KEY, 0),
+                "max_size": column.get(CUSTOM_DATA_MAX_SIZE_KEY, None),
             }
         elif column_dtype == PYSPARK_BINARY_TYPE:
             strategy_kwargs = {
-                "min_size": column.get(CUSTOM_DATA_MIN_SIZE_KEY),
-                "max_size": column.get(CUSTOM_DATA_MAX_SIZE_KEY),
+                "min_size": column.get(CUSTOM_DATA_MIN_SIZE_KEY, 0),
+                "max_size": column.get(CUSTOM_DATA_MAX_SIZE_KEY, None),
             }
 
         column_name = column.get(CUSTOM_DATA_NAME_KEY)

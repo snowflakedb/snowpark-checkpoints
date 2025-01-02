@@ -45,7 +45,7 @@ MAX_EXAMPLES: Final[int] = 5
 
 @given(data=st.data())
 @settings(max_examples=MAX_EXAMPLES)
-def test_array_strategy(data):
+def test_array_strategy(data: st.DataObject):
     min_size = 1
     max_size = 5
     result = data.draw(
@@ -58,7 +58,7 @@ def test_array_strategy(data):
 
 @given(data=st.data())
 @settings(max_examples=MAX_EXAMPLES)
-def test_array_strategy_default_values(data):
+def test_array_strategy_default_values(data: st.DataObject):
     result = data.draw(array_strategy(dtype=PYSPARK_STRING_TYPE))
     assert isinstance(result, list)
     assert len(result) >= 0
@@ -67,7 +67,7 @@ def test_array_strategy_default_values(data):
 
 @given(data=st.data())
 @settings(max_examples=MAX_EXAMPLES)
-def test_array_strategy_unsupported_dtype(data):
+def test_array_strategy_unsupported_dtype(data: st.DataObject):
     dtype = "unsupported_dtype"
     with pytest.raises(
         ValueError, match=f"Not implemented SearchStrategy for arrays of type '{dtype}'"
@@ -77,7 +77,7 @@ def test_array_strategy_unsupported_dtype(data):
 
 @given(data=st.data())
 @settings(max_examples=MAX_EXAMPLES)
-def test_binary_strategy(data):
+def test_binary_strategy(data: st.DataObject):
     min_size = 1
     max_size = 5
     result = data.draw(binary_strategy(min_size=min_size, max_size=max_size))
@@ -87,7 +87,7 @@ def test_binary_strategy(data):
 
 @given(data=st.data())
 @settings(max_examples=MAX_EXAMPLES)
-def test_binary_strategy_default_values(data):
+def test_binary_strategy_default_values(data: st.DataObject):
     result = data.draw(binary_strategy())
     assert isinstance(result, bytes)
     assert len(result) >= 0
@@ -95,14 +95,14 @@ def test_binary_strategy_default_values(data):
 
 @given(data=st.data())
 @settings(max_examples=MAX_EXAMPLES)
-def test_boolean_strategy(data):
+def test_boolean_strategy(data: st.DataObject):
     result = data.draw(boolean_strategy())
     assert isinstance(result, bool)
 
 
 @given(data=st.data())
 @settings(max_examples=MAX_EXAMPLES)
-def test_byte_strategy(data):
+def test_byte_strategy(data: st.DataObject):
     result = data.draw(byte_strategy())
     assert isinstance(result, int)
     assert -128 <= result <= 127
@@ -110,7 +110,7 @@ def test_byte_strategy(data):
 
 @given(data=st.data())
 @settings(max_examples=MAX_EXAMPLES)
-def test_date_strategy(data):
+def test_date_strategy(data: st.DataObject):
     min_date = dt.date(2021, 1, 1)
     max_date = dt.date(2021, 12, 31)
     result = data.draw(date_strategy(min_value=min_date, max_value=max_date))
@@ -120,7 +120,7 @@ def test_date_strategy(data):
 
 @given(data=st.data())
 @settings(max_examples=MAX_EXAMPLES)
-def test_date_strategy_default_values(data):
+def test_date_strategy_default_values(data: st.DataObject):
     result = data.draw(date_strategy())
     assert isinstance(result, dt.date)
     assert dt.date.min <= result <= dt.date.max
@@ -128,7 +128,7 @@ def test_date_strategy_default_values(data):
 
 @given(data=st.data())
 @settings(max_examples=MAX_EXAMPLES)
-def test_decimal_strategy(data):
+def test_decimal_strategy(data: st.DataObject):
     min_value = 0
     max_value = 10
     result = data.draw(decimal_strategy(min_value=min_value, max_value=max_value))
@@ -138,14 +138,14 @@ def test_decimal_strategy(data):
 
 @given(data=st.data())
 @settings(max_examples=MAX_EXAMPLES)
-def test_decimal_strategy_default_values(data):
+def test_decimal_strategy_default_values(data: st.DataObject):
     result = data.draw(decimal_strategy())
     assert isinstance(result, Decimal)
 
 
 @given(data=st.data())
 @settings(max_examples=MAX_EXAMPLES)
-def test_float_strategy(data):
+def test_float_strategy(data: st.DataObject):
     min_value = 0
     max_value = 10
     result = data.draw(float_strategy(min_value=min_value, max_value=max_value))
@@ -155,14 +155,14 @@ def test_float_strategy(data):
 
 @given(data=st.data())
 @settings(max_examples=MAX_EXAMPLES)
-def test_float_strategy_default_values(data):
+def test_float_strategy_default_values(data: st.DataObject):
     result = data.draw(float_strategy())
     assert isinstance(result, float)
 
 
 @given(data=st.data())
 @settings(max_examples=MAX_EXAMPLES)
-def test_integer_strategy(data):
+def test_integer_strategy(data: st.DataObject):
     min_value = 0
     max_value = 10
     result = data.draw(integer_strategy(min_value=min_value, max_value=max_value))
@@ -172,14 +172,14 @@ def test_integer_strategy(data):
 
 @given(data=st.data())
 @settings(max_examples=MAX_EXAMPLES)
-def test_integer_strategy_default_values(data):
+def test_integer_strategy_default_values(data: st.DataObject):
     result = data.draw(integer_strategy())
     assert isinstance(result, int)
 
 
 @given(data=st.data())
 @settings(max_examples=MAX_EXAMPLES)
-def test_long_strategy(data):
+def test_long_strategy(data: st.DataObject):
     result = data.draw(long_strategy())
     assert isinstance(result, int)
     assert -(2**63) <= result <= (2**63) - 1
@@ -187,7 +187,7 @@ def test_long_strategy(data):
 
 @given(data=st.data())
 @settings(max_examples=MAX_EXAMPLES)
-def test_short_strategy(data):
+def test_short_strategy(data: st.DataObject):
     result = data.draw(short_strategy())
     assert isinstance(result, int)
     assert -(2**15) <= result <= 2**15 - 1
@@ -195,7 +195,7 @@ def test_short_strategy(data):
 
 @given(data=st.data())
 @settings(max_examples=MAX_EXAMPLES)
-def test_string_strategy(data):
+def test_string_strategy(data: st.DataObject):
     min_size = 1
     max_size = 5
     result = data.draw(string_strategy(min_size=min_size, max_size=max_size))
@@ -205,7 +205,7 @@ def test_string_strategy(data):
 
 @given(data=st.data())
 @settings(max_examples=MAX_EXAMPLES)
-def test_string_strategy_default_values(data):
+def test_string_strategy_default_values(data: st.DataObject):
     result = data.draw(string_strategy())
     assert isinstance(result, str)
     assert len(result) >= 0
@@ -213,7 +213,7 @@ def test_string_strategy_default_values(data):
 
 @given(data=st.data())
 @settings(max_examples=MAX_EXAMPLES)
-def test_update_pandas_df_strategy_empty_columns(data):
+def test_update_pandas_df_strategy_empty_columns(data: st.DataObject):
     df = pd.DataFrame({"col1": [1, 2, 3]})
     result_df = data.draw(update_pandas_df_strategy(df, []))
     pd.testing.assert_frame_equal(df, result_df)
@@ -221,7 +221,7 @@ def test_update_pandas_df_strategy_empty_columns(data):
 
 @given(data=st.data())
 @settings(max_examples=MAX_EXAMPLES)
-def test_update_pandas_df_strategy_array_type(data):
+def test_update_pandas_df_strategy_array_type(data: st.DataObject):
     col_name = "col1"
     min_size = 1
     max_size = 3
@@ -245,7 +245,7 @@ def test_update_pandas_df_strategy_array_type(data):
 
 @given(data=st.data())
 @settings(max_examples=MAX_EXAMPLES)
-def test_update_pandas_df_strategy_binary_type(data):
+def test_update_pandas_df_strategy_binary_type(data: st.DataObject):
     col_name = "col1"
     min_size = 1
     max_size = 3

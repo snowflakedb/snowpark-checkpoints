@@ -135,6 +135,7 @@ dependencies = [
 
 [tool.hatch.envs.docs.scripts]
 build = [
+  'pip install -e snowpark-checkpoints-configuration',
   'cd ./docs && make clean',
   'cd ./docs && make html SPHINXOPTS="-W --keep-going"'
 ]

@@ -31,7 +31,6 @@ from pyspark.sql.types import (
     BinaryType,
 )
 
-import integration_test_utils
 from snowflake.snowpark_checkpoints_collector import collect_dataframe_checkpoint
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     DATAFRAME_PANDERA_SCHEMA_KEY,
@@ -80,7 +79,7 @@ def telemetry_testing_mode():
     telemetry_manager.sc_is_enabled = True
 
 
-def test_collect_dataframe(spark_session, singleton):
+def test_collect_dataframe(spark_session, singleton, output_path):
     sample_size = 1.0
     checkpoint_name = "test_full_df"
 
@@ -92,10 +91,10 @@ def test_collect_dataframe(spark_session, singleton):
         pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size
     )
 
-    validate_checkpoint_file_output(checkpoint_name)
+    validate_checkpoint_file_output(output_path, checkpoint_name)
 
 
-def test_collect_dataframe_all_column_types(spark_session, singleton):
+def test_collect_dataframe_all_column_types(spark_session, singleton, output_path):
     sample_size = 1.0
     checkpoint_name = "test_full_df_all_column_type"
 
@@ -206,13 +205,14 @@ def test_collect_dataframe_all_column_types(spark_session, singleton):
 
     pyspark_df = spark_session.createDataFrame(data=data_df, schema=schema_df)
     collect_dataframe_checkpoint(
-        pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size
+        pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size,
+        output_path=output_path
     )
 
-    validate_checkpoint_file_output(checkpoint_name)
+    validate_checkpoint_file_output(output_path, checkpoint_name)
 
 
-def test_collect_empty_dataframe_with_schema(spark_session, singleton):
+def test_collect_empty_dataframe_with_schema(spark_session, singleton, output_path):
     sample_size = 1.0
     checkpoint_name = "test_empty_df_with_schema"
 
@@ -229,10 +229,10 @@ def test_collect_empty_dataframe_with_schema(spark_session, singleton):
         pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size
     )
 
-    validate_checkpoint_file_output(checkpoint_name)
+    validate_checkpoint_file_output(output_path, checkpoint_name)
 
 
-def test_collect_empty_dataframe_with_object_column(spark_session, singleton):
+def test_collect_empty_dataframe_with_object_column(spark_session, singleton, output_path):
     sample_size = 1.0
     checkpoint_name = "test_empty_df_with_object_column"
     data = []
@@ -248,11 +248,11 @@ def test_collect_empty_dataframe_with_object_column(spark_session, singleton):
         pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size
     )
 
-    validate_checkpoint_file_output(checkpoint_name)
+    validate_checkpoint_file_output(output_path, checkpoint_name)
 
 
 def test_collect_dataframe_with_unsupported_pandera_column_type(
-    spark_session, singleton
+    spark_session, singleton, output_path
 ):
     sample_size = 1.0
     checkpoint_name = "test_dataframe_with_unsupported_pandera_column_type"
@@ -275,10 +275,10 @@ def test_collect_dataframe_with_unsupported_pandera_column_type(
         pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size
     )
 
-    validate_checkpoint_file_output(checkpoint_name)
+    validate_checkpoint_file_output(output_path, checkpoint_name)
 
 
-def test_collect_dataframe_with_null_values(spark_session, singleton):
+def test_collect_dataframe_with_null_values(spark_session, singleton, output_path):
     sample_size = 1.0
     checkpoint_name = "test_df_with_null_values"
 
@@ -297,10 +297,10 @@ def test_collect_dataframe_with_null_values(spark_session, singleton):
         pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size
     )
 
-    validate_checkpoint_file_output(checkpoint_name)
+    validate_checkpoint_file_output(output_path, checkpoint_name)
 
 
-def test_collect_sampled_dataframe(spark_session, singleton):
+def test_collect_sampled_dataframe(spark_session, singleton, output_path):
     sample_size = 0.1
     checkpoint_name = "test_sampled_df"
     checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
@@ -331,7 +331,8 @@ def test_collect_sampled_dataframe(spark_session, singleton):
 
     pyspark_df = spark_session.createDataFrame(pandas_df)
     collect_dataframe_checkpoint(
-        pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size
+        pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size,
+        output_path=output_path
     )
 
     current_directory_path = os.getcwd()
@@ -381,25 +382,22 @@ def test_collect_sampled_dataframe(spark_session, singleton):
 
     assert collected_column_type_collection == custom_column_type_collection_expected
 
-    integration_test_utils.remove_output_directory()
 
-
-def test_collect_empty_dataframe_without_schema(spark_session, singleton):
+def test_collect_empty_dataframe_without_schema(spark_session, singleton, output_path):
     checkpoint_name = "test_empty_df_without_schema"
     data = []
     columns = StructType()
     pyspark_df = spark_session.createDataFrame(data=data, schema=columns)
 
     with pytest.raises(Exception) as ex_info:
-        collect_dataframe_checkpoint(pyspark_df, checkpoint_name=checkpoint_name)
+        collect_dataframe_checkpoint(pyspark_df, checkpoint_name=checkpoint_name,
+                                     output_path=output_path)
     assert "It is not possible to collect an empty DataFrame without schema" == str(
         ex_info.value
     )
 
-    integration_test_utils.remove_output_directory()
 
-
-def test_collect_dataframe_with_only_null_values(spark_session, singleton):
+def test_collect_dataframe_with_only_null_values(spark_session, singleton, output_path):
     sample_size = 1.0
     checkpoint_name = "test_df_with_only_null_values"
 
@@ -415,23 +413,25 @@ def test_collect_dataframe_with_only_null_values(spark_session, singleton):
     pyspark_df = spark_session.createDataFrame(data=data, schema=columns)
 
     collect_dataframe_checkpoint(
-        pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size
+        pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size,
+        output_path=output_path
     )
 
-    validate_checkpoint_file_output(checkpoint_name)
+    validate_checkpoint_file_output(output_path, checkpoint_name)
 
 
-def validate_checkpoint_file_output(checkpoint_name) -> None:
+def validate_checkpoint_file_output(output_path:str, checkpoint_name:str) -> None:
     checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
         checkpoint_name
     )
     telemetry_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
         checkpoint_name + "_telemetry"
     )
+
     schema_contract_expected = get_expected(checkpoint_file_name)
-    schema_contract_output = get_output(checkpoint_file_name)
+    schema_contract_output = get_output(output_path, checkpoint_file_name)
     telemetry_expected = get_expected(telemetry_file_name)
-    telemetry_output = get_output_telemetry()
+    telemetry_output = get_output_telemetry(output_path)
     expected_obj = json.loads(schema_contract_expected)
     actual_obj = json.loads(schema_contract_output)
 
@@ -456,16 +456,14 @@ def validate_checkpoint_file_output(checkpoint_name) -> None:
         ignore_order=True,
         exclude_paths=exclude_telemetry_paths,
     )
-    integration_test_utils.remove_output_directory()
 
     assert diff == {}
     assert diff_telemetry == {}
 
 
-def get_output(file_name) -> str:
-    current_directory_path = os.getcwd()
+def get_output(output_path, file_name) -> str:
     output_file_path = os.path.join(
-        current_directory_path,
+        output_path,
         SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
         file_name,
     )
@@ -473,10 +471,11 @@ def get_output(file_name) -> str:
         return f.read().strip()
 
 
-def get_output_telemetry() -> str:
-    current_directory_path = os.getcwd()
+def get_output_telemetry(output_path:str) -> str:
     telemetry_directory_path = os.path.join(
-        current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME, "telemetry"
+        output_path,
+        SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
+        "telemetry"
     )
     for file in os.listdir(telemetry_directory_path):
         if file.endswith(".json"):
@@ -486,7 +485,7 @@ def get_output_telemetry() -> str:
     return "{}"
 
 
-def get_expected(file_name) -> str:
+def get_expected(file_name:str) -> str:
     current_directory_path = os.path.dirname(__file__)
     expected_file_path = os.path.join(
         current_directory_path,

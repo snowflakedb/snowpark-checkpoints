@@ -3,9 +3,12 @@
 #
 from typing import Callable, Optional, TypeVar
 
+import pandas as pd
+
 from pyspark.sql import DataFrame as SparkDataFrame
 
 from snowflake.snowpark import DataFrame as SnowparkDataFrame
+from snowflake.snowpark.types import PandasDataFrame
 from snowflake.snowpark_checkpoints.errors import SparkMigrationError
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from snowflake.snowpark_checkpoints.snowpark_sampler import (
@@ -105,19 +108,7 @@ def _assert_return(
     if isinstance(snowpark_results, SnowparkDataFrame) and isinstance(
         spark_results, SparkDataFrame
     ):
-        snowpark_df = snowpark_results.to_pandas()
-        snowpark_df.columns = snowpark_df.columns.str.upper()
-        spark_df = spark_results.toPandas()
-        spark_df.columns = spark_df.columns.str.upper()
-        if spark_df.shape != snowpark_df.shape:
-            cmp = spark_df.merge(snowpark_df, indicator=True, how="left").loc[
-                lambda x: x["_merge"] != "both"
-            ]
-            cmp = cmp.replace(
-                {"left_only": "spark_only", "right_only": "snowpark_only"}
-            )
-        else:
-            cmp = spark_df.compare(snowpark_df, result_names=("Spark", "snowpark"))
+        cmp = compare_spark_snowpark_dfs(spark_results, snowpark_results)
 
         if not cmp.empty:
             exception_result = SparkMigrationError(
@@ -138,3 +129,73 @@ def _assert_return(
             return False, exception_result
         job_context.mark_pass(checkpoint_name)
         return True, None
+
+
+def compare_spark_snowpark_dfs(
+    spark_df: SparkDataFrame, snowpark_df: SnowparkDataFrame
+) -> PandasDataFrame:
+    """Compare two dataframes for equality.
+
+    Args:
+        spark_df (SparkDataFrame): The Spark dataframe to compare.
+        snowpark_df (SnowparkDataFrame): The Snowpark dataframe to compare.
+
+    Returns:Pandas DataFrame containing the differences between the two dataframes.
+
+    """
+    snowpark_df = snowpark_df.to_pandas()
+    snowpark_df.columns = snowpark_df.columns.str.upper()
+    spark_df = spark_df.toPandas()
+    spark_df.columns = spark_df.columns.str.upper()
+    spark_cols = set(spark_df.columns)
+    snowpark_cols = set(snowpark_df.columns)
+    cmp = pd.DataFrame([])
+    left = spark_cols - snowpark_cols
+    right = snowpark_cols - spark_cols
+    if left != set():
+        cmp = _compare_dfs(spark_df, snowpark_df, "spark", "snowpark")
+    if right != set():
+        right_cmp = _compare_dfs(snowpark_df, spark_df, "snowpark", "spark")
+        cmp = right_cmp if cmp.empty else pd.concat([cmp, right_cmp], ignore_index=True)
+    if left == set() and right == set():
+        if spark_df.shape == snowpark_df.shape:
+            cmp = spark_df.compare(snowpark_df, result_names=("spark", "snowpark"))
+        else:
+            cmp = spark_df.merge(snowpark_df, indicator=True, how="outer").loc[
+                lambda x: x["_merge"] != "both"
+            ]
+            cmp = cmp.replace(
+                {"left_only": "spark_only", "right_only": "snowpark_only"}
+            )
+
+    return cmp
+
+
+def _compare_dfs(
+    df_a: pd.DataFrame, df_b: pd.DataFrame, left_label: str, right_label: str
+) -> PandasDataFrame:
+    """Compare two dataframes for equality.
+
+    Args:
+        df_a (PandasDataFrame): The first dataframe to compare.
+        df_b (PandasDataFrame): The second dataframe to compare.
+        left_label (str): The label for the first dataframe.
+        right_label (str): The label for the second dataframe.
+
+    :return: Pandas DataFrame containing the differences between the two dataframes.
+
+    """
+    df_a["side"] = "a"
+    df_b["side"] = "b"
+    a_only = [col for col in df_a.columns if col not in df_b.columns] + ["side"]
+    b_only = [col for col in df_b.columns if col not in df_a.columns] + ["side"]
+    cmp = (
+        df_a[a_only]
+        .merge(df_b[b_only], indicator=True, how="left")
+        .loc[lambda x: x["_merge"] != "both"]
+    )
+    cmp = cmp.replace(
+        {"left_only": f"{left_label}_only", "right_only": f"{right_label}_only"}
+    )
+    cmp = cmp.drop(columns="side")
+    return cmp

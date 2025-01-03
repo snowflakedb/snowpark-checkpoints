@@ -9,8 +9,10 @@ from typing import Optional
 import pandera as pa
 
 from pyspark.sql import DataFrame as SparkDataFrame
+from pyspark.sql.functions import col
+from pyspark.sql.types import DoubleType as SparkDoubleType
+from pyspark.sql.types import StringType as SparkStringType
 from pyspark.sql.types import StructField
-
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT,
     CHECKPOINT_PARQUET_OUTPUT_FILE_NAME_FORMAT,
@@ -49,6 +51,7 @@ def collect_dataframe_checkpoint(
     checkpoint_name,
     sample: Optional[float] = None,
     mode: Optional[CheckpointMode] = None,
+    output_path: Optional[str] = None,
 ) -> None:
     """Collect a DataFrame checkpoint.
 
@@ -59,6 +62,8 @@ def collect_dataframe_checkpoint(
             Defaults to 1.0.
         mode (CheckpointMode): The mode to execution the collection.
             Defaults to CheckpointMode.Schema
+        output_path (str, optional): The output path to save the checkpoint.
+            Defaults to Current working Directory.
 
     Raises:
         Exception: It is not possible to collect an empty DataFrame without schema.
@@ -77,23 +82,18 @@ def collect_dataframe_checkpoint(
 
             _sample = get_checkpoint_sample(checkpoint_name, sample)
 
-            if _is_empty_dataframe_without_schema(df):
-                raise Exception(
-                    "It is not possible to collect an empty DataFrame without schema"
-                )
-
             _mode = get_checkpoint_mode(checkpoint_name, mode)
 
             if _mode == CheckpointMode.SCHEMA:
                 column_type_dict = _get_spark_column_types(df)
                 _collect_dataframe_checkpoint_mode_schema(
-                    checkpoint_name, df, _sample, column_type_dict
+                    checkpoint_name, df, _sample, column_type_dict, output_path
                 )
 
             elif _mode == CheckpointMode.DATAFRAME:
                 snow_connection = SnowConnection()
                 _collect_dataframe_checkpoint_mode_dataframe(
-                    checkpoint_name, df, snow_connection
+                    checkpoint_name, df, snow_connection, output_path
                 )
 
             else:
@@ -117,6 +117,7 @@ def _collect_dataframe_checkpoint_mode_schema(
     df: SparkDataFrame,
     sample: float,
     column_type_dict: dict[str, any],
+    output_path: Optional[str] = None,
 ) -> None:
     source_df = df.sample(sample)
     if source_df.isEmpty():
@@ -175,7 +176,9 @@ def _collect_dataframe_checkpoint_mode_schema(
     }
 
     dataframe_schema_contract_json = json.dumps(dataframe_schema_contract)
-    _generate_json_checkpoint_file(checkpoint_name, dataframe_schema_contract_json)
+    _generate_json_checkpoint_file(
+        checkpoint_name, dataframe_schema_contract_json, output_path
+    )
 
 
 def _get_spark_column_types(df: SparkDataFrame) -> dict[str, StructField]:
@@ -234,7 +237,26 @@ def _generate_json_checkpoint_file(checkpoint_name, dataframe_schema_contract) -
 
 
 def _collect_dataframe_checkpoint_mode_dataframe(
-    checkpoint_name, df: SparkDataFrame, snow_connection
+    checkpoint_name: str,
+    df: SparkDataFrame,
+    snow_connection: SnowConnection,
+    output_path: Optional[str] = None,
+) -> None:
+    current_directory_path = output_path if output_path else os.getcwd()
+    output_path = os.path.join(
+        current_directory_path,
+        SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
+        checkpoint_name,
+    )
+
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+    _generate_parquet_checkpoint_file(df, output_path)
+    _create_snowflake_table_from_parquet(checkpoint_name, output_path, snow_connection)
+
+
+def _generate_parquet_checkpoint_file(
+    spark_df: SparkDataFrame, output_path: str
 ) -> None:
     _generate_parquet_checkpoint_file(checkpoint_name, df)
     _upload_to_snowflake(checkpoint_name, snow_connection)
@@ -248,19 +270,39 @@ def _generate_parquet_checkpoint_file(checkpoint_name, df: SparkDataFrame) -> No
     )
     checkpoint_file_path = os.path.join(output_directory_path, checkpoint_file_name)
     df.write.parquet(checkpoint_file_path, mode="overwrite")
-
-
-def _upload_to_snowflake(checkpoint_name, snow_connection) -> None:
-    try:
-        output_directory_path = file_utils.get_output_directory_path()
-        checkpoint_file_name = CHECKPOINT_PARQUET_OUTPUT_FILE_NAME_FORMAT.format(
-            checkpoint_name
+    # Convert Float to Double to avoid precision problems. Spark parquet use IEEE 32-bit floating point values,
+    # while Snowflake uses IEEE 64-bit floating point values.
+    new_cols = [
+        (
+            col(c).cast(SparkStringType()).cast(SparkDoubleType()).alias(c)
+            if t == "float"
+            else col(c)
         )
-        output_path = os.path.join(output_directory_path, checkpoint_file_name)
-        snow_connection.upload_to_snowflake(
-            checkpoint_name, checkpoint_file_name, output_path
+        for (c, t) in spark_df.dtypes
+    ]
+    converted_df = spark_df.select(new_cols)
+    converted_df.write.parquet(output_path, mode="overwrite")
+
+
+def _create_snowflake_table_from_parquet(
+    table_name: str, input_path: str, snow_connection: SnowConnection
+) -> None:
+    try:
+        snow_connection.create_snowflake_table_from_local_parquet(
+            table_name, input_path
         )
 
     except Exception as err:
         error_message = str(err)
         raise Exception(error_message) from err
+
+
+def _get_output_directory_path() -> str:
+    current_directory_path = os.getcwd()
+    output_directory_path = os.path.join(
+        current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME
+    )
+    if not os.path.exists(output_directory_path):
+        os.makedirs(output_directory_path)
+
+    return output_directory_path

@@ -5,12 +5,14 @@
 from unittest import mock
 from unittest.mock import MagicMock, call
 
+import pytest
+
 from snowflake.snowpark_checkpoints_collector.snow_connection_model import (
     SnowConnection,
 )
 
 
-def test_upload_to_snowflake():
+def test_create_snowflake_table_from_parquet():
     mocked_session = MagicMock()
     mock_df = MagicMock()
     mock_read = MagicMock()
@@ -25,36 +27,47 @@ def test_upload_to_snowflake():
     mock_df.write = mock_save_as_table
     mock_save_as_table.save_as_table.return_value = ["row1", "row2"]
 
-    parquet_file_name = "file1.parquet"
-    parquet_file_path = "dir1/file1.parquet"
-    mock_dir_entry = type(
-        "", (object,), {"name": parquet_file_name, "path": parquet_file_path}
-    )()
-    checkpoint_name = "checkpoint_name_test"
-    checkpoint_file_name = "checkpoint_file_name_test.parquet"
     output_directory_path = "output_directory_path_test"
+    parquet_file_path = f"{output_directory_path}/dir1/file1.parquet"
+    checkpoint_name = "checkpoint_name_test"
 
-    with mock.patch("os.scandir") as os_mock:
-        os_mock.return_value = [mock_dir_entry]
-        snow_connection = SnowConnection(mocked_session)
-        snow_connection.upload_to_snowflake(
-            checkpoint_name, checkpoint_file_name, output_directory_path
-        )
+    with mock.patch("glob.glob") as glob_mock:
+        with mock.patch("os.path.isfile") as isfile_mock:
+            isfile_mock.return_value = True
+            glob_mock.return_value = [parquet_file_path]
+            snow_connection = SnowConnection(mocked_session)
+            snow_connection.create_snowflake_table_from_local_parquet(
+                checkpoint_name, output_directory_path, stage_path=checkpoint_name
+            )
 
     assert mocked_session.method_calls[0] == call.sql(
         "CREATE TEMP STAGE IF NOT EXISTS CHECKPOINT_STAGE"
     )
 
     assert mocked_session.method_calls[1] == call.sql(
-        "PUT 'file://dir1/file1.parquet' "
-        "'@CHECKPOINT_STAGE/checkpoint_file_name_test.parquet' "
+        f"PUT 'file://{output_directory_path}/dir1/file1.parquet' "
+        f"'@CHECKPOINT_STAGE/{checkpoint_name}/dir1/file1.parquet' "
         "AUTO_COMPRESS=FALSE"
     )
 
     assert mocked_session.method_calls[2] == call.read.parquet(
-        path="'@CHECKPOINT_STAGE/checkpoint_file_name_test.parquet'"
+        path=f"'@CHECKPOINT_STAGE/{checkpoint_name}'"
     )
 
     assert mock_df.method_calls[2] == call.write.save_as_table(
         table_name="checkpoint_name_test", mode="overwrite"
     )
+
+
+def test_create_snowflake_table_from_parquet_exception():
+    mocked_session = MagicMock()
+    mocked_session.sql.side_effect = Exception("Test exception")
+    checkpoint_name = "checkpoint_name_test"
+    output_directory_path = "output_directory_path_test"
+
+    with pytest.raises(Exception) as ex_info:
+        snow_connection = SnowConnection(mocked_session)
+        snow_connection.create_snowflake_table_from_local_parquet(
+            checkpoint_name, output_directory_path
+        )
+    assert "Test exception" == str(ex_info.value)

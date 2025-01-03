@@ -1,24 +1,35 @@
 from datetime import datetime
+import os.path
+import tempfile
 from unittest.mock import MagicMock, patch
+
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col
+from pyspark.sql.types import (
+    DoubleType as SparkDoubleType,
+    StringType as SparkStringType,
+)
 from pytest import fixture, raises
 from snowflake.snowpark import Session
-from snowflake.snowpark_checkpoints.checkpoint import validate_dataframe_checkpoint
-from snowflake.snowpark_checkpoints.errors import SchemaValidationError
-from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
-from pyspark.sql import SparkSession
-
 from snowflake.snowpark.types import (
-    IntegerType,
+    BooleanType,
+    DateType,
+    DoubleType,
+    LongType,
     StringType,
     StructField,
     StructType,
-    ByteType,
-    ShortType,
-    LongType,
-    DoubleType,
-    BooleanType,
-    DateType,
 )
+
+from snowflake.snowpark_checkpoints.checkpoint import validate_dataframe_checkpoint
+from snowflake.snowpark_checkpoints.errors import SchemaValidationError
+from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
+from snowflake.snowpark_checkpoints.spark_migration import compare_spark_snowpark_dfs
+from snowflake.snowpark_checkpoints.utils.constant import CheckpointMode
+from snowflake.snowpark_checkpoints_collector.snow_connection_model import (
+    SnowConnection,
+)
+
 from snowflake.snowpark_checkpoints.utils.constant import (
     FAIL_STATUS,
     PASS_STATUS,
@@ -30,26 +41,49 @@ from snowflake.snowpark_checkpoints.utils.constant import (
 def job_context():
     session = Session.builder.getOrCreate()
     job_context = SnowparkJobContext(
-        session, SparkSession.builder.getOrCreate(), "realdemo", True
+        session, SparkSession.builder.getOrCreate(), "real_demo", True
     )
     return job_context
 
 
 @fixture
-def schema():
+def spark_schema():
+    import pyspark.sql.types as t
+
+    return t.StructType(
+        [
+            t.StructField("BYTE", t.ByteType(), True),
+            t.StructField("SHORT", t.ShortType(), True),
+            t.StructField("INTEGER", t.IntegerType(), True),
+            t.StructField("LONG", t.LongType(), True),
+            t.StructField("FLOAT", t.FloatType(), True),
+            t.StructField("DOUBLE", t.DoubleType(), True),
+            # StructField("decimal", DecimalType(10, 3), True),
+            t.StructField("STRING", t.StringType(), True),
+            # StructField("binary", BinaryType(), True),
+            t.StructField("BOOLEAN", t.BooleanType(), True),
+            t.StructField("DATE", t.DateType(), True),
+            # StructField("timestamp", TimestampType(), True),
+            # StructField("timestamp_ntz", TimestampType(), True),
+        ]
+    )
+
+
+@fixture
+def snowpark_schema():
     return StructType(
         [
-            StructField("byte", ByteType(), True),
-            StructField("short", ShortType(), True),
-            StructField("interger", IntegerType(), True),
-            StructField("long", LongType(), True),
-            # StructField("float", FloatType(), True),
-            StructField("double", DoubleType(), True),
+            StructField("BYTE", LongType(), True),
+            StructField("SHORT", LongType(), True),
+            StructField("INTEGER", LongType(), True),
+            StructField("LONG", LongType(), True),
+            StructField("FLOAT", DoubleType(), True),
+            StructField("DOUBLE", DoubleType(), True),
             # StructField("decimal", DecimalType(10, 3), True),
-            StructField("string", StringType(), True),
+            StructField("STRING", StringType(), True),
             # StructField("binary", BinaryType(), True),
-            StructField("boolean", BooleanType(), True),
-            StructField("date", DateType(), True),
+            StructField("BOOLEAN", BooleanType(), True),
+            StructField("DATE", DateType(), True),
             # StructField("timestamp", TimestampType(), True),
             # StructField("timestamp_ntz", TimestampType(), True),
         ]
@@ -68,7 +102,7 @@ def data():
             789,
             13579,
             1231231231,
-            # 7.8,
+            7.8,
             2.345678,
             # Decimal(7.891),
             "red",
@@ -83,7 +117,7 @@ def data():
             101,
             24680,
             3213213210,
-            # 0.12,
+            0.12,
             3.456789,
             # Decimal(0.123),
             "red",
@@ -98,7 +132,7 @@ def data():
             202,
             36912,
             4564564560,
-            # 3.45,
+            3.45,
             4.567890,
             # Decimal(3.456),
             "red",
@@ -113,7 +147,7 @@ def data():
             303,
             48123,
             7897897890,
-            # 6.78,
+            6.78,
             5.678901,
             # Decimal(6.789),
             "red",
@@ -128,7 +162,7 @@ def data():
             404,
             59234,
             9879879870,
-            # 9.01,
+            9.01,
             6.789012,
             # Decimal(9.012),
             "red",
@@ -143,7 +177,7 @@ def data():
             505,
             70345,
             1231231234,
-            # 1.23,
+            1.23,
             7.890123,
             # Decimal(1.234),
             "blue",
@@ -158,7 +192,7 @@ def data():
             606,
             81456,
             3213213214,
-            # 4.56,
+            4.56,
             8.901234,
             # Decimal(4.567),
             "blue",
@@ -173,7 +207,7 @@ def data():
             707,
             92567,
             4564564564,
-            # 7.8,
+            7.8,
             9.012345,
             # Decimal(7.892),
             "blue",
@@ -188,7 +222,7 @@ def data():
             808,
             103678,
             7897897894,
-            # 0.12,
+            0.12,
             0.123456,
             # Decimal(0.123),
             "green",
@@ -203,7 +237,7 @@ def data():
             909,
             114789,
             9879879874,
-            # 3.45,
+            3.45,
             1.234567,
             # Decimal(3.456),
             "green",
@@ -214,6 +248,39 @@ def data():
             # datetime.strptime("2023-12-01 12:00:00", timestamp_ntz_format),
         ],
     ]
+
+
+def test_spark_df_mode_dataframe(spark_schema, snowpark_schema, data):
+    spark = SparkSession.builder.getOrCreate()
+    spark_df = spark.createDataFrame(data, schema=spark_schema)
+    parquet_directory = os.path.join(
+        tempfile.gettempdir(),
+        f"test_spark_df_checkpoint_{datetime.now().strftime('%Y%m%d%H%M%S')}",
+    )
+
+    new_cols = [
+        (
+            col(c).cast(SparkStringType()).cast(SparkDoubleType()).alias(c)
+            if t == "float"
+            else col(c)
+        )
+        for (c, t) in spark_df.dtypes
+    ]
+    converted_df = spark_df.select(new_cols).orderBy(spark_df.columns)
+
+    converted_df.write.parquet(parquet_directory, mode="overwrite")
+
+    snow = SnowConnection()
+    snow.create_snowflake_table_from_local_parquet(
+        "test_spark_df_checkpoint", parquet_directory
+    )
+    snowpark_df = snow.session.table("test_spark_df_checkpoint")
+    snowpark_df = snowpark_df.orderBy(snowpark_df.columns)
+    cpm = compare_spark_snowpark_dfs(converted_df, snowpark_df)
+    assert snowpark_schema == snowpark_df.schema
+    if not cpm.empty:
+        print(cpm)
+    assert cpm.empty
 
 
 def test_df_mode_dataframe(job_context, schema, data):

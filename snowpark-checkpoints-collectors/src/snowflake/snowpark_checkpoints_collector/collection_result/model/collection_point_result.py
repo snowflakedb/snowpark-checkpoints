@@ -1,3 +1,6 @@
+#
+# Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
+#
 from datetime import datetime
 from enum import Enum
 
@@ -36,7 +39,7 @@ class CollectionPointResult:
         line_of_code: int,
         checkpoint_name: str,
     ) -> None:
-        """Init BinaryColumnCollector.
+        """Init CollectionPointResult.
 
         Args:
             file_path (str): the full path where checkpoint is.

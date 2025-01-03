@@ -1,5 +1,7 @@
+#
+# Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
+#
 import json
-import os.path
 
 import pytest
 from pyspark.sql import SparkSession

@@ -1,3 +1,6 @@
+#
+# Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
+#
 from statistics import mean
 
 from pandas import Series
@@ -36,7 +39,7 @@ class MapColumnCollector(ColumnCollectorBase):
     def __init__(
         self, clm_name: str, struct_field: StructField, clm_values: Series
     ) -> None:
-        """Init ArrayColumnCollector.
+        """Init MapColumnCollector.
 
         Args:
             clm_name (str): the name of the column.

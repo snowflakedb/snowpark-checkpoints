@@ -9,6 +9,7 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
     ARRAY_COLUMN_TYPE,
     COLUMN_ALLOW_NULL_KEY,
     COLUMN_KEY_TYPE_KEY,
+    COLUMN_METADATA_KEY,
     COLUMN_VALUE_TYPE_KEY,
     FIELD_METADATA_KEY,
     FIELDS_KEY,
@@ -66,6 +67,7 @@ class EmptyColumnCollector(ColumnCollectorBase):
             for field in struct_field_json[FIELDS_KEY]:
                 del field[FIELD_METADATA_KEY]
                 field_metadata_collection.append(field)
+            custom_data[COLUMN_METADATA_KEY] = field_metadata_collection
 
         else:
             custom_data = {}

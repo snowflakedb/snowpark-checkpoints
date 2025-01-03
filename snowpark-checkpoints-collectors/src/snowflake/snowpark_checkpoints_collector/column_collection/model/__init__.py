@@ -11,7 +11,6 @@ __all__ = [
     "DecimalColumnCollector",
     "EmptyColumnCollector",
     "MapColumnCollector",
-    "MapColumnCollector",
     "NumericColumnCollector",
     "NullColumnCollector",
     "StringColumnCollector",

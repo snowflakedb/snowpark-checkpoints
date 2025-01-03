@@ -92,7 +92,9 @@ EMPTY_MAP_DATA_COLLECT_EXPECTED = (
 
 EMPTY_STRUCT_DATA_COLLECT_EXPECTED = (
     '{"name": "clmTest", "type": "struct", "nullable": true, "rows_count": 0, '
-    '"rows_not_null_count": 0, "rows_null_count": 0}'
+    '"rows_not_null_count": 0, "rows_null_count": 0, "metadata": [{"name": '
+    '"inner1", "type": "string", "nullable": true}, {"name": "inner2", '
+    '"type": "integer", "nullable": true}]}'
 )
 
 MAP_DATA_COLLECT_EXPECTED = (

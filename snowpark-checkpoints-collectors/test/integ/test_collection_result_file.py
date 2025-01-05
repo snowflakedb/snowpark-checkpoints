@@ -17,7 +17,7 @@ from snowflake.snowpark_checkpoints_collector.collection_result.model.collection
     RESULT_KEY,
 )
 from snowflake.snowpark_checkpoints_collector.utils import file_utils
-from snowflake.snowpark_checkpoints_configuration.singleton import Singleton
+from snowflake.snowpark_checkpoints_collector import Singleton
 
 
 @pytest.fixture

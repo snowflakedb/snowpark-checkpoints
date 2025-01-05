@@ -18,7 +18,7 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
 from snowflake.snowpark_checkpoints_collector.snow_connection_model import (
     SnowConnection,
 )
-from snowflake.snowpark_checkpoints_configuration.singleton import Singleton
+from snowflake.snowpark_checkpoints_collector import Singleton
 
 TEST_COLLECT_DF_EXPECTED_DIRECTORY_NAME = "test_collect_df_mode_2_expected"
 

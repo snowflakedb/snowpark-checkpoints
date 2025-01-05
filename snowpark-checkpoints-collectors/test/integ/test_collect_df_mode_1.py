@@ -54,7 +54,7 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
     BOOLEAN_COLUMN_TYPE,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
 )
-from snowflake.snowpark_checkpoints_configuration.singleton import Singleton
+from snowflake.snowpark_checkpoints_collector import Singleton
 
 TEST_COLLECT_DF_MODE_1_EXPECTED_DIRECTORY_NAME = "test_collect_df_mode_1_expected"
 

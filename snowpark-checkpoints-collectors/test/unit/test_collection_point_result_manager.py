@@ -13,7 +13,7 @@ from snowflake.snowpark_checkpoints_collector.collection_result.model.collection
     FILE_KEY,
 )
 
-from snowflake.snowpark_checkpoints_configuration.singleton import Singleton
+from snowflake.snowpark_checkpoints_collector import Singleton
 
 EXPECTED_MODEL = (
     '{"timestamp": "2024-12-20 14:50:49", "file": "unit/test_collection_point_result_manager.py", '

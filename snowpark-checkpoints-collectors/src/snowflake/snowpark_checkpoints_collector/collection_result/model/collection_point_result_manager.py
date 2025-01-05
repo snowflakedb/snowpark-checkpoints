@@ -3,11 +3,11 @@
 #
 import json
 
+from snowflake.snowpark_checkpoints_collector import Singleton
 from snowflake.snowpark_checkpoints_collector.collection_result.model import (
     CollectionPointResult,
 )
 from snowflake.snowpark_checkpoints_collector.utils import file_utils
-from snowflake.snowpark_checkpoints_configuration.singleton import Singleton
 
 
 class CollectionPointResultManager(metaclass=Singleton):

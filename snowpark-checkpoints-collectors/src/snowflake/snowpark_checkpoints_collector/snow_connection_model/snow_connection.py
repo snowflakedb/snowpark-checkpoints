@@ -10,6 +10,7 @@ from typing import Callable, Optional
 from snowflake.snowpark import Session
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     BACKSLASH_TOKEN,
+    DOT_PARQUET_EXTENSION,
     SLASH_TOKEN,
 )
 
@@ -58,7 +59,7 @@ class SnowConnection:
         self.create_temp_stage(STAGE_NAME)
 
         def is_parquet_file(file: str):
-            return file.endswith(".parquet")
+            return file.endswith(DOT_PARQUET_EXTENSION)
 
         self.load_files_to_stage(STAGE_NAME, stage_path, input_path, is_parquet_file)
         self.create_table_from_parquet(table_name, stage_directory_path)

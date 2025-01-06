@@ -66,6 +66,7 @@ repos:
           (?x)^(
               hypothesis-snowpark/recipe/meta.yaml|
               .github/repo_meta.yaml|
+              .*recipe/meta.yaml|
           )$
 
   - repo: https://github.com/Lucas-C/pre-commit-hooks.git

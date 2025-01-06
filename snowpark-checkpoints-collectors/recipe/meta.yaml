@@ -1,0 +1,39 @@
+{% set name = "snowpark.checkpoints.collector" %}
+{% set version = "0.0.0" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  # need to use path to build on Jenkins
+  path: ../
+
+build:
+  skip: True
+  noarch: python
+  script: {{ PYTHON }} -m pip install . --no-deps -vvv
+
+requirements:
+  host:
+    - python<3.12,>=3.9
+    - pip
+    - wheel
+    - hatchling
+  run:
+    - python<3.12,>=3.9
+    - atpublic>=4
+    - pydantic>=2
+    - python-dateutil>=2.8.2
+    - requests
+    - snowflake-connector-python
+    - snowflake-snowpark-python
+    - pyspark
+    - pandera[io]==0.20.4
+
+test:
+  imports:
+    - snowpark.checkpoints.collector
+
+about:
+  summary: snowpark.checkpoints.collector

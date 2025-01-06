@@ -2,7 +2,6 @@
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
 
-from datetime import date
 import json
 import os
 from unittest.mock import ANY, call, patch, mock_open, MagicMock
@@ -16,12 +15,14 @@ from snowflake.snowpark_checkpoints.utils.constant import (
     CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME,
     CHECKPOINT_TABLE_NAME_FORMAT,
     DATAFRAME_CUSTOM_DATA_KEY,
+    DEFAULT_KEY,
     EXCEPT_HASH_AGG_QUERY,
     FAIL_STATUS,
     FLOAT_TYPE,
     NAME_KEY,
     OVERWRITE_MODE,
     PASS_STATUS,
+    ROWS_COUNT_KEY,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
     TYPE_KEY,
 )
@@ -108,7 +109,12 @@ def test_add_boolean_checks():
         }
     )
 
-    additional_check = {TRUE_COUNT_KEY: 2, FALSE_COUNT_KEY: 1, MARGIN_ERROR_KEY: 0}
+    additional_check = {
+        TRUE_COUNT_KEY: 2,
+        FALSE_COUNT_KEY: 1,
+        MARGIN_ERROR_KEY: 0,
+        ROWS_COUNT_KEY: 3,
+    }
 
     _add_boolean_checks(schema, "col1", additional_check)
 
@@ -128,7 +134,12 @@ def test_add_boolean_checks_with_margin_error():
         }
     )
 
-    additional_check = {TRUE_COUNT_KEY: 2, FALSE_COUNT_KEY: 1, MARGIN_ERROR_KEY: 1}
+    additional_check = {
+        TRUE_COUNT_KEY: 2,
+        FALSE_COUNT_KEY: 1,
+        MARGIN_ERROR_KEY: 1,
+        ROWS_COUNT_KEY: 3,
+    }
 
     _add_boolean_checks(schema, "col1", additional_check)
 
@@ -148,7 +159,7 @@ def test_add_boolean_checks_no_true_count():
         }
     )
 
-    additional_check = {FALSE_COUNT_KEY: 3, MARGIN_ERROR_KEY: 0}
+    additional_check = {FALSE_COUNT_KEY: 3, MARGIN_ERROR_KEY: 0, ROWS_COUNT_KEY: 3}
 
     _add_boolean_checks(schema, "col1", additional_check)
 
@@ -168,7 +179,7 @@ def test_add_boolean_checks_no_false_count():
         }
     )
 
-    additional_check = {TRUE_COUNT_KEY: 3, MARGIN_ERROR_KEY: 0}
+    additional_check = {TRUE_COUNT_KEY: 3, MARGIN_ERROR_KEY: 0, ROWS_COUNT_KEY: 3}
 
     _add_boolean_checks(schema, "col1", additional_check)
 
@@ -311,6 +322,8 @@ def test_generate_schema_with_custom_data():
                     "name": "col2",
                     "true_count": 2,
                     "false_count": 1,
+                    "margin_error": 0.0,
+                    "rows_count": 3,
                 },
             ],
         },
@@ -516,17 +529,7 @@ def test_compare_data_match():
     checkpoint_name = "test_checkpoint"
     validation_status = PASS_STATUS
 
-    # Mock the metadata and checkpoint config
-    checkpoint_config = MagicMock()
-    checkpoint_config.file = "test_file.py"
-    checkpoint_config.function = "test_function"
-    checkpoint_config.location = "test_location"
-
     with (
-        patch(
-            "snowflake.snowpark_checkpoints.utils.utils_checks.get_checkpoint_by_name",
-            return_value=checkpoint_config,
-        ),
         patch("os.getcwd", return_value="/mocked/path"),
         patch("os.path.exists", return_value=False),
         patch("builtins.open", mock_open()),
@@ -570,17 +573,7 @@ def test_compare_data_mismatch():
     # Mock session.sql to return a non-empty DataFrame (indicating a mismatch)
     session.sql.return_value.count.return_value = 1
 
-    # Mock the metadata and checkpoint config
-    checkpoint_config = MagicMock()
-    checkpoint_config.file = "test_file.py"
-    checkpoint_config.function = "test_function"
-    checkpoint_config.location = "test_location"
-
     with (
-        patch(
-            "snowflake.snowpark_checkpoints.utils.utils_checks.get_checkpoint_by_name",
-            return_value=checkpoint_config,
-        ),
         patch("os.getcwd", return_value="/mocked/path"),
         patch("os.path.exists", return_value=False),
         patch("builtins.open", mock_open()),
@@ -614,21 +607,10 @@ def test_update_validation_result_with_file():
     checkpoint_name = "test_checkpoint"
     validation_status = PASS_STATUS
 
-    # Mock the checkpoint config
-    checkpoint_config = MagicMock()
-    checkpoint_config.file = "test_file.py"
-    checkpoint_config.function = "test_function"
-    checkpoint_config.location = "test_location"
-
     # Mock the metadata and validation result
-    metadata = MagicMock()
     MockValidationResult = MagicMock()
 
     with (
-        patch(
-            "snowflake.snowpark_checkpoints.utils.utils_checks.get_checkpoint_by_name",
-            return_value=checkpoint_config,
-        ),
         patch(
             "snowflake.snowpark_checkpoints.utils.utils_checks.PipelineResultMetadata"
         ) as MockPipelineResultMetadata,
@@ -644,14 +626,10 @@ def test_update_validation_result_with_file():
         # Assertions
         MockPipelineResultMetadata.assert_called_once()
         MockValidationResult.assert_called_once_with(
-            result=validation_status,
-            timestamp=ANY,
-            file=checkpoint_config.file,
-            function=checkpoint_config.function,
-            location=checkpoint_config.location,
+            result=validation_status, timestamp=ANY, file=DEFAULT_KEY, line_of_code=-1
         )
         mock_pipeline_result_metadata.update_validation_result.assert_called_once_with(
-            checkpoint_config.file, checkpoint_name, MockValidationResult()
+            checkpoint_name, MockValidationResult()
         )
         mock_pipeline_result_metadata.save.assert_called_once()
 
@@ -660,21 +638,10 @@ def test_update_validation_result_without_file():
     checkpoint_name = "test_checkpoint"
     validation_status = PASS_STATUS
 
-    # Mock the checkpoint config
-    checkpoint_config = MagicMock()
-    checkpoint_config.file = None
-    checkpoint_config.function = "test_function"
-    checkpoint_config.location = "test_location"
-
     # Mock the metadata and validation result
-    metadata = MagicMock()
     MockValidationResult = MagicMock()
 
     with (
-        patch(
-            "snowflake.snowpark_checkpoints.utils.utils_checks.get_checkpoint_by_name",
-            return_value=checkpoint_config,
-        ),
         patch(
             "snowflake.snowpark_checkpoints.utils.utils_checks.PipelineResultMetadata"
         ) as MockPipelineResultMetadata,
@@ -684,8 +651,8 @@ def test_update_validation_result_without_file():
         patch(
             "snowflake.snowpark_checkpoints.utils.utils_checks.inspect.stack",
             return_value=[
-                MagicMock(),
-                MagicMock(filename="test_file.py"),
+                MagicMock(filename="test_file.py", code_context=["test code"]),
+                MagicMock(filename="test_file.py", code_context=["test code"]),
             ],
         ),
     ):
@@ -697,13 +664,9 @@ def test_update_validation_result_without_file():
         # Assertions
         MockPipelineResultMetadata.assert_called_once()
         MockValidationResult.assert_called_once_with(
-            result=validation_status,
-            timestamp=ANY,
-            file="test_file.py",
-            function=checkpoint_config.function,
-            location=checkpoint_config.location,
+            result=validation_status, timestamp=ANY, file=DEFAULT_KEY, line_of_code=-1
         )
         mock_pipeline_result_metadata.update_validation_result.assert_called_once_with(
-            "test_file.py", checkpoint_name, MockValidationResult()
+            checkpoint_name, MockValidationResult()
         )
         mock_pipeline_result_metadata.save.assert_called_once()

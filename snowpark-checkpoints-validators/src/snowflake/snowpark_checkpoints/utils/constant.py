@@ -12,6 +12,9 @@ class CheckpointMode(IntEnum):
     DATAFRAME = 2
 
 
+# File position on stack
+STACK_POSITION_CHECKPOINT: Final[int] = 6
+
 # Validation status
 PASS_STATUS: Final[str] = "pass"
 FAIL_STATUS: Final[str] = "fail"
@@ -66,6 +69,7 @@ NULL_COUNT_KEY: Final[str] = "rows_null_count"
 ROWS_NOT_NULL_COUNT_KEY: Final[str] = "rows_not_null_count"
 TRUE_COUNT_KEY: Final[str] = "true_count"
 TYPE_KEY: Final[str] = "type"
+ROWS_COUNT_KEY: Final[str] = "rows_count"
 
 DATAFRAME_CUSTOM_DATA_KEY: Final[str] = "custom_data"
 DATAFRAME_PANDERA_SCHEMA_KEY: Final[str] = "pandera_schema"

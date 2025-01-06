@@ -1,9 +1,8 @@
 #
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
-from typing import Optional
 
-from snowflake.snowpark_checkpoints_configuration.model.checkpoints import Checkpoint
+from typing import Optional
 
 
 # noinspection DuplicatedCode
@@ -38,18 +37,25 @@ def is_checkpoint_enabled(checkpoint_name: Optional[str] = None) -> bool:
         return True
 
 
-def get_checkpoint_by_name(checkpoint_name: str) -> Optional[Checkpoint]:
-    """Get a checkpoint by name.
+def get_checkpoint_file(checkpoint_name: str) -> Optional[str]:
+    """Retrieve the configuration for a specified checkpoint.
+
+    This function fetches the checkpoint configuration if metadata is enabled.
+    It extracts the file name from the checkpoint metadata or
+    from the call stack if not explicitly provided in the metadata.
 
     Args:
-        checkpoint_name (str): The name of the checkpoint.
+        checkpoint_name (str): The name of the checkpoint to retrieve the configuration for.
 
     Returns:
-        Checkpoint: The checkpoint object.
+        Optional[dict]: A dictionary containing the file name,
+                        or None if metadata is not enabled.
 
     """
-    _, metadata = _get_metadata()
-    if metadata:
-        return metadata.get_checkpoint(checkpoint_name)
+    enabled, metadata = _get_metadata()
+    if enabled:
+        config = metadata.get_checkpoint(checkpoint_name)
+
+        return config.file
     else:
         return None

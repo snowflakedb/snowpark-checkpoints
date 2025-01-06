@@ -39,13 +39,14 @@ class PipelineResultMetadata:
             Exception: If there is an error reading the validation results file.
 
         """
-        directory = path if path is not None else os.getcwd()
+        validation_results_file = (
+            path
+            if path is not None
+            else os.path.join(os.getcwd(), VALIDATION_RESULTS_JSON_FILE_NAME)
+        )
 
         self.pipeline_result = {}
 
-        validation_results_file = os.path.join(
-            directory, VALIDATION_RESULTS_JSON_FILE_NAME
-        )
         if os.path.exists(validation_results_file):
             with open(validation_results_file) as file:
                 try:
@@ -58,7 +59,7 @@ class PipelineResultMetadata:
                     ) from None
 
     def update_validation_result(
-        self, file_name: str, checkpoint_name: str, validation_result: ValidationResult
+        self, checkpoint_name: str, validation_result: ValidationResult
     ):
         """Update the validation result for a given file and checkpoint.
 
@@ -71,6 +72,7 @@ class PipelineResultMetadata:
             None
 
         """
+        file_name = validation_result.file
         file_result = self.pipeline_result.get(file_name, {})
         checkpoint_results = file_result.get(checkpoint_name, [])
 

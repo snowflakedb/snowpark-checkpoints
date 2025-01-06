@@ -1,5 +1,4 @@
 from json import JSONEncoder
-from typing import Optional
 
 
 def as_validation_result(dct):
@@ -20,23 +19,23 @@ def as_validation_result(dct):
 
 class ValidationResult:
 
-    """A class to represent the result of a validation.
+    """A class used to represent the result of a validation.
 
-    Attributes:
-        result : str
-            The result of the validation.
-        timestamp : str
-            The timestamp when the validation was performed.
-        location : int
-            The location identifier where the validation was performed.
-        file : Optional[str], optional
-            The file where the validation was performed (default is None).
-        function : Optional[str], optional
-            The function where the validation was performed (default is None).
+    Attributes
+    ----------
+    result : str
+        The result of the validation.
+    timestamp : str
+        The timestamp when the validation was performed.
+    file : str
+        The file where the validation was performed.
+    line_of_code : int
+        The specific line of code that was validated.
 
-    Methods:
-        __dict__() -> dict:
-            Returns a dictionary representation of the validation result.
+    Methods
+    -------
+    __dict__()
+        Returns a dictionary representation of the validation result.
 
     """
 
@@ -44,24 +43,24 @@ class ValidationResult:
         self,
         result: str,
         timestamp: str,
-        location: int,
-        file: Optional[str] = None,
-        function: Optional[str] = None,
+        file: str,
+        line_of_code: int,
     ):
         self.result = result
         self.timestamp = timestamp
-        self.location = location
         self.file = file
-        self.function = function
+        self.line_of_code = line_of_code
 
     def __dict__(self) -> dict:
         return {
             "result": self.result,
             "timestamp": self.timestamp,
-            "location": self.location,
             "file": self.file,
-            "function": self.function,
+            "line_of_code": self.line_of_code,
         }
+
+    def __eq__(self, other):
+        return self.__dict__() == other.__dict__()
 
 
 class ValidationResultEncoder(JSONEncoder):

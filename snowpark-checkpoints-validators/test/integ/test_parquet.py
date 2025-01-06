@@ -4,11 +4,7 @@ import tempfile
 from unittest.mock import MagicMock, patch
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col
-from pyspark.sql.types import (
-    DoubleType as SparkDoubleType,
-    StringType as SparkStringType,
-)
+
 from pytest import fixture, raises
 from snowflake.snowpark import Session
 from snowflake.snowpark.types import (
@@ -26,9 +22,6 @@ from snowflake.snowpark_checkpoints.errors import SchemaValidationError
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from snowflake.snowpark_checkpoints.spark_migration import compare_spark_snowpark_dfs
 from snowflake.snowpark_checkpoints.utils.constant import CheckpointMode
-from snowflake.snowpark_checkpoints_collector.snow_connection_model import (
-    SnowConnection,
-)
 
 from snowflake.snowpark_checkpoints.utils.constant import (
     FAIL_STATUS,
@@ -248,39 +241,6 @@ def data():
             # datetime.strptime("2023-12-01 12:00:00", timestamp_ntz_format),
         ],
     ]
-
-
-def test_spark_df_mode_dataframe(spark_schema, snowpark_schema, data):
-    spark = SparkSession.builder.getOrCreate()
-    spark_df = spark.createDataFrame(data, schema=spark_schema)
-    parquet_directory = os.path.join(
-        tempfile.gettempdir(),
-        f"test_spark_df_checkpoint_{datetime.now().strftime('%Y%m%d%H%M%S')}",
-    )
-
-    new_cols = [
-        (
-            col(c).cast(SparkStringType()).cast(SparkDoubleType()).alias(c)
-            if t == "float"
-            else col(c)
-        )
-        for (c, t) in spark_df.dtypes
-    ]
-    converted_df = spark_df.select(new_cols).orderBy(spark_df.columns)
-
-    converted_df.write.parquet(parquet_directory, mode="overwrite")
-
-    snow = SnowConnection()
-    snow.create_snowflake_table_from_local_parquet(
-        "test_spark_df_checkpoint", parquet_directory
-    )
-    snowpark_df = snow.session.table("test_spark_df_checkpoint")
-    snowpark_df = snowpark_df.orderBy(snowpark_df.columns)
-    cpm = compare_spark_snowpark_dfs(converted_df, snowpark_df)
-    assert snowpark_schema == snowpark_df.schema
-    if not cpm.empty:
-        print(cpm)
-    assert cpm.empty
 
 
 def test_df_mode_dataframe(job_context, schema, data):

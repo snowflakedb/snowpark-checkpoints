@@ -226,7 +226,16 @@ def _get_pandera_infer_schema_as_dict(
     return pandera_infer_schema_dict
 
 
-def _generate_json_checkpoint_file(checkpoint_name, dataframe_schema_contract) -> None:
+def _generate_json_checkpoint_file(
+    checkpoint_name, dataframe_schema_contract, output_path: Optional[str] = None
+) -> None:
+    current_directory_path = output_path if output_path else os.getcwd()
+    output_directory_path = os.path.join(
+        current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME
+    )
+    if not os.path.exists(output_directory_path):
+        os.makedirs(output_directory_path)
+
     checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
         checkpoint_name
     )
@@ -251,27 +260,23 @@ def _collect_dataframe_checkpoint_mode_dataframe(
 
     if not os.path.exists(output_path):
         os.makedirs(output_path)
-    _generate_parquet_checkpoint_file(df, output_path)
+    generate_parquet_for_spark_df(df, output_path)
     _create_snowflake_table_from_parquet(checkpoint_name, output_path, snow_connection)
 
 
-def _generate_parquet_checkpoint_file(
-    spark_df: SparkDataFrame, output_path: str
-) -> None:
-    _generate_parquet_checkpoint_file(checkpoint_name, df)
-    _upload_to_snowflake(checkpoint_name, snow_connection)
+def generate_parquet_for_spark_df(spark_df: SparkDataFrame, output_path: str) -> None:
+    """Generate a parquet file from a Spark DataFrame.
 
+    This function will  convert Float to Double to avoid precision problems.
+    Spark parquet use IEEE 32-bit floating point values,
+    while Snowflake uses IEEE 64-bit floating point values.
 
-def _generate_parquet_checkpoint_file(checkpoint_name, df: SparkDataFrame) -> None:
-    output_directory_path = file_utils.get_output_directory_path()
+    Args:
+        spark_df: dataframe to be saved as parquet
+        output_path: path to save the parquet files.
+    returns: None
 
-    checkpoint_file_name = CHECKPOINT_PARQUET_OUTPUT_FILE_NAME_FORMAT.format(
-        checkpoint_name
-    )
-    checkpoint_file_path = os.path.join(output_directory_path, checkpoint_file_name)
-    df.write.parquet(checkpoint_file_path, mode="overwrite")
-    # Convert Float to Double to avoid precision problems. Spark parquet use IEEE 32-bit floating point values,
-    # while Snowflake uses IEEE 64-bit floating point values.
+    """
     new_cols = [
         (
             col(c).cast(SparkStringType()).cast(SparkDoubleType()).alias(c)

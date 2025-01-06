@@ -21,6 +21,11 @@ from snowflake.snowpark.types import (
     StructType,
 )
 
+from pyspark.sql.functions import col
+from pyspark.sql.types import (
+    DoubleType as SparkDoubleType,
+    StringType as SparkStringType,
+)
 import integration_test_utils
 from snowflake.snowpark_checkpoints_collector import collect_dataframe_checkpoint
 from snowflake.snowpark_checkpoints_collector.collection_common import (
@@ -32,6 +37,10 @@ from snowflake.snowpark_checkpoints_collector.snow_connection_model import (
 from snowflake.snowpark_checkpoints_collector import Singleton
 
 import pyspark.sql.types as t
+
+from snowflake.snowpark_checkpoints_collector.summary_stats_collector import (
+    generate_parquet_for_spark_df,
+)
 
 
 @pytest.fixture
@@ -289,6 +298,24 @@ def test_collect_invalid_mode(spark_session, data, spark_schema):
     with pytest.raises(Exception) as ex_info:
         collect_dataframe_checkpoint(pyspark_df, checkpoint_name="", mode=3)
     assert "Invalid mode value." == str(ex_info.value)
+
+
+def test_spark_df_mode_dataframe(spark_schema, snowpark_schema, data):
+    spark = SparkSession.builder.getOrCreate()
+    spark_df = spark.createDataFrame(data, schema=spark_schema)
+    parquet_directory = os.path.join(
+        tempfile.gettempdir(),
+        f"test_spark_df_checkpoint_{datetime.now().strftime('%Y%m%d%H%M%S')}",
+    )
+
+    generate_parquet_for_spark_df(spark_df, parquet_directory)
+
+    snow = SnowConnection()
+    snow.create_snowflake_table_from_local_parquet(
+        "test_spark_df_checkpoint", parquet_directory
+    )
+
+    validate_dataframes("test_spark_df_checkpoint", spark_df, snowpark_schema)
 
 
 def validate_dataframes(

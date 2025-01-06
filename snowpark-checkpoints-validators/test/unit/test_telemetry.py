@@ -720,7 +720,7 @@ class TelemetryManagerTest(unittest.TestCase):
     def test_get_spark_schema_types(self):
         # Arrange
         from snowflake.snowpark_checkpoints.utils.telemetry import (
-            get_spark_schema_types,
+            _get_spark_schema_types,
         )
         from pyspark.sql import dataframe as spark_dataframe
         from pyspark.sql.types import LongType, StructField
@@ -730,7 +730,7 @@ class TelemetryManagerTest(unittest.TestCase):
 
         # Act
 
-        result = get_spark_schema_types(spark_df)
+        result = _get_spark_schema_types(spark_df)
 
         # Assert
         assert result == ["LongType()"]

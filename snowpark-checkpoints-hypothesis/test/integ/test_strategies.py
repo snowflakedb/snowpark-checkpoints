@@ -34,7 +34,9 @@ from snowflake.snowpark.types import (
 )
 
 SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME = "snowpark-checkpoints-output"
-TEST_DATAFRAME_STRATEGIES_EXPECTED_DIRECTORY_NAME = "test_strategies_expected"
+TEST_TELEMETRY_DATAFRAME_STRATEGIES_EXPECTED_DIRECTORY_NAME = (
+    "test_telemetry_strategies_expected"
+)
 
 
 def test_dataframe_strategy_none_schema(local_session: Session):
@@ -78,7 +80,6 @@ def test_dataframe_strategy_non_nullable_columns(
     assert (
         actual_null_count == 0
     ), f"Expected 0 null values, but got {actual_null_count}"
-    validate_telemetry_file_output("test_dataframe_strategy_non_nullable_columns.json")
 
 
 @given(data=st.data())
@@ -107,7 +108,9 @@ def test_dataframe_strategy_nullable_column(
     assert (
         expected_min_null_count <= actual_null_count <= expected_max_null_count
     ), f"Expected {expected_min_null_count} <= null values <= {expected_max_null_count}, but got {actual_null_count}."
-    validate_telemetry_file_output("test_dataframe_strategy_nullable_column.json")
+    validate_telemetry_file_output(
+        "test_dataframe_strategy_nullable_column_telemetry.json"
+    )
 
 
 @given(data=st.data())
@@ -144,7 +147,9 @@ def test_dataframe_strategy_generated_schema(
     )
 
     assert df.schema == expected_schema
-    validate_telemetry_file_output("test_dataframe_strategy_generated_schema.json")
+    validate_telemetry_file_output(
+        "test_dataframe_strategy_generated_schema_telemetry.json"
+    )
 
 
 @given(data=st.data())
@@ -200,14 +205,16 @@ def test_dataframe_strategy_generated_values(
             f"Column '{column}' contains invalid values."
             f"Actual values: {invalid_rows.collect()}"
         )
-    validate_telemetry_file_output("test_dataframe_strategy_generated_values.json")
+    validate_telemetry_file_output(
+        "test_dataframe_strategy_generated_values_telemetry.json"
+    )
 
 
 def get_expected(file_name) -> str:
     current_directory_path = os.path.dirname(__file__)
     expected_file_path = os.path.join(
         current_directory_path,
-        TEST_DATAFRAME_STRATEGIES_EXPECTED_DIRECTORY_NAME,
+        TEST_TELEMETRY_DATAFRAME_STRATEGIES_EXPECTED_DIRECTORY_NAME,
         file_name,
     )
 
@@ -243,7 +250,6 @@ def validate_telemetry_file_output(telemetry_file_name) -> None:
 
     telemetry_expected_obj = json.loads(telemetry_expected)
     telemetry_output_obj = json.loads(telemetry_output)
-
     exclude_telemetry_paths = [
         "root['timestamp']",
         "root['message']['metadata']['device_id']",

@@ -457,17 +457,17 @@ def handle_result(
     if func_name == "_check_dataframe_schema":
         telemetry_data[STATUS_KEY] = param_data[STATUS_KEY]
         telemetry_data[SCHEMA_TYPES_KEY] = list(
-            param_data["pandera_schema"].columns.keys()
+            param_data.get("pandera_schema").columns.keys()
         )
         telemetry_m.sc_log_info(DATAFRAME_VALIDATOR_SCHEMA, telemetry_data)
     elif func_name in ["check_output_schema", "check_input_schema"]:
         telemetry_data[SCHEMA_TYPES_KEY] = list(
-            param_data["pandera_schema"].columns.keys()
+            param_data.get("pandera_schema").columns.keys()
         )
         telemetry_m.sc_log_info(DATAFRAME_VALIDATOR_SCHEMA, telemetry_data)
     elif func_name == "_collect_dataframe_checkpoint_mode_schema":
         telemetry_data[MODE_KEY] = CheckpointMode.SCHEMA.value
-        schema_types = param_data["column_type_dict"]
+        schema_types = param_data.get("column_type_dict")
         telemetry_data[SCHEMA_TYPES_KEY] = [
             schema_types[schema_type] for schema_type in schema_types
         ]
@@ -475,26 +475,28 @@ def handle_result(
     elif func_name == "_assert_return":
         telemetry_data[STATUS_KEY] = param_data[STATUS_KEY]
         if isinstance(
-            param_data["snowpark_results"], snowpark_dataframe.DataFrame
-        ) and _is_spark_dataframe(param_data["spark_results"]):
+            param_data.get("snowpark_results"), snowpark_dataframe.DataFrame
+        ) and _is_spark_dataframe(param_data.get("spark_results")):
             telemetry_data[SNOWFLAKE_SCHEMA_TYPES_KEY] = get_snowflake_schema_types(
-                param_data["snowpark_results"]
+                param_data.get("snowpark_results")
             )
             telemetry_data[SPARK_SCHEMA_TYPES_KEY] = _get_spark_schema_types(
-                param_data["spark_results"]
+                param_data.get("spark_results")
             )
             telemetry_m.sc_log_info(DATAFRAME_VALIDATOR_MIRROR, telemetry_data)
         else:
             telemetry_m.sc_log_info(VALUE_VALIDATOR_MIRROR, telemetry_data)
     elif func_name == "dataframe_strategy":
-        is_logged = telemetry_m.sc_is_hypothesis_event_logged(param_data["json_schema"])
+        is_logged = telemetry_m.sc_is_hypothesis_event_logged(
+            param_data.get("json_schema")
+        )
         if not is_logged:
-            json_data = get_load_json(param_data["json_schema"])["custom_data"][
+            json_data = get_load_json(param_data.get("json_schema"))["custom_data"][
                 "columns"
             ]
             telemetry_data[SCHEMA_TYPES_KEY] = [column["type"] for column in json_data]
             telemetry_m.sc_log_info(HYPOTHESIS_INPUT_SCHEMA, telemetry_data)
-            telemetry_m.sc_hypothesis_input_events.append(param_data["json_schema"])
+            telemetry_m.sc_hypothesis_input_events.append(param_data.get("json_schema"))
 
 
 def handle_exception(func_name: str, param_data: dict, err: Exception) -> None:
@@ -512,7 +514,7 @@ def handle_exception(func_name: str, param_data: dict, err: Exception) -> None:
         ERROR_KEY: type(err).__name__,
     }
     if func_name == "_collect_dataframe_checkpoint_mode_schema":
-        schema_types = param_data["column_type_dict"]
+        schema_types = param_data.get("column_type_dict")
         if schema_types:
             telemetry_data[SCHEMA_TYPES_KEY] = [
                 schema_types[schema_type] for schema_type in schema_types
@@ -523,27 +525,30 @@ def handle_exception(func_name: str, param_data: dict, err: Exception) -> None:
         "check_output_schema",
         "check_input_schema",
     ]:
-        schema_types = param_data["pandera_schema"].columns.keys()
-        if schema_types:
+        pandera_schema = param_data.get("pandera_schema")
+        if pandera_schema:
+            schema_types = pandera_schema.columns.keys()
             telemetry_data[SCHEMA_TYPES_KEY] = list(schema_types)
         telemetry_m.sc_log_error(DATAFRAME_VALIDATOR_ERROR, telemetry_data)
     elif func_name == "_assert_return":
-        if isinstance(param_data["snowpark_results"], snowpark_dataframe.DataFrame):
+        if isinstance(param_data.get("snowpark_results"), snowpark_dataframe.DataFrame):
             telemetry_data[SNOWFLAKE_SCHEMA_TYPES_KEY] = get_snowflake_schema_types(
-                param_data["snowpark_results"]
+                param_data.get("snowpark_results")
             )
-        if _is_spark_dataframe(param_data["spark_results"]):
+        if _is_spark_dataframe(param_data.get("spark_results")):
             telemetry_data[SPARK_SCHEMA_TYPES_KEY] = _get_spark_schema_types(
-                param_data["spark_results"]
+                param_data.get("spark_results")
             )
         telemetry_m.sc_log_error(DATAFRAME_VALIDATOR_ERROR, telemetry_data)
     elif func_name == "dataframe_strategy":
-        input_json = param_data["json_schema"]
+        input_json = param_data.get("json_schema")
         if input_json:
             is_logged = telemetry_m.sc_is_hypothesis_event_logged(input_json)
             if not is_logged:
                 telemetry_m.sc_log_error(HYPOTHESIS_INPUT_SCHEMA_ERROR, telemetry_data)
-                telemetry_m.sc_hypothesis_input_events.append(param_data["json_schema"])
+                telemetry_m.sc_hypothesis_input_events.append(
+                    param_data.get("json_schema")
+                )
 
 
 fn = TypeVar("fn", bound=Callable)
@@ -570,10 +575,11 @@ def report_telemetry(
         func_name = func.__name__
 
         def wrapper(*args, **kwargs):
+            func_exception = None
             try:
                 result = func(*args, **kwargs)
             except Exception as err:
-                raise Exception from err
+                func_exception = err
 
             param_data = {}
             try:
@@ -590,6 +596,9 @@ def report_telemetry(
                 return result
             except Exception as err:
                 handle_exception(func_name, param_data, err)
+
+            if func_exception is not None:
+                raise func_exception
 
         return wrapper
 

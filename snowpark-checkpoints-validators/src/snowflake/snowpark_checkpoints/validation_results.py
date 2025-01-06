@@ -1,7 +1,11 @@
+#
+# Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
+#
+
 from json import JSONEncoder
 
 
-def as_validation_result(dct):
+def as_validation_result(dct: dict):
     """Convert a dictionary to a ValidationResult object if the dictionary contains a "result" key.
 
     Args:

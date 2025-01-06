@@ -10,6 +10,9 @@ from snowflake.snowpark_checkpoints_collector.collection_result.model import (
 from snowflake.snowpark_checkpoints_collector.utils import file_utils
 
 
+RESULTS_KEY = "results"
+
+
 class CollectionPointResultManager(metaclass=Singleton):
 
     """Class for manage the checkpoint collection results. It is a singleton.
@@ -43,7 +46,8 @@ class CollectionPointResultManager(metaclass=Singleton):
             str: the results as json string.
 
         """
-        result_collection_json = json.dumps(self.result_collection)
+        dict_object = {RESULTS_KEY: self.result_collection}
+        result_collection_json = json.dumps(dict_object)
         return result_collection_json
 
     def _save_result(self) -> None:

@@ -16,6 +16,9 @@ from snowflake.snowpark_checkpoints_collector.collection_result.model import (
 from snowflake.snowpark_checkpoints_collector.collection_result.model.collection_point_result import (
     RESULT_KEY,
 )
+from snowflake.snowpark_checkpoints_collector.collection_result.model.collection_point_result_manager import (
+    RESULTS_KEY,
+)
 from snowflake.snowpark_checkpoints_collector.utils import file_utils
 from snowflake.snowpark_checkpoints_collector import Singleton
 
@@ -100,7 +103,8 @@ def validate_collection_point_result_file(expected_result_value: CollectionResul
     with open(result_file_path) as f:
         result_file_content = f.read()
 
-    result_file_collection = json.loads(result_file_content)
+    results_data_dict = json.loads(result_file_content)
+    result_file_collection = results_data_dict[RESULTS_KEY]
     for result_file in result_file_collection:
         assert result_file[RESULT_KEY] == expected_result_value.value
 

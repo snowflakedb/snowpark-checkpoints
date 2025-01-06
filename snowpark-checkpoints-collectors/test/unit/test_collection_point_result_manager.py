@@ -15,6 +15,9 @@ from snowflake.snowpark_checkpoints_collector.collection_result.model.collection
 )
 
 from snowflake.snowpark_checkpoints_collector import Singleton
+from snowflake.snowpark_checkpoints_collector.collection_result.model.collection_point_result_manager import (
+    RESULTS_KEY,
+)
 
 EXPECTED_MODEL = (
     '{"timestamp": "2024-12-20 14:50:49", "file": "unit/test_collection_point_result_manager.py", '
@@ -46,7 +49,7 @@ def test_add_result(singleton):
 
     model_json = manager.to_json()
     model = json.loads(model_json)
-    collection_point_dict = model[0]
+    collection_point_dict = model[RESULTS_KEY][0]
 
     timestamp_path_to_ignore = f"root['{TIMESTAMP_KEY}']"
     file_path_to_ignore = f"root['{FILE_KEY}']"

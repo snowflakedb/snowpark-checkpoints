@@ -4,9 +4,8 @@
 
 import json
 import os
-from unittest.mock import ANY, call, patch, mock_open, MagicMock
+from unittest.mock import ANY, call, patch, mock_open
 from numpy import float64
-from pandera import DataFrameSchema
 
 from pytest import raises
 from snowflake.snowpark_checkpoints.errors import SchemaValidationError
@@ -44,7 +43,6 @@ from snowflake.snowpark_checkpoints.utils.utils_checks import (
     _generate_schema,
     _add_numeric_checks,
     MEAN_KEY,
-    MARGIN_ERROR_KEY,
     DECIMAL_PRECISION_KEY,
     _skip_checks_on_schema,
     SKIP_ALL,
@@ -607,29 +605,31 @@ def test_update_validation_result_with_file():
     checkpoint_name = "test_checkpoint"
     validation_status = PASS_STATUS
 
-    # Mock the metadata and validation result
-    MockValidationResult = MagicMock()
-
     with (
         patch(
-            "snowflake.snowpark_checkpoints.utils.utils_checks.PipelineResultMetadata"
-        ) as MockPipelineResultMetadata,
+            "snowflake.snowpark_checkpoints.utils.utils_checks.ValidationResultsMetadata"
+        ) as MockValidationResultsMetadata,
         patch(
-            "snowflake.snowpark_checkpoints.utils.utils_checks.ValidationResult",
-        ) as MockValidationResult,
+            "snowflake.snowpark_checkpoints.utils.utils_checks.datetime"
+        ) as mock_datetime,
     ):
-        mock_pipeline_result_metadata = MockPipelineResultMetadata.return_value
+        mock_datetime.now.return_value.isoformat.return_value = "2021-01-01T00:00:00"
+        mock_pipeline_result_metadata = MockValidationResultsMetadata.return_value
 
         # Call the function
         _update_validation_result(checkpoint_name, validation_status)
 
         # Assertions
-        MockPipelineResultMetadata.assert_called_once()
-        MockValidationResult.assert_called_once_with(
-            result=validation_status, timestamp=ANY, file=DEFAULT_KEY, line_of_code=-1
-        )
-        mock_pipeline_result_metadata.update_validation_result.assert_called_once_with(
-            checkpoint_name, MockValidationResult()
+        MockValidationResultsMetadata.assert_called_once()
+
+        mock_pipeline_result_metadata.add_validation_result.assert_called_once_with(
+            ValidationResult(
+                timestamp="2021-01-01T00:00:00",
+                file=DEFAULT_KEY,
+                line_of_code=-1,
+                checkpoint_name=checkpoint_name,
+                result=validation_status,
+            )
         )
         mock_pipeline_result_metadata.save.assert_called_once()
 
@@ -638,35 +638,43 @@ def test_update_validation_result_without_file():
     checkpoint_name = "test_checkpoint"
     validation_status = PASS_STATUS
 
-    # Mock the metadata and validation result
-    MockValidationResult = MagicMock()
-
     with (
         patch(
-            "snowflake.snowpark_checkpoints.utils.utils_checks.PipelineResultMetadata"
-        ) as MockPipelineResultMetadata,
-        patch(
-            "snowflake.snowpark_checkpoints.utils.utils_checks.ValidationResult",
-        ) as MockValidationResult,
+            "snowflake.snowpark_checkpoints.utils.utils_checks.ValidationResultsMetadata"
+        ) as MockValidationResultsMetadata,
         patch(
             "snowflake.snowpark_checkpoints.utils.utils_checks.inspect.stack",
             return_value=[
-                MagicMock(filename="test_file.py", code_context=["test code"]),
-                MagicMock(filename="test_file.py", code_context=["test code"]),
+                MagicMock(
+                    filename="test_file.py",
+                    code_context=["_check_dataframe_schema_file"],
+                ),
+                MagicMock(
+                    filename="test_file.py",
+                    code_context=["validate_dataframe_checkpoint"],
+                    lineno=1,
+                ),
             ],
         ),
+        patch(
+            "snowflake.snowpark_checkpoints.utils.utils_checks.datetime"
+        ) as mock_datetime,
     ):
-        mock_pipeline_result_metadata = MockPipelineResultMetadata.return_value
+        mock_datetime.now.return_value.isoformat.return_value = "2021-01-01T00:00:00"
+        mock_pipeline_result_metadata = MockValidationResultsMetadata.return_value
 
         # Call the function
         _update_validation_result(checkpoint_name, validation_status)
 
         # Assertions
-        MockPipelineResultMetadata.assert_called_once()
-        MockValidationResult.assert_called_once_with(
-            result=validation_status, timestamp=ANY, file=DEFAULT_KEY, line_of_code=-1
-        )
-        mock_pipeline_result_metadata.update_validation_result.assert_called_once_with(
-            checkpoint_name, MockValidationResult()
+        MockValidationResultsMetadata.assert_called_once()
+        mock_pipeline_result_metadata.add_validation_result.assert_called_once_with(
+            ValidationResult(
+                timestamp="2021-01-01T00:00:00",
+                file="test_file.py",
+                line_of_code=1,
+                checkpoint_name=checkpoint_name,
+                result=validation_status,
+            )
         )
         mock_pipeline_result_metadata.save.assert_called_once()

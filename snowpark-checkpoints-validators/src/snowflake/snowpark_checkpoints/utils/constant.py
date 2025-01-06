@@ -16,12 +16,10 @@ class CheckpointMode(IntEnum):
 STACK_POSITION_CHECKPOINT: Final[int] = 6
 
 # Validation status
-PASS_STATUS: Final[str] = "pass"
-FAIL_STATUS: Final[str] = "fail"
+PASS_STATUS: Final[str] = "PASS"
+FAIL_STATUS: Final[str] = "FAIL"
 
 # Validation result keys
-RESULT_KEY: Final[str] = "result"
-TIMESTAMP_KEY: Final[str] = "timestamp"
 DEFAULT_KEY: Final[str] = "default"
 
 

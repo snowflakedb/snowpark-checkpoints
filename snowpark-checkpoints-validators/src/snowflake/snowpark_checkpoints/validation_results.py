@@ -2,84 +2,37 @@
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
 
-from json import JSONEncoder
+
+from pydantic import BaseModel
 
 
-def as_validation_result(dct: dict):
-    """Convert a dictionary to a ValidationResult object if the dictionary contains a "result" key.
+class ValidationResult(BaseModel):
 
-    Args:
-        dct (dict): The dictionary to be converted.
+    """ValidationResult represents the result of a validation checkpoint.
 
-    Returns:
-        ValidationResult: An instance of ValidationResult if the dictionary contains a "result" key.
-        dict: The original dictionary if it does not contain a "result" key.
-
-    """
-    if "result" in dct:
-        return ValidationResult(**dct)
-    return dct
-
-
-class ValidationResult:
-
-    """A class used to represent the result of a validation.
-
-    Attributes
-    ----------
-    result : str
-        The result of the validation.
-    timestamp : str
-        The timestamp when the validation was performed.
-    file : str
-        The file where the validation was performed.
-    line_of_code : int
-        The specific line of code that was validated.
-
-    Methods
-    -------
-    __dict__()
-        Returns a dictionary representation of the validation result.
+    Attributes:
+        result (str): The result of the validation.
+        timestamp (datetime): The timestamp when the validation was performed.
+        file (str): The file where the validation checkpoint is located.
+        line_of_code (int): The line number in the file where the validation checkpoint is located.
+        checkpoint_name (str): The name of the validation checkpoint.
 
     """
 
-    def __init__(
-        self,
-        result: str,
-        timestamp: str,
-        file: str,
-        line_of_code: int,
-    ):
-        self.result = result
-        self.timestamp = timestamp
-        self.file = file
-        self.line_of_code = line_of_code
-
-    def __dict__(self) -> dict:
-        return {
-            "result": self.result,
-            "timestamp": self.timestamp,
-            "file": self.file,
-            "line_of_code": self.line_of_code,
-        }
-
-    def __eq__(self, other):
-        return self.__dict__() == other.__dict__()
+    result: str
+    timestamp: str
+    file: str
+    line_of_code: int
+    checkpoint_name: str
 
 
-class ValidationResultEncoder(JSONEncoder):
+class ValidationResults(BaseModel):
 
-    """ValidationResultEncoder is a custom JSON encoder for serializing ValidationResult objects.
+    """ValidationResults is a model that holds a list of validation results.
 
-    Methods:
-        default(obj):
-            Overrides the default method to serialize ValidationResult objects by returning their dictionary
-            representation.
-            If the object is not an instance of ValidationResult, it falls back to the default serialization method.
+    Attributes:
+        results (list[ValidationResult]): A list of validation results.
 
     """
 
-    def default(self, obj):
-        if isinstance(obj, ValidationResult):
-            return obj.__dict__()
-        return super().default(obj)
+    results: list[ValidationResult]

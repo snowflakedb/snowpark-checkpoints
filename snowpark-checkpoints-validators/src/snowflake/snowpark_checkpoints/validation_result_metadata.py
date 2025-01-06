@@ -2,7 +2,6 @@
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
 
-import json
 import os
 
 from typing import Optional
@@ -12,20 +11,27 @@ from snowflake.snowpark_checkpoints.utils.constant import (
 )
 from snowflake.snowpark_checkpoints.validation_results import (
     ValidationResult,
-    ValidationResultEncoder,
-    as_validation_result,
+    ValidationResults,
 )
 
 
-class PipelineResultMetadata:
+class ValidationResultsMetadata:
 
-    """ValidationResultMetadata class.
+    """ValidationResultsMetadata is a class that manages the loading, storing, and updating of validation results.
 
-    This is a singleton class that reads the validation_results.json file
-    and provides an interface to get the validation result configuration.
+    Attributes:
+        validation_results (list): A list to store validation results.
 
-    Args:
-        metaclass (Singleton, optional): Defaults to Singleton.
+    Methods:
+        __init__(path: Optional[str] = None):
+            Initializes the PipelineResultMetadata instance and loads validation results from a JSON file
+            if a path is provided.
+        _load(path: Optional[str] = None):
+            Loads validation results from a JSON file. If no path is provided, the current working directory is used.
+        add_validation_result(validation_result: dict):
+            Adds a validation result to the pipeline result list.
+        save():
+            Saves the validation results to a JSON file in the current working directory.
 
     """
 
@@ -49,42 +55,29 @@ class PipelineResultMetadata:
             else os.path.join(os.getcwd(), VALIDATION_RESULTS_JSON_FILE_NAME)
         )
 
-        self.pipeline_result = {}
+        self.validation_results = ValidationResults(results=[])
 
         if os.path.exists(validation_results_file):
             with open(validation_results_file) as file:
                 try:
-                    self.pipeline_result = json.load(
-                        file, object_hook=as_validation_result
+                    validation_result_json = file.read()
+                    self.validation_results = ValidationResults.model_validate_json(
+                        validation_result_json
                     )
                 except Exception as e:
                     raise Exception(
                         f"Error reading validation results file: {validation_results_file} \n {e}"
                     ) from None
 
-    def update_validation_result(
-        self, checkpoint_name: str, validation_result: ValidationResult
-    ):
-        """Update the validation result for a given file and checkpoint.
+    def add_validation_result(self, validation_result: ValidationResult):
+        """Add a validation result to the pipeline result list.
 
         Args:
-            file_name (str): The name of the file for which the validation result is being updated.
-            checkpoint_name (str): The name of the checkpoint for which the validation result is being updated.
-            validation_result (ValidationResult): The validation result to be added.
-
-        Returns:
-            None
+            checkpoint_name (str): The name of the checkpoint.
+            validation_result (dict): The validation result to be added.
 
         """
-        file_name = validation_result.file
-        file_result = self.pipeline_result.get(file_name, {})
-        checkpoint_results = file_result.get(checkpoint_name, [])
-
-        checkpoint_results.append(validation_result)
-
-        file_result[checkpoint_name] = checkpoint_results
-
-        self.pipeline_result[file_name] = file_result
+        self.validation_results.results.append(validation_result)
 
     def save(self):
         """Save the validation results to a JSON file.
@@ -102,6 +95,4 @@ class PipelineResultMetadata:
         )
 
         with open(validation_results_file, "w") as output_file:
-            output_file.write(
-                json.dumps(self.pipeline_result, cls=ValidationResultEncoder)
-            )
+            output_file.write(self.validation_results.model_dump_json())

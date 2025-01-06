@@ -50,7 +50,7 @@ from snowflake.snowpark_checkpoints.utils.supported_types import (
     NumericTypes,
 )
 from snowflake.snowpark_checkpoints.validation_result_metadata import (
-    PipelineResultMetadata,
+    ValidationResultsMetadata,
 )
 from snowflake.snowpark_checkpoints.validation_results import ValidationResult
 
@@ -145,15 +145,6 @@ def _add_numeric_checks(
         )
 
 
-#  {
-#         "name": "boolean",
-#         "type": "boolean",
-#         "rows_count": 8,
-#         "rows_not_null_count": 8,
-#         "rows_null_count": 0,
-#         "true_count": 5,
-#         "false_count": 3
-#       }
 def _add_boolean_checks(
     schema: DataFrameSchema, col: str, additional_check: dict[str, Any]
 ):
@@ -175,20 +166,20 @@ def _add_boolean_checks(
     count_of_false = additional_check.get(FALSE_COUNT_KEY, 0)
     rows_count = additional_check.get(ROWS_COUNT_KEY, 0)
     std = additional_check.get(MARGIN_ERROR_KEY, 0)
-    porcentage_true = count_of_true / rows_count
-    porcentage_false = count_of_false / rows_count
+    percentage_true = count_of_true / rows_count
+    percentage_false = count_of_false / rows_count
 
     schema.columns[col].checks.extend(
         [
             Check(
-                lambda series: porcentage_true - std
+                lambda series: percentage_true - std
                 <= series.value_counts().get(True, 0) / series.count()
-                <= porcentage_true + std
+                <= percentage_true + std
             ),
             Check(
-                lambda series: porcentage_false - std
+                lambda series: percentage_false - std
                 <= series.value_counts().get(False, 0) / series.count()
-                <= porcentage_false + std
+                <= percentage_false + std
             ),
         ]
     )
@@ -453,17 +444,16 @@ def _update_validation_result(checkpoint_name: str, validation_status: str) -> N
 
     _file_from_stack, _line_of_code = _find_frame_in(stack)
 
-    pipeline_result_metadata = PipelineResultMetadata()
+    pipeline_result_metadata = ValidationResultsMetadata()
 
-    validation_result: ValidationResult = ValidationResult(
-        result=validation_status,
-        timestamp=datetime.now().isoformat(),
-        file=_file if _file else _file_from_stack,
-        line_of_code=_line_of_code,
-    )
-
-    pipeline_result_metadata.update_validation_result(
-        checkpoint_name, validation_result
+    pipeline_result_metadata.add_validation_result(
+        ValidationResult(
+            timestamp=datetime.now().isoformat(),
+            file=_file_from_stack,
+            line_of_code=_line_of_code,
+            checkpoint_name=checkpoint_name,
+            result=validation_status,
+        )
     )
 
     pipeline_result_metadata.save()

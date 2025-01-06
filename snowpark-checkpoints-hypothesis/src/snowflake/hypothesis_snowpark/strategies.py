@@ -8,9 +8,9 @@ import json
 
 from typing import Optional
 
-import dateutil
 import pandera as pa
 
+from dateutil.parser import parse
 from hypothesis.strategies import DrawFn, SearchStrategy, composite
 
 from snowflake.hypothesis_snowpark.checks.date_check import (
@@ -135,8 +135,8 @@ def _process_dataframe_schema(
                     max_value, date_format
                 ).date()
             else:
-                min_value_obj = dateutil.parser.parse(min_value).date()
-                max_value_obj = dateutil.parser.parse(max_value).date()
+                min_value_obj = parse(min_value).date()
+                max_value_obj = parse(max_value).date()
 
             # Replace the previous checks with the new date range check.
             column_obj.checks = [

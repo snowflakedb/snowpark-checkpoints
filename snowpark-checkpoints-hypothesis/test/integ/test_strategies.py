@@ -4,6 +4,7 @@
 
 from collections.abc import Iterable
 from datetime import date, datetime
+from typing import Union
 
 import hypothesis.strategies as st
 import pytest
@@ -145,7 +146,9 @@ def test_dataframe_strategy_generated_values(
 
     df = data.draw(strategy)
 
-    def range_check(column_name: str, min_value: float, max_value: float):
+    def range_check(
+        column_name: str, min_value: Union[float, date], max_value: Union[float, date]
+    ):
         return (col(column_name) >= min_value) & (col(column_name) <= max_value)
 
     def in_check(column_name: str, values: Iterable):

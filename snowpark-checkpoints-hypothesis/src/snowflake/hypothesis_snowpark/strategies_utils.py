@@ -207,6 +207,7 @@ def apply_custom_null_values(
             selected_positions = np.random.choice(
                 non_null_positions, size=additional_nulls, replace=False
             )
+            df_copy[column] = df_copy[column].astype(object)
             df_copy.iloc[selected_positions, df_copy.columns.get_loc(column)] = None
 
     return df_copy.replace({np.nan: None})

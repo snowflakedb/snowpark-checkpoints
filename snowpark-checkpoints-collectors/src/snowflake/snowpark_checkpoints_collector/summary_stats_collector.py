@@ -35,6 +35,7 @@ from snowflake.snowpark_checkpoints_collector.utils.extra_config import (
     get_checkpoint_sample,
     is_checkpoint_enabled,
 )
+from snowflake.snowpark_checkpoints_collector.utils.telemetry import report_telemetry
 
 
 def collect_dataframe_checkpoint(
@@ -71,7 +72,10 @@ def collect_dataframe_checkpoint(
             _mode = get_checkpoint_mode(checkpoint_name, mode)
 
             if _mode == CheckpointMode.SCHEMA:
-                _collect_dataframe_checkpoint_mode_schema(checkpoint_name, df, _sample)
+                column_type_dict = _get_spark_column_types(df)
+                _collect_dataframe_checkpoint_mode_schema(
+                    checkpoint_name, df, _sample, column_type_dict
+                )
 
             elif _mode == CheckpointMode.DATAFRAME:
                 snow_connection = SnowConnection()
@@ -87,7 +91,13 @@ def collect_dataframe_checkpoint(
         raise Exception(error_message) from err
 
 
-def _collect_dataframe_checkpoint_mode_schema(checkpoint_name, df, sample) -> None:
+@report_telemetry(params_list=["column_type_dict"])
+def _collect_dataframe_checkpoint_mode_schema(
+    checkpoint_name: str,
+    df: SparkDataFrame,
+    sample: float,
+    column_type_dict: dict[str, any],
+) -> None:
     source_df = df.sample(sample)
     if source_df.isEmpty():
         source_df = df
@@ -97,7 +107,6 @@ def _collect_dataframe_checkpoint_mode_schema(checkpoint_name, df, sample) -> No
         pa.infer_schema(pandas_df) if not is_empty_df_with_string_column else {}
     )
 
-    column_type_dict = _get_spark_column_types(df)
     column_name_collection = df.schema.names
     columns_to_remove_from_pandera_schema_collection = []
     column_custom_data_collection = []

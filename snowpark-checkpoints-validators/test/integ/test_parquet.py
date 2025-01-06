@@ -4,7 +4,6 @@ import tempfile
 from unittest.mock import MagicMock, patch
 
 from pyspark.sql import SparkSession
-
 from pytest import fixture, raises
 from snowflake.snowpark import Session
 from snowflake.snowpark.types import (
@@ -20,7 +19,6 @@ from snowflake.snowpark.types import (
 from snowflake.snowpark_checkpoints.checkpoint import validate_dataframe_checkpoint
 from snowflake.snowpark_checkpoints.errors import SchemaValidationError
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
-from snowflake.snowpark_checkpoints.spark_migration import compare_spark_snowpark_dfs
 from snowflake.snowpark_checkpoints.utils.constant import CheckpointMode
 
 from snowflake.snowpark_checkpoints.utils.constant import (
@@ -243,9 +241,10 @@ def data():
     ]
 
 
-def test_df_mode_dataframe(job_context, schema, data):
+def test_df_mode_dataframe(job_context, snowpark_schema, data):
+    stage_name = "test_df_mode_dataframe"
     checkpoint_name = "test_mode_dataframe_checkpoint"
-    df = job_context.snowpark_session.create_dataframe(data, schema)
+    df = job_context.snowpark_session.create_dataframe(data, snowpark_schema)
     df.write.save_as_table(checkpoint_name, mode="overwrite")
 
     mocked_session = MagicMock()
@@ -265,15 +264,15 @@ def test_df_mode_dataframe(job_context, schema, data):
     mocked_session.assert_called_once_with(checkpoint_name)
 
 
-def test_df_mode_dataframe_mismatch(job_context, schema, data):
+def test_df_mode_dataframe_mismatch(job_context, snowpark_schema, data):
     checkpoint_name = "test_mode_dataframe_checkpoint_fail"
 
     data_copy = data.copy()
-    df = job_context.snowpark_session.create_dataframe(data_copy, schema)
+    df = job_context.snowpark_session.create_dataframe(data_copy, snowpark_schema)
     df.write.save_as_table(checkpoint_name, mode="overwrite")
 
     data.pop()
-    df_spark = job_context.snowpark_session.create_dataframe(data, schema)
+    df_spark = job_context.snowpark_session.create_dataframe(data, snowpark_schema)
 
     with patch(
         "snowflake.snowpark_checkpoints.utils.utils_checks._update_validation_result"
@@ -292,9 +291,9 @@ def test_df_mode_dataframe_mismatch(job_context, schema, data):
     mocked_update.assert_called_once_with(checkpoint_name, FAIL_STATUS)
 
 
-def test_df_mode_dataframe_job_none(job_context, schema, data):
+def test_df_mode_dataframe_job_none(job_context, snowpark_schema, data):
     checkpoint_name = "test_mode_dataframe_checkpoint_fail"
-    df_spark = job_context.snowpark_session.create_dataframe(data, schema)
+    df_spark = job_context.snowpark_session.create_dataframe(data, snowpark_schema)
 
     with raises(
         ValueError, match="Connectionless mode is not supported for Parquet validation"
@@ -307,9 +306,9 @@ def test_df_mode_dataframe_job_none(job_context, schema, data):
         )
 
 
-def test_df_mode_dataframe_invalid_mode(job_context, schema, data):
+def test_df_mode_dataframe_invalid_mode(job_context, snowpark_schema, data):
     checkpoint_name = "test_mode_dataframe_checkpoint_fail"
-    df_spark = job_context.snowpark_session.create_dataframe(data, schema)
+    df_spark = job_context.snowpark_session.create_dataframe(data, snowpark_schema)
 
     with raises(
         ValueError,

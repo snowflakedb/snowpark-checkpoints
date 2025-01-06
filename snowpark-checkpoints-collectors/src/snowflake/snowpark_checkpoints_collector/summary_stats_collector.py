@@ -1,6 +1,7 @@
 #
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
+import glob
 import json
 import os
 
@@ -276,6 +277,9 @@ def generate_parquet_for_spark_df(spark_df: SparkDataFrame, output_path: str) ->
         output_path: path to save the parquet files.
     returns: None
 
+    Raises:
+        Exception: No parquet files were generated.
+
     """
     new_cols = [
         (
@@ -287,6 +291,11 @@ def generate_parquet_for_spark_df(spark_df: SparkDataFrame, output_path: str) ->
     ]
     converted_df = spark_df.select(new_cols)
     converted_df.write.parquet(output_path, mode="overwrite")
+
+    target_dir = os.path.join(output_path, "**", f"*{DOT_PARQUET_EXTENSION}")
+    files = glob.glob(target_dir, recursive=True)
+    if len(files) == 0:
+        raise Exception("No parquet files were generated.")
 
 
 def _create_snowflake_table_from_parquet(

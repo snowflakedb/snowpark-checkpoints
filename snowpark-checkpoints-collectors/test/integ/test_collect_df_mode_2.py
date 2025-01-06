@@ -2,6 +2,7 @@
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
 from datetime import datetime
+import glob
 import os
 import tempfile
 
@@ -30,6 +31,7 @@ import integration_test_utils
 from snowflake.snowpark_checkpoints_collector import collect_dataframe_checkpoint
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     CheckpointMode,
+    DOT_PARQUET_EXTENSION,
 )
 from snowflake.snowpark_checkpoints_collector.snow_connection_model import (
     SnowConnection,
@@ -298,6 +300,20 @@ def test_collect_invalid_mode(spark_session, data, spark_schema):
     with pytest.raises(Exception) as ex_info:
         collect_dataframe_checkpoint(pyspark_df, checkpoint_name="", mode=3)
     assert "Invalid mode value." == str(ex_info.value)
+
+
+def test_generate_parquet_for_spark_df(data, spark_schema):
+    spark = SparkSession.builder.getOrCreate()
+    spark_df = spark.createDataFrame(data, schema=spark_schema)
+    parquet_directory = os.path.join(
+        tempfile.gettempdir(),
+        f"test_spark_df_checkpoint_{datetime.now().strftime('%Y%m%d%H%M%S')}",
+    )
+
+    generate_parquet_for_spark_df(spark_df, parquet_directory)
+    target_dir = os.path.join(parquet_directory, "**", f"*{DOT_PARQUET_EXTENSION}")
+    files = glob.glob(target_dir, recursive=True)
+    assert len(files) > 0
 
 
 def test_spark_df_mode_dataframe(spark_schema, snowpark_schema, data):

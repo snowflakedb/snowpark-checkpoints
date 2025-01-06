@@ -68,10 +68,15 @@ def test_save_success():
         path, "checkpoint_validation_results", VALIDATION_RESULTS_JSON_FILE_NAME
     )
     with open(path) as file:
-        mock_validation_results = file.read()
+        validation_results_json = file.read()
+        mock_validation_results = ValidationResults.model_validate_json(
+            validation_results_json
+        )
 
     metadata = ValidationResultsMetadata(path)
     with patch("builtins.open", mock_open()) as mock_open_file:
         metadata.save()
 
-    mock_open_file().write.assert_called_once_with(mock_validation_results)
+    mock_open_file().write.assert_called_once_with(
+        mock_validation_results.model_dump_json()
+    )

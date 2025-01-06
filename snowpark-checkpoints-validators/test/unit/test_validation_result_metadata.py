@@ -122,6 +122,8 @@ def test_save_success():
     )
     with open(path) as file:
         mock_validation_results = file.read()
+        # remove the last end of line character
+        mock_validation_results = mock_validation_results[:-1]
 
     metadata = PipelineResultMetadata(path)
     with patch("builtins.open", mock_open()) as mock_open_file:

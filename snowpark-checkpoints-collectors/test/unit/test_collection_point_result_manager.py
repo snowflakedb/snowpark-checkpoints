@@ -11,6 +11,7 @@ from snowflake.snowpark_checkpoints_collector.collection_result.model import (
 from snowflake.snowpark_checkpoints_collector.collection_result.model.collection_point_result import (
     TIMESTAMP_KEY,
     FILE_KEY,
+    CollectionResult,
 )
 
 from snowflake.snowpark_checkpoints_collector import Singleton
@@ -31,7 +32,7 @@ def generate_collection_point_result_object():
     checkpoint_name = "checkpoint_test"
     line_of_code = 10
     collection_result = CollectionPointResult(file_path, line_of_code, checkpoint_name)
-    collection_result.set_collection_point_result_to_pass()
+    collection_result.result = CollectionResult.PASS
     return collection_result
 
 

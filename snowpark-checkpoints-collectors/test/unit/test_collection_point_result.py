@@ -31,29 +31,29 @@ def test_get_collection_point_result_object():
 
     collection_result = generate_collection_point_result_object()
 
-    assert collection_result.file_path == expected_file_path
-    assert collection_result.checkpoint_name == expected_checkpoint_name
-    assert collection_result.timestamp is not None
+    assert collection_result._file_path == expected_file_path
+    assert collection_result._checkpoint_name == expected_checkpoint_name
+    assert collection_result._timestamp is not None
     assert collection_result.result is None
-    assert collection_result.line_of_code == 2
+    assert collection_result._line_of_code == 2
 
 
 def test_set_collection_point_result_to_pass():
     collection_result = generate_collection_point_result_object()
-    collection_result.set_collection_point_result_to_pass()
+    collection_result.result = CollectionResult.PASS
     assert collection_result.result == CollectionResult.PASS
 
 
 def test_set_collection_point_result_to_fail():
     collection_result = generate_collection_point_result_object()
-    collection_result.set_collection_point_result_to_fail()
+    collection_result.result = CollectionResult.FAIL
     assert collection_result.result == CollectionResult.FAIL
 
 
 def test_get_collection_result_data():
     expected_collection_result_data = json.loads(RESULT_DATA_EXPECTED)
     collection_result = generate_collection_point_result_object()
-    collection_result.set_collection_point_result_to_pass()
+    collection_result.result = CollectionResult.PASS
     collection_result_data = collection_result.get_collection_result_data()
 
     file_path_to_ignore = f"root['{FILE_KEY}']"

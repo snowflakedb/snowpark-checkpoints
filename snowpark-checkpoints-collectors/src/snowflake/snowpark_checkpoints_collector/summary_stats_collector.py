@@ -24,6 +24,7 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
 from snowflake.snowpark_checkpoints_collector.collection_result.model import (
     CollectionPointResult,
     CollectionPointResultManager,
+    CollectionResult,
 )
 from snowflake.snowpark_checkpoints_collector.column_collection import (
     ColumnCollectorManager,
@@ -98,10 +99,10 @@ def collect_dataframe_checkpoint(
             else:
                 raise Exception("Invalid mode value.")
 
-            collection_point_result.set_collection_point_result_to_pass()
+            collection_point_result.result = CollectionResult.PASS
 
     except Exception as err:
-        collection_point_result.set_collection_point_result_to_fail()
+        collection_point_result.result = CollectionResult.FAIL
         error_message = str(err)
         raise Exception(error_message) from err
 

@@ -26,10 +26,11 @@ class CollectionPointResult:
     """Class for checkpoint collection results.
 
     Attributes:
-        timestamp (timestamp): the timestamp when collection started.
-        file_path (str): the full path where checkpoint is.
-        line_of_code (int): the line of code where the checkpoint is.
-        checkpoint_name (str): the checkpoint name.
+        _timestamp (timestamp): the timestamp when collection started.
+        _file_path (str): the full path where checkpoint is.
+        _line_of_code (int): the line of code where the checkpoint is.
+        _checkpoint_name (str): the checkpoint name.
+        _result (CollectionResult): the result status of the checkpoint collection point.
 
     """
 
@@ -47,30 +48,32 @@ class CollectionPointResult:
             checkpoint_name (str): the checkpoint name.
 
         """
-        self.timestamp = datetime.now()
-        self.file_path = file_path
-        self.line_of_code = line_of_code
-        self.checkpoint_name = checkpoint_name
-        self.result = None
+        self._timestamp = datetime.now()
+        self._file_path = file_path
+        self._line_of_code = line_of_code
+        self._checkpoint_name = checkpoint_name
+        self._result = None
 
-    def set_collection_point_result_to_pass(self) -> None:
-        """Set the result status of the checkpoint to pass."""
-        self.result = CollectionResult.PASS
+    @property
+    def result(self):
+        """Get the result status of the checkpoint collection point."""
+        return self._result
 
-    def set_collection_point_result_to_fail(self) -> None:
-        """Set the result status of the checkpoint to fail."""
-        self.result = CollectionResult.FAIL
+    @result.setter
+    def result(self, value):
+        """Set the result status of the checkpoint collection point."""
+        self._result = value
 
     def get_collection_result_data(self) -> dict[str, any]:
-        """Get the results of the checkpoint."""
-        timestamp_with_format = self.timestamp.strftime(TIMESTAMP_FORMAT)
-        relative_path = file_utils.get_relative_file_path(self.file_path)
+        """Get the results of the checkpoint collection point."""
+        timestamp_with_format = self._timestamp.strftime(TIMESTAMP_FORMAT)
+        relative_path = file_utils.get_relative_file_path(self._file_path)
 
         collection_point_result = {
             TIMESTAMP_KEY: timestamp_with_format,
             FILE_KEY: relative_path,
-            LINE_OF_CODE_KEY: self.line_of_code,
-            CHECKPOINT_NAME_KEY: self.checkpoint_name,
+            LINE_OF_CODE_KEY: self._line_of_code,
+            CHECKPOINT_NAME_KEY: self._checkpoint_name,
             RESULT_KEY: self.result.value,
         }
 

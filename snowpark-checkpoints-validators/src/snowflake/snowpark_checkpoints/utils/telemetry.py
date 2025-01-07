@@ -579,7 +579,6 @@ def report_telemetry(
             try:
                 result = func(*args, **kwargs)
             except Exception as err:
-                print(err)
                 func_exception = err
 
             param_data = {}
@@ -596,7 +595,7 @@ def report_telemetry(
                 )
                 return result
             except Exception as err:
-                print(err)
+                raise err
                 handle_exception(func_name, param_data, err)
 
             if func_exception is not None:

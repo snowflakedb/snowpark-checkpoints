@@ -251,7 +251,9 @@ def data():
     ]
 
 
-def test_collect_dataframe(spark_session, data, spark_schema, snowpark_schema):
+def test_collect_dataframe(
+    spark_session, data, spark_schema, snowpark_schema, singleton
+):
     checkpoint_name = "test_full_df"
 
     pyspark_df = spark_session.createDataFrame(data, schema=spark_schema).orderBy(

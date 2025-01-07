@@ -52,11 +52,9 @@ def test_collect_with_exception(spark_session, singleton):
         collect_dataframe_checkpoint(
             pyspark_df,
             checkpoint_name="df_checkpoint_failed",
-            mode=CheckpointMode.SCHEMA,
+            mode=3,
         )
-    assert "It is not possible to collect an empty DataFrame without schema" == str(
-        ex_info.value
-    )
+    assert "Invalid mode value." == str(ex_info.value)
 
     validate_collection_point_result_file(CollectionResult.FAIL)
 

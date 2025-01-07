@@ -68,7 +68,6 @@ def collect_dataframe_checkpoint(
             Defaults to Current working Directory.
 
     Raises:
-        Exception: It is not possible to collect an empty DataFrame without schema.
         Exception: Invalid mode value.
 
     """

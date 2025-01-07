@@ -114,8 +114,8 @@ class TelemetryManager(TelemetryClient):
         """
         self.sc_log_batch.append(event)
         if self.sc_is_testing:
-            output_folder = str(
-                Path(getcwd()) / "snowpark-checkpoints-output" / "telemetry"
+            output_folder = path.join(
+                getcwd(), "snowpark-checkpoints-output", "telemetry"
             )
             self._sc_write_telemetry(self.sc_log_batch, output_folder=output_folder)
             self.sc_log_batch = []

@@ -77,7 +77,6 @@ def collect_dataframe_checkpoint(
     collection_point_result = CollectionPointResult(
         collection_point_file_path, collection_point_line_of_code, checkpoint_name
     )
-    file_utils.create_output_directory(output_path)
 
     try:
         if is_checkpoint_enabled(checkpoint_name):

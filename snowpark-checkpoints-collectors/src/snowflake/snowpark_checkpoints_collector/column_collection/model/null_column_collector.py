@@ -1,6 +1,7 @@
 #
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
+from pandas import Series
 from pyspark.sql.types import StructField
 
 from snowflake.snowpark_checkpoints_collector.column_collection.model.column_collector_base import (
@@ -8,9 +9,9 @@ from snowflake.snowpark_checkpoints_collector.column_collection.model.column_col
 )
 
 
-class StringColumnCollector(ColumnCollectorBase):
+class NullColumnCollector(ColumnCollectorBase):
 
-    """Class for collect a string type column.
+    """Class for collect a null type column.
 
     Attributes:
         name (str): the name of the column.
@@ -20,8 +21,10 @@ class StringColumnCollector(ColumnCollectorBase):
 
     """
 
-    def __init__(self, clm_name, struct_field: StructField, clm_values) -> None:
-        """Init StringColumnCollector.
+    def __init__(
+        self, clm_name: str, struct_field: StructField, clm_values: Series
+    ) -> None:
+        """Init NullColumnCollector.
 
         Args:
             clm_name (str): the name of the column.

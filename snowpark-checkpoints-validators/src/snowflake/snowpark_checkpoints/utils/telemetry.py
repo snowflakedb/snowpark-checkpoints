@@ -470,7 +470,8 @@ def handle_result(
         telemetry_data[MODE_KEY] = CheckpointMode.SCHEMA.value
         schema_types = param_data.get("column_type_dict")
         telemetry_data[SCHEMA_TYPES_KEY] = [
-            schema_types[schema_type] for schema_type in schema_types
+            schema_types[schema_type].dataType.typeName()
+            for schema_type in schema_types
         ]
         telemetry_m.sc_log_info(DATAFRAME_COLLECTION, telemetry_data)
     elif func_name == "_assert_return":
@@ -518,7 +519,8 @@ def handle_exception(func_name: str, param_data: dict, err: Exception) -> None:
         schema_types = param_data.get("column_type_dict")
         if schema_types:
             telemetry_data[SCHEMA_TYPES_KEY] = [
-                schema_types[schema_type] for schema_type in schema_types
+                schema_types[schema_type].dataType.typeName()
+                for schema_type in schema_types
             ]
         telemetry_m.sc_log_error(DATAFRAME_COLLECTION_ERROR, telemetry_data)
     elif func_name in [

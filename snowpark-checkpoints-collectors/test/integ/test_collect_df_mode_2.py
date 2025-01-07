@@ -3,12 +3,12 @@
 #
 
 import os
-import shutil
 
 import pytest
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, LongType, BooleanType
 
+import integration_test_utils
 from snowflake.snowpark_checkpoints_collector import collect_dataframe_checkpoint
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     CHECKPOINT_PARQUET_OUTPUT_FILE_NAME_FORMAT,
@@ -18,6 +18,7 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
 from snowflake.snowpark_checkpoints_collector.snow_connection_model import (
     SnowConnection,
 )
+from snowflake.snowpark_checkpoints_collector import Singleton
 
 TEST_COLLECT_DF_EXPECTED_DIRECTORY_NAME = "test_collect_df_mode_2_expected"
 
@@ -27,7 +28,12 @@ def spark_session():
     return SparkSession.builder.getOrCreate()
 
 
-def test_collect_dataframe(spark_session):
+@pytest.fixture
+def singleton():
+    Singleton._instances = {}
+
+
+def test_collect_dataframe(spark_session, singleton):
     checkpoint_name = "test_full_df"
     checkpoint_file_name = CHECKPOINT_PARQUET_OUTPUT_FILE_NAME_FORMAT.format(
         checkpoint_name
@@ -48,7 +54,7 @@ def test_collect_dataframe(spark_session):
     )
 
 
-def test_collect_empty_dataframe_with_schema(spark_session):
+def test_collect_empty_dataframe_with_schema(spark_session, singleton):
     checkpoint_name = "test_empty_df_with_schema"
     checkpoint_file_name = CHECKPOINT_PARQUET_OUTPUT_FILE_NAME_FORMAT.format(
         checkpoint_name
@@ -74,18 +80,21 @@ def test_collect_empty_dataframe_with_schema(spark_session):
     )
 
 
-def test_collect_empty_dataframe_without_schema(spark_session):
+def test_collect_empty_dataframe_without_schema(spark_session, singleton):
+    checkpoint_name = "test_empty_df_without_schema"
     data = []
     columns = StructType()
     pyspark_df = spark_session.createDataFrame(data=data, schema=columns)
 
     with pytest.raises(Exception) as ex_info:
         collect_dataframe_checkpoint(
-            pyspark_df, checkpoint_name="", mode=CheckpointMode.DATAFRAME
+            pyspark_df, checkpoint_name=checkpoint_name, mode=CheckpointMode.DATAFRAME
         )
     assert "It is not possible to collect an empty DataFrame without schema" == str(
         ex_info.value
     )
+
+    integration_test_utils.remove_output_directory()
 
 
 def validate_checkpoint_output(
@@ -103,7 +112,7 @@ def validate_checkpoint_output(
     output_df = spark_session.read.parquet(output_directory_path)
     compare_schema(output_df.schema, expected_schema)
 
-    remove_output_directory()
+    integration_test_utils.remove_output_directory()
 
     snow_connection = SnowConnection()
     df_table_data = snow_connection.session.read.table(checkpoint_name)
@@ -126,12 +135,3 @@ def get_output_directory_path(checkpoint_file_name) -> str:
         checkpoint_file_name,
     )
     return output_file_path
-
-
-def remove_output_directory() -> None:
-    current_directory_path = os.getcwd()
-    output_directory_path = os.path.join(
-        current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME
-    )
-    if os.path.exists(output_directory_path):
-        shutil.rmtree(output_directory_path)

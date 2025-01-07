@@ -5,6 +5,7 @@ from datetime import datetime
 import glob
 import os
 import tempfile
+import time
 
 from pandas.testing import assert_frame_equal
 from pyspark.sql import SparkSession
@@ -37,6 +38,11 @@ from snowflake.snowpark_checkpoints_collector.snow_connection_model import (
 from snowflake.snowpark_checkpoints_collector.summary_stats_collector import (
     generate_parquet_for_spark_df,
 )
+
+
+@pytest.fixture(scope="function")
+def test_id():
+    return int(time.time())
 
 
 @pytest.fixture
@@ -251,19 +257,17 @@ def data():
     ]
 
 
-def test_collect_dataframe(
-    spark_session, data, spark_schema, snowpark_schema, singleton
+def test_collect_checkpoint_mode_2(
+    spark_session, data, spark_schema, snowpark_schema, singleton, test_id
 ):
-    checkpoint_name = "test_full_df"
+    checkpoint_name = "test_full_df_mode2"
 
     pyspark_df = spark_session.createDataFrame(data, schema=spark_schema).orderBy(
         "INTEGER"
     )
 
     temp_dir = tempfile.gettempdir()
-    output_path = os.path.join(
-        temp_dir, f"test_collect_dataframe_{datetime.now().strftime('%Y%m%d%H%M%S')}"
-    )
+    output_path = os.path.join(temp_dir, f"test_collect_checkpoint_mode_2_{test_id}")
 
     collect_dataframe_checkpoint(
         pyspark_df,
@@ -300,12 +304,12 @@ def test_collect_invalid_mode(spark_session, data, spark_schema):
     assert "Invalid mode value." == str(ex_info.value)
 
 
-def test_generate_parquet_for_spark_df(data, spark_schema):
+def test_generate_parquet_for_spark_df(data, spark_schema, test_id):
     spark = SparkSession.builder.getOrCreate()
     spark_df = spark.createDataFrame(data, schema=spark_schema)
     parquet_directory = os.path.join(
         tempfile.gettempdir(),
-        f"test_spark_df_checkpoint_{datetime.now().strftime('%Y%m%d%H%M%S')}",
+        f"test_spark_df_checkpoint_{test_id}",
     )
 
     generate_parquet_for_spark_df(spark_df, parquet_directory)
@@ -314,12 +318,12 @@ def test_generate_parquet_for_spark_df(data, spark_schema):
     assert len(files) > 0
 
 
-def test_spark_df_mode_dataframe(spark_schema, snowpark_schema, data):
+def test_spark_df_mode_dataframe(spark_schema, snowpark_schema, data, test_id):
     spark = SparkSession.builder.getOrCreate()
     spark_df = spark.createDataFrame(data, schema=spark_schema)
     parquet_directory = os.path.join(
         tempfile.gettempdir(),
-        f"test_spark_df_checkpoint_{datetime.now().strftime('%Y%m%d%H%M%S')}",
+        f"test_spark_df_checkpoint_{test_id}",
     )
 
     generate_parquet_for_spark_df(spark_df, parquet_directory)

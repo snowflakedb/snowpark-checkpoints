@@ -134,6 +134,12 @@ class SnowConnection:
             table_name (str): the name of the table.
             stage_directory_path (str): the stage directory path.
 
+        Raise:
+            Exception: No parquet files were found in the stage
+
         """
+        files = self.session.sql(f"LIST {stage_directory_path}").collect()
+        if len(files) == 0:
+            raise Exception("No parquet files were found in the stage.")
         dataframe = self.session.read.parquet(path=stage_directory_path)
         dataframe.write.save_as_table(table_name=table_name, mode="overwrite")

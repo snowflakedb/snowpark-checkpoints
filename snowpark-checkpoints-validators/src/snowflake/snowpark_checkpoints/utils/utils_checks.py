@@ -2,9 +2,12 @@
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
 
+import inspect
 import json
 import os
+import re
 
+from datetime import datetime
 from typing import Any, Optional
 
 import numpy as np
@@ -25,20 +28,31 @@ from snowflake.snowpark_checkpoints.utils.constant import (
     DATAFRAME_CUSTOM_DATA_KEY,
     DATAFRAME_PANDERA_SCHEMA_KEY,
     DECIMAL_PRECISION_KEY,
+    DEFAULT_KEY,
     EXCEPT_HASH_AGG_QUERY,
+    FAIL_STATUS,
     FALSE_COUNT_KEY,
     MARGIN_ERROR_KEY,
     MEAN_KEY,
     NAME_KEY,
+    PASS_STATUS,
+    ROWS_COUNT_KEY,
     SKIP_ALL,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
     TRUE_COUNT_KEY,
     TYPE_KEY,
 )
+from snowflake.snowpark_checkpoints.utils.extra_config import (
+    get_checkpoint_file,
+)
 from snowflake.snowpark_checkpoints.utils.supported_types import (
     BooleanTypes,
     NumericTypes,
 )
+from snowflake.snowpark_checkpoints.validation_result_metadata import (
+    ValidationResultsMetadata,
+)
+from snowflake.snowpark_checkpoints.validation_results import ValidationResult
 
 
 def _process_sampling(
@@ -150,19 +164,22 @@ def _add_boolean_checks(
     """
     count_of_true = additional_check.get(TRUE_COUNT_KEY, 0)
     count_of_false = additional_check.get(FALSE_COUNT_KEY, 0)
+    rows_count = additional_check.get(ROWS_COUNT_KEY, 0)
     std = additional_check.get(MARGIN_ERROR_KEY, 0)
+    percentage_true = count_of_true / rows_count
+    percentage_false = count_of_false / rows_count
 
     schema.columns[col].checks.extend(
         [
             Check(
-                lambda series: count_of_true - std
-                <= series.value_counts().get(True, 0)
-                <= count_of_true + std
+                lambda series: percentage_true - std
+                <= series.value_counts().get(True, 0) / series.count()
+                <= percentage_true + std
             ),
             Check(
-                lambda series: count_of_false - std
-                <= series.value_counts().get(False, 0)
-                <= count_of_false + std
+                lambda series: percentage_false - std
+                <= series.value_counts().get(False, 0) / series.count()
+                <= percentage_false + std
             ),
         ]
     )
@@ -346,6 +363,10 @@ def _compare_data(
             checkpoint_name,
             df,
         )
+        _update_validation_result(
+            checkpoint_name,
+            FAIL_STATUS,
+        )
         raise SchemaValidationError(
             error_message,
             job_context,
@@ -353,4 +374,86 @@ def _compare_data(
             df,
         )
     else:
+        _update_validation_result(checkpoint_name, PASS_STATUS)
         job_context.mark_pass(checkpoint_name)
+
+
+def _find_frame_in(stack: list[inspect.FrameInfo]) -> tuple:
+    """Find a specific frame in the provided stack trace.
+
+    This function searches through the provided stack trace to find a frame that matches
+    certain criteria. It looks for frames where the function name is "wrapper" or where
+    the code context matches specific regular expressions.
+
+    Args:
+        stack (list[inspect.FrameInfo]): A list of frame information objects representing
+                                         the current stack trace.
+
+    Returns:
+        tuple: A tuple containing the relative path of the file and the line number of the
+               matched frame. If no frame is matched, it returns a default key and -1.
+
+    """
+    regex = (
+        r"(?<!_check_dataframe_schema_file)"
+        r"(?<!_check_dataframe_schema)"
+        r"(validate_dataframe_checkpoint|check_dataframe_schema)"
+    )
+
+    first_frames = stack[:6]
+    first_frames.reverse()
+
+    for i, frame in enumerate(first_frames):
+        if frame.function == "wrapper" and i - 1 >= 0:
+            next_frame = first_frames[i - 1]
+            return _get_relative_path(next_frame.filename), next_frame.lineno
+
+        if len(frame.code_context) >= 0 and re.search(regex, frame.code_context[0]):
+            return _get_relative_path(frame.filename), frame.lineno
+    return DEFAULT_KEY, -1
+
+
+def _get_relative_path(file_path: str) -> str:
+    """Get the relative path of a file.
+
+    Args:
+        file_path (str): The path to the file.
+
+    Returns:
+        str: The relative path of the file.
+
+    """
+    current_directory = os.getcwd()
+    return os.path.relpath(file_path, current_directory)
+
+
+def _update_validation_result(checkpoint_name: str, validation_status: str) -> None:
+    """Update the validation result file with the status of a given checkpoint.
+
+    Args:
+        checkpoint_name (str): The name of the checkpoint to update.
+        validation_status (str): The validation status to record for the checkpoint.
+
+    Returns:
+        None
+
+    """
+    _file = get_checkpoint_file(checkpoint_name)
+
+    stack = inspect.stack()
+
+    _file_from_stack, _line_of_code = _find_frame_in(stack)
+
+    pipeline_result_metadata = ValidationResultsMetadata()
+
+    pipeline_result_metadata.add_validation_result(
+        ValidationResult(
+            timestamp=datetime.now().isoformat(),
+            file=_file if _file else _file_from_stack,
+            line_of_code=_line_of_code,
+            checkpoint_name=checkpoint_name,
+            result=validation_status,
+        )
+    )
+
+    pipeline_result_metadata.save()

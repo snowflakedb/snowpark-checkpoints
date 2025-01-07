@@ -91,11 +91,15 @@ class PanderaColumnChecksManager:
         func(clm_name, pandas_df, pandera_column)
 
     @column_register(BOOLEAN_COLUMN_TYPE)
-    def _add_boolean_type_checks(self, clm_name, pandas_df, pandera_column) -> None:
+    def _add_boolean_type_checks(
+        self, clm_name: str, pandas_df: PandasDataFrame, pandera_column: Column
+    ) -> None:
         pandera_column.checks.extend([Check.isin([True, False])])
 
     @column_register(DATE_COLUMN_TYPE)
-    def _add_date_type_checks(self, clm_name, pandas_df, pandera_column) -> None:
+    def _add_date_type_checks(
+        self, clm_name: str, pandas_df: PandasDataFrame, pandera_column: Column
+    ) -> None:
         column_values = pandas_df[clm_name]
         min_value = str(column_values.min())
         max_value = str(column_values.max())
@@ -111,7 +115,7 @@ class PanderaColumnChecksManager:
 
     @column_register(DAYTIMEINTERVAL_COLUMN_TYPE)
     def _add_daytimeinterval_type_checks(
-        self, clm_name, pandas_df, pandera_column
+        self, clm_name: str, pandas_df: PandasDataFrame, pandera_column: Column
     ) -> None:
         column_values = pandas_df[clm_name]
         min_value = str(column_values.min())
@@ -134,7 +138,9 @@ class PanderaColumnChecksManager:
         FLOAT_COLUMN_TYPE,
         DOUBLE_COLUMN_TYPE,
     )
-    def _add_numeric_type_checks(self, clm_name, pandas_df, pandera_column) -> None:
+    def _add_numeric_type_checks(
+        self, clm_name: str, pandas_df: PandasDataFrame, pandera_column: Column
+    ) -> None:
         column_values = pandas_df[clm_name]
         min_value = column_values.min().item()
         max_value = column_values.max().item()
@@ -149,11 +155,15 @@ class PanderaColumnChecksManager:
         )
 
     @column_register(STRING_COLUMN_TYPE)
-    def _add_string_type_checks(self, clm_name, pandas_df, pandera_column) -> None:
+    def _add_string_type_checks(
+        self, clm_name: str, pandas_df: PandasDataFrame, pandera_column: Column
+    ) -> None:
         pass
 
     @column_register(TIMESTAMP_COLUMN_TYPE)
-    def _add_timestamp_type_checks(self, clm_name, pandas_df, pandera_column) -> None:
+    def _add_timestamp_type_checks(
+        self, clm_name: str, pandas_df: PandasDataFrame, pandera_column: Column
+    ) -> None:
         column_values = pandas_df[clm_name]
         min_value = str(column_values.min())
         max_value = str(column_values.max())
@@ -169,7 +179,7 @@ class PanderaColumnChecksManager:
 
     @column_register(TIMESTAMP_NTZ_COLUMN_TYPE)
     def _add_timestamp_ntz_type_checks(
-        self, clm_name, pandas_df, pandera_column
+        self, clm_name: str, pandas_df: PandasDataFrame, pandera_column: Column
     ) -> None:
         column_values = pandas_df[clm_name]
         min_value = str(column_values.min())

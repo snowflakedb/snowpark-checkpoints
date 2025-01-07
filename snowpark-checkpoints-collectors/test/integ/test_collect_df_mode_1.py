@@ -4,7 +4,6 @@
 import decimal
 import json
 import os
-import shutil
 from datetime import date, datetime, timezone, timedelta
 from pyspark.sql import SparkSession
 import pytest
@@ -26,7 +25,13 @@ from pyspark.sql.types import (
     TimestampType,
     TimestampNTZType,
     DayTimeIntervalType,
+    ArrayType,
+    MapType,
+    NullType,
+    BinaryType,
 )
+
+import integration_test_utils
 from snowflake.snowpark_checkpoints_collector import collect_dataframe_checkpoint
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     DATAFRAME_PANDERA_SCHEMA_KEY,
@@ -49,6 +54,7 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
     BOOLEAN_COLUMN_TYPE,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
 )
+from snowflake.snowpark_checkpoints_collector import Singleton
 
 TEST_COLLECT_DF_MODE_1_EXPECTED_DIRECTORY_NAME = "test_collect_df_mode_1_expected"
 
@@ -58,7 +64,12 @@ def spark_session():
     return SparkSession.builder.getOrCreate()
 
 
-def test_collect_dataframe(spark_session):
+@pytest.fixture
+def singleton():
+    Singleton._instances = {}
+
+
+def test_collect_dataframe(spark_session, singleton):
     sample_size = 1.0
     checkpoint_name = "test_full_df"
     checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
@@ -76,7 +87,7 @@ def test_collect_dataframe(spark_session):
     validate_checkpoint_file_output(checkpoint_file_name)
 
 
-def test_collect_dataframe_all_column_types(spark_session):
+def test_collect_dataframe_all_column_types(spark_session, singleton):
     sample_size = 1.0
     checkpoint_name = "test_full_df_all_column_type"
     checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
@@ -88,6 +99,13 @@ def test_collect_dataframe_all_column_types(spark_session):
     decimal_data = decimal.Decimal("3.141516171819")
     timestamp_data = datetime(2000, 1, 1, 12, 0, 0)
     timestamp_ntz_data = datetime(2000, 1, 1, 12, 53, 0, tzinfo=timezone.utc)
+    inner_schema = StructType(
+        [
+            StructField("inner1", StringType(), False),
+            StructField("inner2", LongType(), True),
+        ]
+    )
+    struct_data = {"inner1": "A1", "inner2": 10}
 
     data_df = [
         [
@@ -104,6 +122,17 @@ def test_collect_dataframe_all_column_types(spark_session):
             timestamp_data,
             timestamp_ntz_data,
             decimal_data,
+            ["A", "B", "C", "D", "E"],
+            bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00]),
+            {
+                "C1": "black",
+                "C2": "yellow",
+                "C3": "orange",
+                "C4": "blue",
+                "C5": "brown",
+            },
+            None,
+            struct_data,
         ],
         [
             False,
@@ -119,6 +148,11 @@ def test_collect_dataframe_all_column_types(spark_session):
             timestamp_data,
             timestamp_ntz_data,
             decimal_data,
+            ["q", "w", "e", "r", "t"],
+            bytes([0x13, 0x00]),
+            {"FA": "AF", "GA": "AG", "HA": "AH", "WE": "EW"},
+            None,
+            struct_data,
         ],
         [
             True,
@@ -134,6 +168,11 @@ def test_collect_dataframe_all_column_types(spark_session):
             timestamp_data,
             timestamp_ntz_data,
             decimal_data,
+            ["HA", "JA", "KA", "LA", "PA"],
+            bytes([0x00, 0x08, 0x00]),
+            {"RTA": "ERT"},
+            None,
+            struct_data,
         ],
     ]
 
@@ -152,6 +191,11 @@ def test_collect_dataframe_all_column_types(spark_session):
             StructField("m", TimestampType(), False),
             StructField("n", TimestampNTZType(), False),
             StructField("o", DecimalType(15, 13), False),
+            StructField("p", ArrayType(StringType(), False), False),
+            StructField("q", BinaryType(), False),
+            StructField("r", MapType(StringType(), StringType(), False), False),
+            StructField("s", NullType(), True),
+            StructField("t", inner_schema, False),
         ]
     )
 
@@ -163,7 +207,7 @@ def test_collect_dataframe_all_column_types(spark_session):
     validate_checkpoint_file_output(checkpoint_file_name)
 
 
-def test_collect_empty_dataframe_with_schema(spark_session):
+def test_collect_empty_dataframe_with_schema(spark_session, singleton):
     sample_size = 1.0
     checkpoint_name = "test_empty_df_with_schema"
     checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
@@ -186,9 +230,9 @@ def test_collect_empty_dataframe_with_schema(spark_session):
     validate_checkpoint_file_output(checkpoint_file_name)
 
 
-def test_collect_empty_dataframe_with_string_column(spark_session):
+def test_collect_empty_dataframe_with_object_column(spark_session, singleton):
     sample_size = 1.0
-    checkpoint_name = "test_empty_df_with_string_column"
+    checkpoint_name = "test_empty_df_with_object_column"
     checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
         checkpoint_name
     )
@@ -208,7 +252,9 @@ def test_collect_empty_dataframe_with_string_column(spark_session):
     validate_checkpoint_file_output(checkpoint_file_name)
 
 
-def test_collect_dataframe_with_unsupported_pandera_column_type(spark_session):
+def test_collect_dataframe_with_unsupported_pandera_column_type(
+    spark_session, singleton
+):
     sample_size = 1.0
     checkpoint_name = "test_dataframe_with_unsupported_pandera_column_type"
     checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
@@ -236,7 +282,7 @@ def test_collect_dataframe_with_unsupported_pandera_column_type(spark_session):
     validate_checkpoint_file_output(checkpoint_file_name)
 
 
-def test_collect_dataframe_with_null_values(spark_session):
+def test_collect_dataframe_with_null_values(spark_session, singleton):
     sample_size = 1.0
     checkpoint_name = "test_df_with_null_values"
     checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
@@ -261,7 +307,7 @@ def test_collect_dataframe_with_null_values(spark_session):
     validate_checkpoint_file_output(checkpoint_file_name)
 
 
-def test_collect_sampled_dataframe(spark_session):
+def test_collect_sampled_dataframe(spark_session, singleton):
     sample_size = 0.1
     checkpoint_name = "test_sampled_df"
     checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
@@ -343,19 +389,22 @@ def test_collect_sampled_dataframe(spark_session):
 
     assert collected_column_type_collection == custom_column_type_collection_expected
 
-    remove_output_directory()
+    integration_test_utils.remove_output_directory()
 
 
-def test_collect_empty_dataframe_without_schema(spark_session):
+def test_collect_empty_dataframe_without_schema(spark_session, singleton):
+    checkpoint_name = "test_empty_df_without_schema"
     data = []
     columns = StructType()
     pyspark_df = spark_session.createDataFrame(data=data, schema=columns)
 
     with pytest.raises(Exception) as ex_info:
-        collect_dataframe_checkpoint(pyspark_df, checkpoint_name="")
+        collect_dataframe_checkpoint(pyspark_df, checkpoint_name=checkpoint_name)
     assert "It is not possible to collect an empty DataFrame without schema" == str(
         ex_info.value
     )
+
+    integration_test_utils.remove_output_directory()
 
 
 def validate_checkpoint_file_output(checkpoint_file_name) -> None:
@@ -369,7 +418,8 @@ def validate_checkpoint_file_output(checkpoint_file_name) -> None:
     diff = DeepDiff(
         expected_obj, actual_obj, ignore_order=True, exclude_paths=[exclude_paths]
     )
-    remove_output_directory()
+
+    integration_test_utils.remove_output_directory()
 
     assert diff == {}
 
@@ -395,12 +445,3 @@ def get_expected_schema_contract(checkpoint_file_name) -> str:
 
     with open(expected_file_path) as f:
         return f.read().strip()
-
-
-def remove_output_directory() -> None:
-    current_directory_path = os.getcwd()
-    output_directory_path = os.path.join(
-        current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME
-    )
-    if os.path.exists(output_directory_path):
-        shutil.rmtree(output_directory_path)

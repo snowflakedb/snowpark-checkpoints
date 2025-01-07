@@ -4,20 +4,24 @@
 
 import json
 import os
-from unittest.mock import call, patch, mock_open
+from unittest.mock import ANY, call, patch, mock_open
 from numpy import float64
-from pandera import DataFrameSchema
 
+from pytest import raises
 from snowflake.snowpark_checkpoints.errors import SchemaValidationError
 from snowflake.snowpark_checkpoints.utils.constant import (
     BOOLEAN_TYPE,
     CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME,
     CHECKPOINT_TABLE_NAME_FORMAT,
     DATAFRAME_CUSTOM_DATA_KEY,
+    DEFAULT_KEY,
     EXCEPT_HASH_AGG_QUERY,
+    FAIL_STATUS,
     FLOAT_TYPE,
     NAME_KEY,
     OVERWRITE_MODE,
+    PASS_STATUS,
+    ROWS_COUNT_KEY,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
     TYPE_KEY,
 )
@@ -29,6 +33,7 @@ from snowflake.snowpark import DataFrame as SnowparkDataFrame
 from snowflake.snowpark_checkpoints.utils.utils_checks import (
     _compare_data,
     _process_sampling,
+    _update_validation_result,
 )
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from snowflake.snowpark_checkpoints.snowpark_sampler import SamplingStrategy
@@ -38,7 +43,6 @@ from snowflake.snowpark_checkpoints.utils.utils_checks import (
     _generate_schema,
     _add_numeric_checks,
     MEAN_KEY,
-    MARGIN_ERROR_KEY,
     DECIMAL_PRECISION_KEY,
     _skip_checks_on_schema,
     SKIP_ALL,
@@ -47,6 +51,7 @@ from snowflake.snowpark_checkpoints.utils.utils_checks import (
     FALSE_COUNT_KEY,
     MARGIN_ERROR_KEY,
 )
+from snowflake.snowpark_checkpoints.validation_results import ValidationResult
 
 
 def test_skip_specific_check():
@@ -102,7 +107,12 @@ def test_add_boolean_checks():
         }
     )
 
-    additional_check = {TRUE_COUNT_KEY: 2, FALSE_COUNT_KEY: 1, MARGIN_ERROR_KEY: 0}
+    additional_check = {
+        TRUE_COUNT_KEY: 2,
+        FALSE_COUNT_KEY: 1,
+        MARGIN_ERROR_KEY: 0,
+        ROWS_COUNT_KEY: 3,
+    }
 
     _add_boolean_checks(schema, "col1", additional_check)
 
@@ -122,7 +132,12 @@ def test_add_boolean_checks_with_margin_error():
         }
     )
 
-    additional_check = {TRUE_COUNT_KEY: 2, FALSE_COUNT_KEY: 1, MARGIN_ERROR_KEY: 1}
+    additional_check = {
+        TRUE_COUNT_KEY: 2,
+        FALSE_COUNT_KEY: 1,
+        MARGIN_ERROR_KEY: 1,
+        ROWS_COUNT_KEY: 3,
+    }
 
     _add_boolean_checks(schema, "col1", additional_check)
 
@@ -142,7 +157,7 @@ def test_add_boolean_checks_no_true_count():
         }
     )
 
-    additional_check = {FALSE_COUNT_KEY: 3, MARGIN_ERROR_KEY: 0}
+    additional_check = {FALSE_COUNT_KEY: 3, MARGIN_ERROR_KEY: 0, ROWS_COUNT_KEY: 3}
 
     _add_boolean_checks(schema, "col1", additional_check)
 
@@ -162,7 +177,7 @@ def test_add_boolean_checks_no_false_count():
         }
     )
 
-    additional_check = {TRUE_COUNT_KEY: 3, MARGIN_ERROR_KEY: 0}
+    additional_check = {TRUE_COUNT_KEY: 3, MARGIN_ERROR_KEY: 0, ROWS_COUNT_KEY: 3}
 
     _add_boolean_checks(schema, "col1", additional_check)
 
@@ -305,6 +320,8 @@ def test_generate_schema_with_custom_data():
                     "name": "col2",
                     "true_count": 2,
                     "false_count": 1,
+                    "margin_error": 0.0,
+                    "rows_count": 3,
                 },
             ],
         },
@@ -507,10 +524,25 @@ def test_compare_data_match():
     # Mock session.sql to return an empty DataFrame (indicating no mismatch)
     session.sql.return_value.count.return_value = 0
 
-    # Call the function
-    _compare_data(df, job_context, checkpoint_name)
+    checkpoint_name = "test_checkpoint"
+    validation_status = PASS_STATUS
+
+    with (
+        patch("os.getcwd", return_value="/mocked/path"),
+        patch("os.path.exists", return_value=False),
+        patch("builtins.open", mock_open()),
+        patch("json.dump"),
+        patch(
+            "snowflake.snowpark_checkpoints.utils.utils_checks._update_validation_result"
+        ) as mock_update_validation_result,
+    ):
+        # Call the function
+        _compare_data(df, job_context, checkpoint_name)
 
     # Assertions
+    mock_update_validation_result.assert_called_once_with(
+        checkpoint_name, validation_status
+    )
     df.write.save_as_table.assert_called_once_with(
         table_name=new_checkpoint_name, mode=OVERWRITE_MODE
     )
@@ -539,14 +571,24 @@ def test_compare_data_mismatch():
     # Mock session.sql to return a non-empty DataFrame (indicating a mismatch)
     session.sql.return_value.count.return_value = 1
 
-    # Call the function and expect a SchemaValidationError
-    try:
-        _compare_data(df, job_context, checkpoint_name)
-        assert False, "Expected SchemaValidationError"
-    except SchemaValidationError:
-        pass
+    with (
+        patch("os.getcwd", return_value="/mocked/path"),
+        patch("os.path.exists", return_value=False),
+        patch("builtins.open", mock_open()),
+        patch("json.dump"),
+        patch(
+            "snowflake.snowpark_checkpoints.utils.utils_checks._update_validation_result"
+        ) as mock_update_validation_result,
+    ):
+        # Call the function and expect a SchemaValidationError
+        with raises(
+            SchemaValidationError,
+            match=f"Data mismatch for checkpoint {checkpoint_name}",
+        ):
+            _compare_data(df, job_context, checkpoint_name)
 
     # Assertions
+    mock_update_validation_result.assert_called_once_with(checkpoint_name, FAIL_STATUS)
     df.write.save_as_table.assert_called_once_with(
         table_name=new_checkpoint_name, mode=OVERWRITE_MODE
     )
@@ -557,3 +599,82 @@ def test_compare_data_mismatch():
     session.sql.assert_has_calls(calls)
     job_context.mark_fail.assert_called()
     job_context.mark_pass.assert_not_called()
+
+
+def test_update_validation_result_with_file():
+    checkpoint_name = "test_checkpoint"
+    validation_status = PASS_STATUS
+
+    with (
+        patch(
+            "snowflake.snowpark_checkpoints.utils.utils_checks.ValidationResultsMetadata"
+        ) as MockValidationResultsMetadata,
+        patch(
+            "snowflake.snowpark_checkpoints.utils.utils_checks.datetime"
+        ) as mock_datetime,
+    ):
+        mock_datetime.now.return_value.isoformat.return_value = "2021-01-01T00:00:00"
+        mock_pipeline_result_metadata = MockValidationResultsMetadata.return_value
+
+        # Call the function
+        _update_validation_result(checkpoint_name, validation_status)
+
+        # Assertions
+        MockValidationResultsMetadata.assert_called_once()
+
+        mock_pipeline_result_metadata.add_validation_result.assert_called_once_with(
+            ValidationResult(
+                timestamp="2021-01-01T00:00:00",
+                file=DEFAULT_KEY,
+                line_of_code=-1,
+                checkpoint_name=checkpoint_name,
+                result=validation_status,
+            )
+        )
+        mock_pipeline_result_metadata.save.assert_called_once()
+
+
+def test_update_validation_result_without_file():
+    checkpoint_name = "test_checkpoint"
+    validation_status = PASS_STATUS
+
+    with (
+        patch(
+            "snowflake.snowpark_checkpoints.utils.utils_checks.ValidationResultsMetadata"
+        ) as MockValidationResultsMetadata,
+        patch(
+            "snowflake.snowpark_checkpoints.utils.utils_checks.inspect.stack",
+            return_value=[
+                MagicMock(
+                    filename="test_file.py",
+                    code_context=["_check_dataframe_schema_file"],
+                ),
+                MagicMock(
+                    filename="test_file.py",
+                    code_context=["validate_dataframe_checkpoint"],
+                    lineno=1,
+                ),
+            ],
+        ),
+        patch(
+            "snowflake.snowpark_checkpoints.utils.utils_checks.datetime"
+        ) as mock_datetime,
+    ):
+        mock_datetime.now.return_value.isoformat.return_value = "2021-01-01T00:00:00"
+        mock_pipeline_result_metadata = MockValidationResultsMetadata.return_value
+
+        # Call the function
+        _update_validation_result(checkpoint_name, validation_status)
+
+        # Assertions
+        MockValidationResultsMetadata.assert_called_once()
+        mock_pipeline_result_metadata.add_validation_result.assert_called_once_with(
+            ValidationResult(
+                timestamp="2021-01-01T00:00:00",
+                file="test_file.py",
+                line_of_code=1,
+                checkpoint_name=checkpoint_name,
+                result=validation_status,
+            )
+        )
+        mock_pipeline_result_metadata.save.assert_called_once()

@@ -418,7 +418,7 @@ def report_telemetry(
                     telemetry_data[MODE_KEY] = CheckpointMode.SCHEMA.value
                     column_type_dict = param_data["column_type_dict"]
                     telemetry_data[SCHEMA_TYPES_KEY] = [
-                        column_type_dict[schema_type]
+                        column_type_dict[schema_type].dataType.typeName()
                         for schema_type in column_type_dict
                     ]
                     telemetry_m.sc_log_info(DATAFRAME_COLLECTION, telemetry_data)

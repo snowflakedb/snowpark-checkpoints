@@ -605,6 +605,7 @@ def report_telemetry(
 
             if func_exception is not None:
                 raise func_exception
+            return result
 
         return wrapper
 

@@ -577,6 +577,7 @@ def report_telemetry(
 
         def wrapper(*args, **kwargs):
             func_exception = None
+            result = None
             try:
                 result = func(*args, **kwargs)
             except Exception as err:

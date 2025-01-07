@@ -285,6 +285,7 @@ def validate_telemetry_file_output(telemetry_file_name) -> None:
         "root['timestamp']",
         "root['message']['metadata']['device_id']",
         "root['message']['metadata']",
+        "root['message']['data']",
         "root['message']['driver_version']",
     ]
 

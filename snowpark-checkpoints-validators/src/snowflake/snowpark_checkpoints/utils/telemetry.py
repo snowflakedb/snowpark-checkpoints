@@ -599,7 +599,6 @@ def report_telemetry(
                 )
                 return result
             except Exception as err:
-                raise err
                 handle_exception(func_name, param_data, err)
 
             if func_exception is not None:

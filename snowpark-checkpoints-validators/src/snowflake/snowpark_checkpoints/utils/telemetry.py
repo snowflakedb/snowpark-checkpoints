@@ -249,11 +249,12 @@ class TelemetryManager(TelemetryClient):
         """
         return True
 
-    def sc_is_hypothesis_event_logged(self, event_name: str) -> bool:
-        """Check if the event is logged.
+    def sc_is_hypothesis_event_logged(self, event_name: tuple[str, int]) -> bool:
+        """Check if a Hypothesis event is logged.
 
         Args:
-            event_name (str): The name of the event.
+            event_name (tuple[str, int]): A tuple containing the name of the event and an integer identifier
+            (0 for info, 1 for error).
 
         Returns:
             bool: True if the event is logged, False otherwise.
@@ -490,7 +491,7 @@ def handle_result(
             telemetry_m.sc_log_info(VALUE_VALIDATOR_MIRROR, telemetry_data)
     elif func_name == "dataframe_strategy":
         is_logged = telemetry_m.sc_is_hypothesis_event_logged(
-            param_data.get("json_schema")
+            (param_data.get("json_schema"), 0)
         )
         if not is_logged:
             json_data = get_load_json(param_data.get("json_schema"))["custom_data"][
@@ -498,7 +499,9 @@ def handle_result(
             ]
             telemetry_data[SCHEMA_TYPES_KEY] = [column["type"] for column in json_data]
             telemetry_m.sc_log_info(HYPOTHESIS_INPUT_SCHEMA, telemetry_data)
-            telemetry_m.sc_hypothesis_input_events.append(param_data.get("json_schema"))
+            telemetry_m.sc_hypothesis_input_events.append(
+                (param_data.get("json_schema"), 0)
+            )
 
 
 def handle_exception(func_name: str, param_data: dict, err: Exception) -> None:
@@ -546,11 +549,11 @@ def handle_exception(func_name: str, param_data: dict, err: Exception) -> None:
     elif func_name == "dataframe_strategy":
         input_json = param_data.get("json_schema")
         if input_json:
-            is_logged = telemetry_m.sc_is_hypothesis_event_logged(input_json)
+            is_logged = telemetry_m.sc_is_hypothesis_event_logged((input_json, 1))
             if not is_logged:
                 telemetry_m.sc_log_error(HYPOTHESIS_INPUT_SCHEMA_ERROR, telemetry_data)
                 telemetry_m.sc_hypothesis_input_events.append(
-                    param_data.get("json_schema")
+                    (param_data.get("json_schema"), 1)
                 )
 
 
@@ -597,7 +600,6 @@ def report_telemetry(
                     multiple_return,
                     telemetry_m,
                 )
-                return result
             except Exception as err:
                 handle_exception(func_name, param_data, err)
 

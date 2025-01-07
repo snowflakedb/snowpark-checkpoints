@@ -108,7 +108,7 @@ def collect_dataframe_checkpoint(
         raise Exception(error_message) from err
 
     finally:
-        collection_point_result_manager = CollectionPointResultManager()
+        collection_point_result_manager = CollectionPointResultManager(output_path)
         collection_point_result_manager.add_result(collection_point_result)
 
 

@@ -41,7 +41,7 @@ def test_create_snowflake_table_from_parquet():
             )
 
     assert mocked_session.method_calls[0] == call.sql(
-        "CREATE TEMP STAGE IF NOT EXISTS CHECKPOINT_STAGE"
+        "CREATE STAGE IF NOT EXISTS CHECKPOINT_STAGE"
     )
 
     assert mocked_session.method_calls[1] == call.sql(
@@ -56,6 +56,10 @@ def test_create_snowflake_table_from_parquet():
 
     assert mock_df.method_calls[2] == call.write.save_as_table(
         table_name="checkpoint_name_test", mode="overwrite"
+    )
+
+    assert mocked_session.method_calls[3] == call.sql(
+        "DROP STAGE IF EXISTS CHECKPOINT_STAGE"
     )
 
 

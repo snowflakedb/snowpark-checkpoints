@@ -16,7 +16,8 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
 
 
 STAGE_NAME = "CHECKPOINT_STAGE"
-CREATE_STAGE_STATEMENT_FORMAT = "CREATE TEMP STAGE IF NOT EXISTS {}"
+CREATE_STAGE_STATEMENT_FORMAT = "CREATE STAGE IF NOT EXISTS {}"
+REMOVE_STAGE_STATEMENT_FORMAT = "DROP STAGE IF EXISTS {}"
 STAGE_PATH_FORMAT = "'@{}/{}'"
 PUT_FILE_IN_STAGE_STATEMENT_FORMAT = "PUT 'file://{}' {} AUTO_COMPRESS=FALSE"
 
@@ -57,15 +58,21 @@ class SnowConnection:
         folder = f"table_files_{table_id}"
         stage_path = stage_path if stage_path else folder
         stage_directory_path = STAGE_PATH_FORMAT.format(STAGE_NAME, stage_path)
-        self.create_temp_stage(STAGE_NAME)
 
         def is_parquet_file(file: str):
             return file.endswith(DOT_PARQUET_EXTENSION)
 
-        self.load_files_to_stage(STAGE_NAME, stage_path, input_path, is_parquet_file)
-        self.create_table_from_parquet(table_name, stage_directory_path)
+        try:
+            self.create_stage(STAGE_NAME)
+            self.load_files_to_stage(
+                STAGE_NAME, stage_path, input_path, is_parquet_file
+            )
+            self.create_table_from_parquet(table_name, stage_directory_path)
 
-    def create_temp_stage(self, stage_name: str) -> None:
+        finally:
+            self.remove_stage(STAGE_NAME)
+
+    def create_stage(self, stage_name: str) -> None:
         """Create a temp stage in Snowflake.
 
         Args:
@@ -74,6 +81,16 @@ class SnowConnection:
         """
         create_stage_statement = CREATE_STAGE_STATEMENT_FORMAT.format(stage_name)
         self.session.sql(create_stage_statement).collect()
+
+    def remove_stage(self, stage_name: str) -> None:
+        """Remove a stage in Snowflake.
+
+        Args:
+            stage_name (str): the name of the stage.
+
+        """
+        remove_stage_statement = REMOVE_STAGE_STATEMENT_FORMAT.format(stage_name)
+        self.session.sql(remove_stage_statement).collect()
 
     def load_files_to_stage(
         self,

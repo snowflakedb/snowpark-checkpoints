@@ -21,14 +21,19 @@ from snowflake.hypothesis_snowpark.constants import (
     CUSTOM_DATA_FORMAT_KEY,
     CUSTOM_DATA_KEY,
     CUSTOM_DATA_NAME_KEY,
+    CUSTOM_DATA_TYPE_KEY,
     PANDERA_IN_RANGE_CHECK,
     PANDERA_INCLUDE_MAX_KEY,
     PANDERA_INCLUDE_MIN_KEY,
     PANDERA_MAX_VALUE_KEY,
     PANDERA_MIN_VALUE_KEY,
     PANDERA_SCHEMA_KEY,
+    PYSPARK_ARRAY_TYPE,
+    PYSPARK_BINARY_TYPE,
 )
+from snowflake.hypothesis_snowpark.custom_strategies import update_pandas_df_strategy
 from snowflake.hypothesis_snowpark.strategies_utils import (
+    PYSPARK_TO_SNOWPARK_SUPPORTED_TYPES,
     apply_custom_null_values,
     generate_snowpark_dataframe,
     load_json_schema,
@@ -74,6 +79,22 @@ def dataframe_strategy(
             f"Invalid JSON schema. The JSON schema must contain '{PANDERA_SCHEMA_KEY}' and '{CUSTOM_DATA_KEY}' keys."
         )
 
+    custom_data_columns = custom_data.get(CUSTOM_DATA_COLUMNS_KEY, [])
+    not_supported_columns, columns_with_custom_strategy = [], []
+
+    for column in custom_data_columns:
+        dtype = column.get(CUSTOM_DATA_TYPE_KEY)
+        if dtype not in PYSPARK_TO_SNOWPARK_SUPPORTED_TYPES:
+            not_supported_columns.append(column)
+        elif dtype in (PYSPARK_ARRAY_TYPE, PYSPARK_BINARY_TYPE):
+            columns_with_custom_strategy.append(column)
+
+    if not_supported_columns:
+        raise ValueError(
+            f"The following data types are not supported by the Snowpark DataFrame strategy: "
+            f"{[column.get(CUSTOM_DATA_TYPE_KEY) for column in not_supported_columns]}"
+        )
+
     df_schema = pa.DataFrameSchema.from_json(json.dumps(pandera_schema))
     df_schema = _process_dataframe_schema(df_schema, custom_data)
 
@@ -81,9 +102,12 @@ def dataframe_strategy(
     def _dataframe_strategy(draw: DrawFn) -> DataFrame:
         pandas_strategy = df_schema.strategy(size=size)
         pandas_df = draw(pandas_strategy)
-        processed_pandas_df = apply_custom_null_values(pandas_df, custom_data)
+        pandas_df = draw(
+            update_pandas_df_strategy(pandas_df, columns_with_custom_strategy)
+        )
+        pandas_df = apply_custom_null_values(pandas_df, custom_data)
         snowpark_df = generate_snowpark_dataframe(
-            processed_pandas_df, session, df_schema, custom_data
+            pandas_df, session, df_schema, custom_data
         )
         return snowpark_df
 

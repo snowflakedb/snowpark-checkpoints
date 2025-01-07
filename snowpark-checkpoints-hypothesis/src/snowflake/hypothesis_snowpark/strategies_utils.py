@@ -7,7 +7,7 @@ import os
 import random
 
 from contextlib import contextmanager
-from typing import Final, Union
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -19,50 +19,10 @@ from snowflake.hypothesis_snowpark.constants import (
     CUSTOM_DATA_ROWS_COUNT,
     CUSTOM_DATA_ROWS_NULL_COUNT_KEY,
     CUSTOM_DATA_TYPE_KEY,
+    PYSPARK_TO_SNOWPARK_SUPPORTED_TYPES,
 )
 from snowflake.snowpark import DataFrame, Session
-from snowflake.snowpark.types import (
-    ArrayType,
-    BinaryType,
-    BooleanType,
-    ByteType,
-    DataType,
-    DateType,
-    DecimalType,
-    DoubleType,
-    FloatType,
-    IntegerType,
-    LongType,
-    MapType,
-    NullType,
-    ShortType,
-    StringType,
-    StructField,
-    StructType,
-    TimestampTimeZone,
-    TimestampType,
-)
-
-
-PYSPARK_TO_SNOWPARK_TYPES: Final[dict[str, DataType]] = {
-    "array": ArrayType(),
-    "binary": BinaryType(),
-    "boolean": BooleanType(),
-    "byte": ByteType(),
-    "data": DataType(),
-    "date": DateType(),
-    "decimal": DecimalType(),
-    "double": DoubleType(),
-    "float": FloatType(),
-    "integer": IntegerType(),
-    "long": LongType(),
-    "map": MapType(),
-    "void": NullType(),
-    "short": ShortType(),
-    "string": StringType(),
-    "timestamp": TimestampType(),
-    "timestamp_ntz": TimestampType(TimestampTimeZone.NTZ),
-}
+from snowflake.snowpark.types import DataType, StructField, StructType
 
 
 def load_json_schema(json_schema: str) -> dict:
@@ -98,7 +58,7 @@ def pyspark_to_snowpark_type(pyspark_type: str) -> DataType:
         The equivalent Snowpark data type.
 
     """
-    snowpark_type = PYSPARK_TO_SNOWPARK_TYPES.get(pyspark_type)
+    snowpark_type = PYSPARK_TO_SNOWPARK_SUPPORTED_TYPES.get(pyspark_type)
     if not snowpark_type:
         raise ValueError(f"Unsupported PySpark data type: {pyspark_type}")
     return snowpark_type

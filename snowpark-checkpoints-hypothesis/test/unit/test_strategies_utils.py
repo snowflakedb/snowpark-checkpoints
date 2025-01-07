@@ -3,16 +3,16 @@
 #
 
 import json
+import random
 
 from pathlib import Path
-import random
 
 import pandas as pd
 import pandera as pa
 import pytest
 
 from snowflake.hypothesis_snowpark.strategies_utils import (
-    PYSPARK_TO_SNOWPARK_TYPES,
+    PYSPARK_TO_SNOWPARK_SUPPORTED_TYPES,
     apply_custom_null_values,
     generate_snowpark_dataframe,
     load_json_schema,
@@ -51,7 +51,10 @@ def test_load_json_schema_invalid_json(tmp_path: Path):
 
 
 def test_pyspark_to_snowpark_type_valid_types():
-    for pyspark_type, expected_snowpark_type in PYSPARK_TO_SNOWPARK_TYPES.items():
+    for (
+        pyspark_type,
+        expected_snowpark_type,
+    ) in PYSPARK_TO_SNOWPARK_SUPPORTED_TYPES.items():
         actual_snowpark_type = pyspark_to_snowpark_type(pyspark_type)
         assert isinstance(actual_snowpark_type, DataType)
         assert actual_snowpark_type == expected_snowpark_type

@@ -286,11 +286,4 @@ def generate_parquet_for_spark_df(spark_df: SparkDataFrame, output_path: str) ->
 def _create_snowflake_table_from_parquet(
     table_name: str, input_path: str, snow_connection: SnowConnection
 ) -> None:
-    try:
-        snow_connection.create_snowflake_table_from_local_parquet(
-            table_name, input_path
-        )
-
-    except Exception as err:
-        error_message = str(err)
-        raise Exception(error_message) from err
+    snow_connection.create_snowflake_table_from_local_parquet(table_name, input_path)

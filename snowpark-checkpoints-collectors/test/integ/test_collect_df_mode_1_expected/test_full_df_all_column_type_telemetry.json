@@ -1,11 +1,11 @@
 {
     "message": {
-        "data": "{\"function\": \"_collect_dataframe_checkpoint_mode_schema\", \"mode\": 1, \"schema_types\": [\"boolean\", \"byte\", \"date\", \"daytimeinterval\", \"double\", \"float\", \"integer\", \"long\", \"short\", \"string\", \"timestamp\", \"timestamp_ntz\", \"decimal\"]}",
+        "data": "{\"function\": \"_collect_dataframe_checkpoint_mode_schema\", \"mode\": 1, \"schema_types\": [\"boolean\", \"byte\", \"date\", \"daytimeinterval\", \"double\", \"float\", \"integer\", \"long\", \"short\", \"string\", \"timestamp\", \"timestamp_ntz\", \"decimal\", \"array\", \"binary\", \"map\", \"void\", \"struct\"]}",
         "driver_type": "PythonConnector",
         "driver_version": "3.12.3",
         "event_name": "DataFrame_Collection",
         "metadata": {
-            "device_id": "f6015d7dd95662e65d3ed3bdd1ed87492607b7e9d8e5c05832116c69b59d7cd7",
+            "device_id": "0471186eb1a6ba58c82e97d19006a08b163bc0056c05e6f770090eade2c3a809",
             "os_version": "darwin",
             "python_version": "3.11.2",
             "snowpark_version": "1.25.0"
@@ -13,5 +13,5 @@
         "source": "snowpark-checkpoints",
         "type": "info"
     },
-    "timestamp": "1734725046547"
+    "timestamp": "1736272330054"
 }

@@ -10,6 +10,7 @@ from pandas.testing import assert_frame_equal
 from pyspark.sql import SparkSession
 from pyspark.sql.dataframe import DataFrame as SparkDataFrame
 from pyspark.sql.types import BooleanType, LongType, StructField, StructType
+import pyspark.sql.types as t
 import pytest
 from pytest import fixture
 from snowflake.snowpark.types import (
@@ -22,13 +23,10 @@ from snowflake.snowpark.types import (
     StructType,
 )
 
-from pyspark.sql.functions import col
-from pyspark.sql.types import (
-    DoubleType as SparkDoubleType,
-    StringType as SparkStringType,
+from snowflake.snowpark_checkpoints_collector import (
+    Singleton,
+    collect_dataframe_checkpoint,
 )
-import integration_test_utils
-from snowflake.snowpark_checkpoints_collector import collect_dataframe_checkpoint
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     CheckpointMode,
     DOT_PARQUET_EXTENSION,
@@ -36,10 +34,6 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
 from snowflake.snowpark_checkpoints_collector.snow_connection_model import (
     SnowConnection,
 )
-from snowflake.snowpark_checkpoints_collector import Singleton
-
-import pyspark.sql.types as t
-
 from snowflake.snowpark_checkpoints_collector.summary_stats_collector import (
     generate_parquet_for_spark_df,
 )
@@ -49,9 +43,11 @@ from snowflake.snowpark_checkpoints_collector.summary_stats_collector import (
 def spark_session():
     return SparkSession.builder.getOrCreate()
 
+
 @pytest.fixture
 def singleton():
     Singleton._instances = {}
+
 
 @fixture
 def spark_schema():

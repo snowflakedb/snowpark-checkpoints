@@ -1,6 +1,4 @@
 from datetime import datetime
-import os.path
-import tempfile
 from unittest.mock import MagicMock, patch
 
 from pyspark.sql import SparkSession
@@ -19,12 +17,10 @@ from snowflake.snowpark.types import (
 from snowflake.snowpark_checkpoints.checkpoint import validate_dataframe_checkpoint
 from snowflake.snowpark_checkpoints.errors import SchemaValidationError
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
-from snowflake.snowpark_checkpoints.utils.constant import CheckpointMode
-
 from snowflake.snowpark_checkpoints.utils.constant import (
+    CheckpointMode,
     FAIL_STATUS,
     PASS_STATUS,
-    CheckpointMode,
 )
 
 

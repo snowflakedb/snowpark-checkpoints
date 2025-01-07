@@ -5,6 +5,8 @@ import inspect
 import os
 import tempfile
 
+from typing import Optional
+
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     COLLECTION_RESULT_FILE_NAME,
     DOT_IPYNB_EXTENSION,
@@ -43,27 +45,30 @@ def get_relative_file_path(path: str) -> str:
     return relative_file_path
 
 
-def get_output_directory_path() -> str:
+def get_output_directory_path(output_path: Optional[str] = None) -> str:
     """Get the output directory path.
 
     Returns:
         str: returns the output directory path.
 
     """
-    current_working_directory_path = os.getcwd()
+    current_working_directory_path = output_path if output_path else os.getcwd()
     checkpoints_output_directory_path = os.path.join(
         current_working_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME
     )
     return checkpoints_output_directory_path
 
 
-def create_output_directory() -> None:
+def create_output_directory(output_path: Optional[str] = None) -> None:
     """Create the output directory in the current working directory.
 
     The name of the directory is snowpark-checkpoints-output.
 
+    Args:
+        output_path (str): the output path.
+
     """
-    checkpoints_output_directory_path = get_output_directory_path()
+    checkpoints_output_directory_path = get_output_directory_path(output_path)
     if not os.path.exists(checkpoints_output_directory_path):
         os.makedirs(checkpoints_output_directory_path)
 

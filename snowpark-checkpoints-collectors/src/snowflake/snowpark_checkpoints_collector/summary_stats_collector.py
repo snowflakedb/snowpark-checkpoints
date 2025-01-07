@@ -14,13 +14,14 @@ from pyspark.sql.functions import col
 from pyspark.sql.types import DoubleType as SparkDoubleType
 from pyspark.sql.types import StringType as SparkStringType
 from pyspark.sql.types import StructField
+
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT,
-    CHECKPOINT_PARQUET_OUTPUT_FILE_NAME_FORMAT,
     COLUMNS_KEY,
     DATAFRAME_CUSTOM_DATA_KEY,
     DATAFRAME_PANDERA_SCHEMA_KEY,
     DECIMAL_COLUMN_TYPE,
+    DOT_PARQUET_EXTENSION,
     PANDAS_OBJECT_TYPE_COLLECTION,
     CheckpointMode,
 )
@@ -76,7 +77,7 @@ def collect_dataframe_checkpoint(
     collection_point_result = CollectionPointResult(
         collection_point_file_path, collection_point_line_of_code, checkpoint_name
     )
-    file_utils.create_output_directory()
+    file_utils.create_output_directory(output_path)
 
     try:
         if is_checkpoint_enabled(checkpoint_name):
@@ -230,17 +231,11 @@ def _get_pandera_infer_schema_as_dict(
 def _generate_json_checkpoint_file(
     checkpoint_name, dataframe_schema_contract, output_path: Optional[str] = None
 ) -> None:
-    current_directory_path = output_path if output_path else os.getcwd()
-    output_directory_path = os.path.join(
-        current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME
-    )
-    if not os.path.exists(output_directory_path):
-        os.makedirs(output_directory_path)
 
     checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
         checkpoint_name
     )
-    output_directory_path = file_utils.get_output_directory_path()
+    output_directory_path = file_utils.get_output_directory_path(output_path)
     checkpoint_file_path = os.path.join(output_directory_path, checkpoint_file_name)
     with open(checkpoint_file_path, "w") as f:
         f.write(dataframe_schema_contract)
@@ -252,15 +247,7 @@ def _collect_dataframe_checkpoint_mode_dataframe(
     snow_connection: SnowConnection,
     output_path: Optional[str] = None,
 ) -> None:
-    current_directory_path = output_path if output_path else os.getcwd()
-    output_path = os.path.join(
-        current_directory_path,
-        SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
-        checkpoint_name,
-    )
-
-    if not os.path.exists(output_path):
-        os.makedirs(output_path)
+    output_path = file_utils.get_output_directory_path(output_path)
     generate_parquet_for_spark_df(df, output_path)
     _create_snowflake_table_from_parquet(checkpoint_name, output_path, snow_connection)
 
@@ -309,14 +296,3 @@ def _create_snowflake_table_from_parquet(
     except Exception as err:
         error_message = str(err)
         raise Exception(error_message) from err
-
-
-def _get_output_directory_path() -> str:
-    current_directory_path = os.getcwd()
-    output_directory_path = os.path.join(
-        current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME
-    )
-    if not os.path.exists(output_directory_path):
-        os.makedirs(output_directory_path)
-
-    return output_directory_path

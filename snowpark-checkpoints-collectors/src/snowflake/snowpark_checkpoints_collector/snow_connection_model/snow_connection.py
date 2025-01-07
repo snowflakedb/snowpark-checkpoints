@@ -3,8 +3,8 @@
 #
 import glob
 import os.path
+import time
 
-from datetime import datetime
 from typing import Callable, Optional
 
 from snowflake.snowpark import Session
@@ -16,7 +16,7 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
 
 
 STAGE_NAME = "CHECKPOINT_STAGE"
-CREATE_STAGE_STATEMENT_FORMAT = "CREATE STAGE IF NOT EXISTS {}"
+CREATE_STAGE_STATEMENT_FORMAT = "CREATE TEMP STAGE IF NOT EXISTS {}"
 STAGE_PATH_FORMAT = "'@{}/{}'"
 PUT_FILE_IN_STAGE_STATEMENT_FORMAT = "PUT 'file://{}' {} AUTO_COMPRESS=FALSE"
 
@@ -53,7 +53,8 @@ class SnowConnection:
             stage_path: (str, optional): the stage path.
 
         """
-        folder = f"table_files_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        table_id = int(time.time())
+        folder = f"table_files_{table_id}"
         stage_path = stage_path if stage_path else folder
         stage_directory_path = STAGE_PATH_FORMAT.format(STAGE_NAME, stage_path)
         self.create_temp_stage(STAGE_NAME)

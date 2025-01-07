@@ -259,7 +259,6 @@ data = [
 df = spark.createDataFrame(data, schema)
 
 # Collect a schema/stats here!
-collect_dataframe_checkpoint(df, "demo-initial-creation-checkpoint", sample=0.5)
 collect_dataframe_checkpoint(
     df, "demo_initial_creation_checkpoint_dataframe", mode=CheckpointMode.DATAFRAME
 )
@@ -272,7 +271,6 @@ df1 = df.withColumn(
 )
 
 # Collect a schema/stats here!
-collect_dataframe_checkpoint(df1, "demo-add-a-column", sample=0.5)
 collect_dataframe_checkpoint(
     df1, "demo_add_a_column_dataframe", mode=CheckpointMode.DATAFRAME
 )

@@ -1,5 +1,5 @@
 from datetime import datetime
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from pytest import fixture, raises
 from snowflake.snowpark import Session
 from snowflake.snowpark_checkpoints.checkpoint import validate_dataframe_checkpoint
@@ -19,7 +19,11 @@ from snowflake.snowpark.types import (
     BooleanType,
     DateType,
 )
-from snowflake.snowpark_checkpoints.utils.constant import CheckpointMode
+from snowflake.snowpark_checkpoints.utils.constant import (
+    FAIL_STATUS,
+    PASS_STATUS,
+    CheckpointMode,
+)
 
 
 @fixture
@@ -220,13 +224,17 @@ def test_df_mode_dataframe(job_context, schema, data):
     mocked_session = MagicMock()
     job_context.mark_pass = mocked_session
 
-    validate_dataframe_checkpoint(
-        df,
-        checkpoint_name,
-        job_context=job_context,
-        mode=CheckpointMode.DATAFRAME,
-    )
+    with patch(
+        "snowflake.snowpark_checkpoints.utils.utils_checks._update_validation_result"
+    ) as mocked_update:
+        validate_dataframe_checkpoint(
+            df,
+            checkpoint_name,
+            job_context=job_context,
+            mode=CheckpointMode.DATAFRAME,
+        )
 
+    mocked_update.assert_called_once_with(checkpoint_name, PASS_STATUS)
     mocked_session.assert_called_once_with(checkpoint_name)
 
 
@@ -240,15 +248,21 @@ def test_df_mode_dataframe_mismatch(job_context, schema, data):
     data.pop()
     df_spark = job_context.snowpark_session.create_dataframe(data, schema)
 
-    with raises(
-        SchemaValidationError, match=f"Data mismatch for checkpoint {checkpoint_name}"
-    ):
-        validate_dataframe_checkpoint(
-            df_spark,
-            checkpoint_name,
-            job_context=job_context,
-            mode=CheckpointMode.DATAFRAME,
-        )
+    with patch(
+        "snowflake.snowpark_checkpoints.utils.utils_checks._update_validation_result"
+    ) as mocked_update:
+        with raises(
+            SchemaValidationError,
+            match=f"Data mismatch for checkpoint {checkpoint_name}",
+        ):
+            validate_dataframe_checkpoint(
+                df_spark,
+                checkpoint_name,
+                job_context=job_context,
+                mode=CheckpointMode.DATAFRAME,
+            )
+
+    mocked_update.assert_called_once_with(checkpoint_name, FAIL_STATUS)
 
 
 def test_df_mode_dataframe_job_none(job_context, schema, data):

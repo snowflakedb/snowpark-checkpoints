@@ -4,6 +4,7 @@
 
 import json
 import os
+from unittest.mock import patch
 from numpy import int8
 from pandas import DataFrame as PandasDataFrame
 from pandera import DataFrameSchema, Column, Check
@@ -21,12 +22,14 @@ from snowflake.snowpark.functions import lit
 
 from snowflake.snowpark_checkpoints.utils.constant import (
     CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME,
+    PASS_STATUS,
     SKIP_ALL,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
 )
 
 
 def test_input():
+    checkpoint_name = "test_checkpoint"
     df = PandasDataFrame(
         {
             "COLUMN1": [1, 4, 0, 10, 9],
@@ -41,21 +44,26 @@ def test_input():
         }
     )
 
-    @check_input_schema(in_schema)
+    @check_input_schema(in_schema, checkpoint_name)
     def preprocessor(dataframe: SnowparkDataFrame):
-        dataframe["column3"] = dataframe["column1"] + dataframe["column2"]
+        dataframe = dataframe.withColumn(
+            "column3", dataframe["COLUMN1"] + dataframe["COLUMN2"]
+        )
         return dataframe
 
     session = Session.builder.getOrCreate()
     sp_df = session.create_dataframe(df)
-    try:
-        preprocessed_df = preprocessor(sp_df)
-        assert False
-    except:
-        pass
+
+    with patch(
+        "snowflake.snowpark_checkpoints.checkpoint._update_validation_result"
+    ) as mock_update_validation_result:
+        preprocessor(sp_df)
+
+    mock_update_validation_result.assert_called_once_with(checkpoint_name, PASS_STATUS)
 
 
 def test_output():
+    checkpoint_name = "test_checkpoint"
     df = PandasDataFrame(
         {
             "COLUMN1": [1, 4, 0, 10, 9],
@@ -70,21 +78,23 @@ def test_output():
         }
     )
 
-    @check_output_schema(out_schema)
+    @check_output_schema(out_schema, checkpoint_name)
     def preprocessor(dataframe: SnowparkDataFrame):
         return dataframe.with_column("COLUMN1", lit("Some bad data yo"))
 
     session = Session.builder.getOrCreate()
     sp_df = session.create_dataframe(df)
 
-    try:
-        preprocessed_df = preprocessor(sp_df)
-        assert False
-    except:
-        pass
+    with patch(
+        "snowflake.snowpark_checkpoints.checkpoint._update_validation_result"
+    ) as mock_update_validation_result:
+        preprocessor(sp_df)
+
+    mock_update_validation_result.assert_called_once_with(checkpoint_name, PASS_STATUS)
 
 
 def test_df_check():
+    checkpoint_name = "test_checkpoint"
     df = PandasDataFrame(
         {
             "COLUMN1": [1, 4, 0, 10, 9],
@@ -102,7 +112,18 @@ def test_df_check():
     session = Session.builder.getOrCreate()
     sp_df = session.create_dataframe(df)
 
-    check_dataframe_schema(sp_df, schema)
+    with (
+        patch(
+            "snowflake.snowpark_checkpoints.checkpoint.is_checkpoint_enabled",
+            return_value=True,
+        ),
+        patch(
+            "snowflake.snowpark_checkpoints.checkpoint._update_validation_result"
+        ) as mocked_update,
+    ):
+        check_dataframe_schema(sp_df, schema, checkpoint_name)
+
+    mocked_update.assert_called_once_with(checkpoint_name, PASS_STATUS)
 
 
 def test_df_check_from_file():
@@ -176,10 +197,23 @@ def test_df_check_from_file():
     session = Session.builder.getOrCreate()
     sp_df = session.create_dataframe(df)
 
-    _check_dataframe_schema_file(sp_df, checkpoint_name)
+    with (
+        patch(
+            "snowflake.snowpark_checkpoints.checkpoint.is_checkpoint_enabled",
+            return_value=True,
+        ),
+        patch(
+            "snowflake.snowpark_checkpoints.checkpoint._update_validation_result"
+        ) as mocked_update,
+    ):
+        _check_dataframe_schema_file(sp_df, checkpoint_name)
+
+    mocked_update.assert_called_once_with(checkpoint_name, PASS_STATUS)
 
 
 def test_df_check_custom_check():
+    checkpoint_name = "test_checkpoint"
+
     df = PandasDataFrame(
         {
             "COLUMN1": [1, 4, 0, 10, 9],
@@ -196,23 +230,35 @@ def test_df_check_custom_check():
 
     session = Session.builder.getOrCreate()
     sp_df = session.create_dataframe(df)
-    check_dataframe_schema(
-        sp_df,
-        schema,
-        custom_checks={
-            "COLUMN1": [
-                Check(lambda x: x.shape[0] == 5),
-                Check(lambda x: x.shape[1] == 2),
-            ],
-            "COLUMN2": [Check(lambda x: x.shape[0] == 5)],
-        },
-    )
+    with (
+        patch(
+            "snowflake.snowpark_checkpoints.checkpoint.is_checkpoint_enabled",
+            return_value=True,
+        ),
+        patch(
+            "snowflake.snowpark_checkpoints.checkpoint._update_validation_result"
+        ) as mocked_update,
+    ):
+        check_dataframe_schema(
+            sp_df,
+            schema,
+            checkpoint_name,
+            custom_checks={
+                "COLUMN1": [
+                    Check(lambda x: x.shape[0] == 5),
+                    Check(lambda x: x.shape[1] == 2),
+                ],
+                "COLUMN2": [Check(lambda x: x.shape[0] == 5)],
+            },
+        )
 
+    mocked_update.assert_called_once_with(checkpoint_name, PASS_STATUS)
     assert len(schema.columns["COLUMN1"].checks) == 3
     assert len(schema.columns["COLUMN2"].checks) == 2
 
 
 def test_df_check_skip_check():
+    checkpoint_name = "test_checkpoint"
     df = PandasDataFrame(
         {
             "COLUMN1": [1, 4, 0, 10, 9],
@@ -236,11 +282,25 @@ def test_df_check_skip_check():
 
     session = Session.builder.getOrCreate()
     sp_df = session.create_dataframe(df)
-    check_dataframe_schema(
-        sp_df,
-        schema,
-        skip_checks={"COLUMN1": [SKIP_ALL], "COLUMN2": ["greater_than", "less_than"]},
-    )
+    with (
+        patch(
+            "snowflake.snowpark_checkpoints.checkpoint.is_checkpoint_enabled",
+            return_value=True,
+        ),
+        patch(
+            "snowflake.snowpark_checkpoints.checkpoint._update_validation_result"
+        ) as mocked_update,
+    ):
+        check_dataframe_schema(
+            sp_df,
+            schema,
+            checkpoint_name,
+            skip_checks={
+                "COLUMN1": [SKIP_ALL],
+                "COLUMN2": ["greater_than", "less_than"],
+            },
+        )
 
+    mocked_update.assert_called_once_with(checkpoint_name, PASS_STATUS)
     assert len(schema.columns["COLUMN1"].checks) == 0
     assert len(schema.columns["COLUMN2"].checks) == 1

@@ -173,8 +173,8 @@ class TelemetryManager(TelemetryClient):
                 if message is not None:
                     file_path = (
                         folder
-                        / f'{datetime.datetime.now().strftime("%Y-%m-%d-%H:%M:%S:%f")}'
-                        f'-telemetry_{message.get("type")}.json'
+                        / f'{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")}'
+                        f'_telemetry_{message.get("type")}.json'
                     )
                     json_content = self._sc_validate_folder_space(event)
                     with open(file_path, "w") as json_file:

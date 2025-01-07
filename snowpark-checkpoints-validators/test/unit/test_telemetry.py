@@ -305,7 +305,7 @@ class TelemetryManagerTest(unittest.TestCase):
 
     def test_telemetry_manager_write_telemetry(self):
         # Arrange
-        mock_date = "00-00-0000-00:00:00"
+        mock_date = "00-00-0000_00-00-00"
         event = {"message": {"type": "test"}}
         batch = [event]
         rest_mock, mock_DIRS = mock_before_telemetry_import()
@@ -346,7 +346,7 @@ class TelemetryManagerTest(unittest.TestCase):
             # Assert
             TelemetryManager._sc_validate_folder_space.assert_called_once_with(batch[0])
             open.assert_called_once_with(
-                telemetry.sc_folder_path / f"{mock_date}-telemetry_test.json", "w"
+                telemetry.sc_folder_path / f"{mock_date}_telemetry_test.json", "w"
             )
             open().write.assert_called_once_with(f"{event}")
 

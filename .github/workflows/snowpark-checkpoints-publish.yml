@@ -70,7 +70,7 @@ jobs:
         env:
           NEW_VERSION: ${{ steps.gitversion.outputs.version }}
           FILE_VERSION: ../snowpark-checkpoints-configuration/__version__.py
-        working-directory: ${{ github.workspace }}
+        working-directory: ./snowpark-checkpoints-configuration
 
       - name: Update Version [snowpark-checkpoints-hypothesis]
         run: |

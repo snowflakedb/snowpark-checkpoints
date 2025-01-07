@@ -449,7 +449,7 @@ def _update_validation_result(checkpoint_name: str, validation_status: str) -> N
     pipeline_result_metadata.add_validation_result(
         ValidationResult(
             timestamp=datetime.now().isoformat(),
-            file=_file_from_stack,
+            file=_file if _file else _file_from_stack,
             line_of_code=_line_of_code,
             checkpoint_name=checkpoint_name,
             result=validation_status,

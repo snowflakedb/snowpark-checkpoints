@@ -236,12 +236,14 @@ def get_output_telemetry() -> str:
     telemetry_directory_path = os.path.join(
         current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME, "telemetry"
     )
+    print(telemetry_directory_path)
     for file in os.listdir(telemetry_directory_path):
+        print(file)
         if file.endswith(".json"):
             output_file_path = os.path.join(telemetry_directory_path, file)
             with open(output_file_path) as f:
                 return f.read().strip()
-    return ""
+    return "{}"
 
 
 def validate_telemetry_file_output(telemetry_file_name) -> None:

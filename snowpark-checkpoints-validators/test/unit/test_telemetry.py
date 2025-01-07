@@ -346,8 +346,7 @@ class TelemetryManagerTest(unittest.TestCase):
             # Assert
             TelemetryManager._sc_validate_folder_space.assert_called_once_with(batch[0])
             open.assert_called_once_with(
-                path.join(telemetry.sc_folder_path, f"{mock_date}-telemetry_test.json"),
-                "w",
+                telemetry.sc_folder_path / f"{mock_date}-telemetry_test.json", "w"
             )
             open().write.assert_called_once_with(f"{event}")
 

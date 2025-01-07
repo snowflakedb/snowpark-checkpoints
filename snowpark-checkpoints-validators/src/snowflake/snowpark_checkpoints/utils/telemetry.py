@@ -8,7 +8,7 @@ import inspect
 import json
 
 from enum import IntEnum
-from os import getcwd, getenv, makedirs, path
+from os import getcwd, getenv, makedirs
 from pathlib import Path
 from platform import python_version
 from sys import platform
@@ -49,9 +49,10 @@ class TelemetryManager(TelemetryClient):
     def __init__(self, rest: SnowflakeRestful):
         """TelemetryManager class to log telemetry events."""
         super().__init__(rest)
-        self.sc_folder_path = str(
-            SNOWFLAKE_DIRS.user_config_path / "snowpark-checkpoints-telemetry"
+        self.sc_folder_path = (
+            Path(SNOWFLAKE_DIRS.user_config_path) / "snowpark-checkpoints-telemetry"
         )
+
         self.sc_sf_path_telemetry = "/telemetry/send"
         self.sc_flush_size = 25
         self.sc_is_enabled = self._sc_is_telemetry_enabled()
@@ -114,9 +115,7 @@ class TelemetryManager(TelemetryClient):
         """
         self.sc_log_batch.append(event)
         if self.sc_is_testing:
-            output_folder = path.join(
-                getcwd(), "snowpark-checkpoints-output", "telemetry"
-            )
+            output_folder = Path(getcwd()) / "snowpark-checkpoints-output" / "telemetry"
             self._sc_write_telemetry(self.sc_log_batch, output_folder=output_folder)
             self.sc_log_batch = []
             return
@@ -172,9 +171,10 @@ class TelemetryManager(TelemetryClient):
             for event in batch:
                 message = event.get("message")
                 if message is not None:
-                    file_path = path.join(
-                        folder,
-                        f'{datetime.datetime.now().strftime("%Y-%m-%d-%H:%M:%S:%f")}-telemetry_{message.get("type")}.json',
+                    file_path = (
+                        folder
+                        / f'{datetime.datetime.now().strftime("%Y-%m-%d-%H:%M:%S:%f")}'
+                        f'-telemetry_{message.get("type")}.json'
                     )
                     json_content = self._sc_validate_folder_space(event)
                     with open(file_path, "w") as json_file:
@@ -195,7 +195,7 @@ class TelemetryManager(TelemetryClient):
         """
         json_content = json.dumps(event, indent=4, sort_keys=True)
         new_json_file_size = len(json_content.encode("utf-8"))
-        telemetry_folder = Path(self.sc_folder_path)
+        telemetry_folder = self.sc_folder_path
         folder_size = _get_folder_size(telemetry_folder)
         if folder_size + new_json_file_size > self.sc_memory_limit:
             _free_up_space(telemetry_folder, self.sc_memory_limit - new_json_file_size)
@@ -206,7 +206,7 @@ class TelemetryManager(TelemetryClient):
         if not self.is_enabled() or self.sc_is_testing:
             return
         batch = []
-        for file in Path(self.sc_folder_path).glob("*.json"):
+        for file in self.sc_folder_path.glob("*.json"):
             with open(file) as json_file:
                 data_dict = json.load(json_file)
                 batch.append(data_dict)
@@ -219,7 +219,7 @@ class TelemetryManager(TelemetryClient):
             timeout=5,
         )
         if ret.get("success"):
-            for file in Path(self.sc_folder_path).glob("*.json"):
+            for file in self.sc_folder_path.glob("*.json"):
                 file.unlink()
 
     def _sc_is_telemetry_enabled(self) -> bool:

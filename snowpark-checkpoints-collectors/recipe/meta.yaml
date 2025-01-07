@@ -1,4 +1,4 @@
-{% set name = "snowpark.checkpoints.collector" %}
+{% set name = "snowpark.checkpoints.collectors" %}
 {% set version = "0.0.0" %}
 
 package:
@@ -6,13 +6,13 @@ package:
   version: {{ version }}
 
 source:
-  # need to use path to build on Jenkins
   path: ../
 
 build:
-  skip: True
   noarch: python
-  script: {{ PYTHON }} -m pip install . --no-deps -vvv
+  script: |
+    set -e
+    {{ PYTHON }} -m pip install . --no-deps -vvv
 
 requirements:
   host:
@@ -22,18 +22,27 @@ requirements:
     - hatchling
   run:
     - python<3.12,>=3.9
-    - atpublic>=4
-    - pydantic>=2
-    - python-dateutil>=2.8.2
-    - requests
     - snowflake-connector-python
     - snowflake-snowpark-python
     - pyspark
-    - pandera[io]==0.20.4
+  run_constrained:
+    - pandera ==0.20.4
 
 test:
-  imports:
-    - snowpark.checkpoints.collector
+  requires:
+    - pip
+    - snowflake-snowpark-python>=1.26.0
+    - snowflake-connector-python
+    - pyspark
+    - pandera
+
+  commands:
+    - pip install pandera[io]==0.20.4
+    - pip check
+    - python -c "import pandera"
 
 about:
-  summary: snowpark.checkpoints.collector
+  summary: A package for snowpark checkpoints collectors.
+
+channels:
+  - conda-forge

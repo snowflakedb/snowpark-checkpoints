@@ -1,4 +1,4 @@
-{% set name = "snowpark.checkpoints.hypothesis" %}
+{% set name = "snowpark-checkpoints-validators" %}
 {% set version = "0.0.0" %}
 
 package:
@@ -24,17 +24,21 @@ requirements:
     - python<3.12,>=3.9
     - hypothesis
     - snowflake-snowpark-python
+    - snowflake-connector-python
+    - pyspark
   run_constrained:
     - pandera ==0.20.4
 
 test:
   commands:
     - pip install pandera[io]==0.20.4
+    - pip install pandera-report==0.1.2
     - pip check
+    - pip list --verbose
     - python -c "import pandera"
 
 about:
-  summary: A package for snowpark checkpoints hypothesis.
+  summary: A package for snowpark checkpoints validators.
 
 channels:
   - conda-forge

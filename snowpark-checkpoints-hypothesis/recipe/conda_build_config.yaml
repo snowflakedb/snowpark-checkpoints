@@ -1,0 +1,32 @@
+python:
+  - 3.9
+  - 3.10
+  - 3.11
+  - 3.12
+
+numpy:
+  - 1.19
+  - 1.21
+  - 1.23
+  - 1.26
+
+pyarrow:
+  - 4.0.1
+  - 5.0.0
+  - 6.0.1
+
+c_compiler:
+  - gcc
+  - clang
+
+cxx_compiler:
+  - gxx
+  - clangxx
+
+c_compiler_version:
+  - 10.2.0
+  - 9.3.0
+
+cxx_compiler_version:
+  - 10.2.0
+  - 9.3.0

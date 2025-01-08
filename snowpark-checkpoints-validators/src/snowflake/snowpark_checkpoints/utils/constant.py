@@ -106,8 +106,3 @@ VALIDATION_RESULTS_JSON_FILE_NAME: Final[str] = "checkpoint_validation_results.j
 SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH_ENV_VAR: Final[
     str
 ] = "SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH"
-
-# Misc keys
-DOT_PARQUET_EXTENSION: Final[str] = ".parquet"
-BACKSLASH_TOKEN: Final[str] = "\\"
-SLASH_TOKEN: Final[str] = "/"

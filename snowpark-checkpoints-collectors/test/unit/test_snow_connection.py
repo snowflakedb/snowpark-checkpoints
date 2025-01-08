@@ -50,15 +50,19 @@ def test_create_snowflake_table_from_parquet():
         "AUTO_COMPRESS=FALSE"
     )
 
-    assert mocked_session.method_calls[2] == call.read.parquet(
+    assert mocked_session.method_calls[2] == call.sql(
+        f"LIST '@CHECKPOINT_STAGE/{checkpoint_name}'"
+    )
+
+    assert mocked_session.method_calls[3] == call.read.parquet(
         path=f"'@CHECKPOINT_STAGE/{checkpoint_name}'"
     )
 
-    assert mock_df.method_calls[2] == call.write.save_as_table(
+    assert mock_df.method_calls[3] == call.write.save_as_table(
         table_name="checkpoint_name_test", mode="overwrite"
     )
 
-    assert mocked_session.method_calls[3] == call.sql(
+    assert mocked_session.method_calls[4] == call.sql(
         "DROP STAGE IF EXISTS CHECKPOINT_STAGE"
     )
 

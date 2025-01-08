@@ -6,7 +6,7 @@ import copy
 import datetime
 import json
 
-from typing import Optional
+from typing import Optional, Union
 
 import pandera as pa
 
@@ -30,12 +30,13 @@ from snowflake.hypothesis_snowpark.constants import (
     PANDERA_SCHEMA_KEY,
     PYSPARK_ARRAY_TYPE,
     PYSPARK_BINARY_TYPE,
+    PYSPARK_TO_SNOWPARK_SUPPORTED_TYPES,
 )
 from snowflake.hypothesis_snowpark.custom_strategies import update_pandas_df_strategy
 from snowflake.hypothesis_snowpark.strategies_utils import (
-    PYSPARK_TO_SNOWPARK_SUPPORTED_TYPES,
     apply_custom_null_values,
     generate_snowpark_dataframe,
+    generate_snowpark_schema,
     load_json_schema,
 )
 from snowflake.hypothesis_snowpark.telemetry.telemetry import report_telemetry
@@ -44,12 +45,13 @@ from snowflake.snowpark import DataFrame, Session
 
 @report_telemetry(params_list=["json_schema"])
 def dataframe_strategy(
-    json_schema: str, session: Session, size: Optional[int] = None
+    schema: Union[str, pa.DataFrameSchema], session: Session, size: Optional[int] = None
 ) -> SearchStrategy[DataFrame]:
     """Create a Hypothesis strategy for generating Snowpark DataFrames based on a Pandera JSON schema.
 
     Args:
-        json_schema: The path to the JSON schema file.
+        schema: The Pandera schema. This can be a path to a JSON schema file or a Pandera
+                DataFrameSchema object.
         session: The Snowpark session to use for creating the DataFrames.
         size: The number of rows to generate. If not specified, the strategy will generate an arbitrary number of rows.
 
@@ -58,7 +60,7 @@ def dataframe_strategy(
         >>> from snowflake.hypothesis_snowpark import dataframe_strategy
         >>> from snowflake.snowpark import DataFrame, Session
         >>>
-        >>> @given(df=dataframe_strategy(json_schema="schema.json", session=Session.builder.getOrCreate(), size=10))
+        >>> @given(df=dataframe_strategy(schema="schema.json", session=Session.builder.getOrCreate(), size=10))
         >>> def test_my_function(df: DataFrame):
         >>>     ...
 
@@ -66,13 +68,72 @@ def dataframe_strategy(
         A Hypothesis strategy that generates Snowpark DataFrames.
 
     """
-    if not json_schema:
-        raise ValueError("JSON schema cannot be None.")
+    if not schema:
+        raise ValueError("Schema cannot be None.")
 
     if not session:
         raise ValueError("Session cannot be None.")
 
-    json_schema_dict = load_json_schema(json_schema)
+    if isinstance(schema, pa.DataFrameSchema):
+        return _dataframe_strategy_from_object_schema(schema, session, size)
+
+    if isinstance(schema, str) and schema.endswith(".json"):
+        return _dataframe_strategy_from_json_schema(schema, session, size)
+
+    raise ValueError(
+        "Schema must be a path to a JSON schema file or a Pandera DataFrameSchema object."
+    )
+
+
+def _dataframe_strategy_from_object_schema(
+    schema: pa.DataFrameSchema, session: Session, size: Optional[int] = None
+) -> SearchStrategy[DataFrame]:
+    """Create a Hypothesis strategy for generating Snowpark DataFrames based on a Pandera DataFrameSchema object.
+
+    Args:
+        schema: The Pandera DataFrameSchema object.
+        session: The Snowpark session to use for creating the DataFrames.
+        size: The number of rows to generate.
+
+    Returns:
+        A Hypothesis strategy that generates Snowpark DataFrames.
+
+    """
+    original_schema = copy.deepcopy(schema)
+
+    for column in schema.columns.values():
+        if isinstance(column.dtype, pa.engines.pandas_engine.Date):
+            # Data generation for date type is currently unsupported by Pandera.
+            # As a workaround, we can change the data type to pa.DateTime to
+            # avoid an exception and let Snowpark handle the conversion to Date.
+            column.dtype = pa.DateTime
+
+    @composite
+    def _dataframe_strategy(draw: DrawFn) -> DataFrame:
+        pandas_strategy = schema.strategy(size=size)
+        pandas_df = draw(pandas_strategy)
+        snowpark_schema = generate_snowpark_schema(original_schema)
+        snowpark_df = generate_snowpark_dataframe(pandas_df, snowpark_schema, session)
+        return snowpark_df
+
+    return _dataframe_strategy()
+
+
+def _dataframe_strategy_from_json_schema(
+    schema: str, session: Session, size: Optional[int] = None
+) -> SearchStrategy[DataFrame]:
+    """Create a Hypothesis strategy for generating Snowpark DataFrames based on a JSON schema.
+
+    Args:
+        schema: The path to the JSON schema file.
+        session: The Snowpark session to use for creating the DataFrames.
+        size: The number of rows to generate.
+
+    Returns:
+        A Hypothesis strategy that generates Snowpark DataFrames
+
+    """
+    json_schema_dict = load_json_schema(schema)
     pandera_schema = json_schema_dict.get(PANDERA_SCHEMA_KEY)
     custom_data = json_schema_dict.get(CUSTOM_DATA_KEY)
 
@@ -108,9 +169,8 @@ def dataframe_strategy(
             update_pandas_df_strategy(pandas_df, columns_with_custom_strategy)
         )
         pandas_df = apply_custom_null_values(pandas_df, custom_data)
-        snowpark_df = generate_snowpark_dataframe(
-            pandas_df, session, df_schema, custom_data
-        )
+        snowpark_schema = generate_snowpark_schema(df_schema, custom_data)
+        snowpark_df = generate_snowpark_dataframe(pandas_df, snowpark_schema, session)
         return snowpark_df
 
     return _dataframe_strategy()

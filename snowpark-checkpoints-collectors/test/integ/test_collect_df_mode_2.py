@@ -260,14 +260,14 @@ def data():
 def test_collect_checkpoint_mode_2(
     spark_session, data, spark_schema, snowpark_schema, singleton, test_id
 ):
-    checkpoint_name = "test_collect_checkpoint_mode_2"
+    checkpoint_name = f"test_collect_checkpoint_mode_2_{test_id}"
 
     pyspark_df = spark_session.createDataFrame(data, schema=spark_schema).orderBy(
         "INTEGER"
     )
 
     temp_dir = tempfile.gettempdir()
-    output_path = os.path.join(temp_dir, f"test_collect_checkpoint_mode_2_{test_id}")
+    output_path = os.path.join(temp_dir, checkpoint_name)
 
     collect_dataframe_checkpoint(
         pyspark_df,
@@ -321,19 +321,18 @@ def test_generate_parquet_for_spark_df(data, spark_schema, test_id):
 def test_spark_df_mode_dataframe(spark_schema, snowpark_schema, data, test_id):
     spark = SparkSession.builder.getOrCreate()
     spark_df = spark.createDataFrame(data, schema=spark_schema)
+    checkpoint_name = f"test_spark_df_mode_dataframe_{test_id}"
     parquet_directory = os.path.join(
         tempfile.gettempdir(),
-        f"test_spark_df_mode_dataframe_{test_id}",
+        checkpoint_name,
     )
 
     generate_parquet_for_spark_df(spark_df, parquet_directory)
 
     snow = SnowConnection()
-    snow.create_snowflake_table_from_local_parquet(
-        "test_spark_df_mode_dataframe", parquet_directory
-    )
+    snow.create_snowflake_table_from_local_parquet(checkpoint_name, parquet_directory)
 
-    validate_dataframes("test_spark_df_mode_dataframe", spark_df, snowpark_schema)
+    validate_dataframes(checkpoint_name, spark_df, snowpark_schema)
 
 
 def validate_dataframes(

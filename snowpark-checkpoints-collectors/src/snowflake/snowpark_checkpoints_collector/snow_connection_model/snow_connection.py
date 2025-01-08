@@ -101,24 +101,33 @@ class SnowConnection:
             filter_func (Callable): the filter function to apply to the files.
 
         """
+
+        def filter_files(name: str):
+            if not os.path.isfile(name):
+                return False
+            return True if filter_func is None else filter_func(name)
+
         target_dir = os.path.join(input_directory_path, "**", "*")
         files_collection = glob.glob(target_dir, recursive=True)
 
-        for file in files_collection:
-            if not os.path.isfile(file):
-                continue
-            is_match = filter_func(file) if filter_func else True
-            if is_match:
-                # Snowflake handle paths with slash, no matters the OS.
-                normalize_file_path = file.replace(BACKSLASH_TOKEN, SLASH_TOKEN)
-                new_file_path = normalize_file_path.replace(
-                    input_directory_path, folder_name
-                )
-                stage_file_path = STAGE_PATH_FORMAT.format(stage_name, new_file_path)
-                put_statement = PUT_FILE_IN_STAGE_STATEMENT_FORMAT.format(
-                    normalize_file_path, stage_file_path
-                )
-                self.session.sql(put_statement).collect()
+        files = [file for file in files_collection if filter_files(file)]
+
+        if len(files) == 0:
+            raise Exception(
+                f"No files were found in the input directory: {input_directory_path}"
+            )
+
+        for file in files:
+            # Snowflake handle paths with slash, no matters the OS.
+            normalize_file_path = file.replace(BACKSLASH_TOKEN, SLASH_TOKEN)
+            new_file_path = normalize_file_path.replace(
+                input_directory_path, folder_name
+            )
+            stage_file_path = STAGE_PATH_FORMAT.format(stage_name, new_file_path)
+            put_statement = PUT_FILE_IN_STAGE_STATEMENT_FORMAT.format(
+                normalize_file_path, stage_file_path
+            )
+            self.session.sql(put_statement).collect()
 
     def create_table_from_parquet(self, table_name, stage_directory_path) -> None:
         """Create a table from a parquet file in Snowflake.

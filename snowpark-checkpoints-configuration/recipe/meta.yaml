@@ -1,4 +1,4 @@
-{% set name = snowpark.checkpoints.configuration" %}
+{% set name = "snowpark-checkpoints-configuration" %}
 {% set version = "0.0.0" %}
 
 package:
@@ -6,13 +6,13 @@ package:
   version: {{ version }}
 
 source:
-  # need to use path to build on Jenkins
   path: ../
 
 build:
-  skip: True
   noarch: python
-  script: {{ PYTHON }} -m pip install . --no-deps -vvv
+  script: |
+    set -e
+    {{ PYTHON }} -m pip install . --no-deps -vvv  
 
 requirements:
   host:
@@ -23,10 +23,23 @@ requirements:
   run:
     - python<3.12,>=3.9
     - pydantic>=1.8.2
+    - snowflake-snowpark-python>=1.26.0
 
 test:
-  imports:
-    - snowpark.checkpoints.configuration
+  requires:
+    - pip
+    - snowflake-snowpark-python>=1.26.0
+    - pandas
+    - pydantic
+    - snowpark-checkpoints-configuration
+  commands:
+    - pip check 
+    - pip list --verbose
+    - python -c "import pydantic"
+    - python -c "import pandas"
+    - python -c "import snowflake.snowpark"
 
 about:
-  summary: snowpark.checkpoints.configuration
+  summary: A package for snowpark checkpoints configuration
+  home: https://github.com/snowflakedb/snowpark-checkpoints/
+  license: Apache License 2.0

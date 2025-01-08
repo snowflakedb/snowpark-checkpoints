@@ -1,4 +1,4 @@
-{% set name = snowpark.checkpoints.hypothesis" %}
+{% set name = "snowpark.checkpoints.hypothesis" %}
 {% set version = "0.0.0" %}
 
 package:
@@ -6,13 +6,13 @@ package:
   version: {{ version }}
 
 source:
-  # need to use path to build on Jenkins
   path: ../
 
 build:
-  skip: True
   noarch: python
-  script: {{ PYTHON }} -m pip install . --no-deps -vvv
+  script: |
+    set -e
+    {{ PYTHON }} -m pip install . --no-deps -vvv
 
 requirements:
   host:
@@ -23,12 +23,21 @@ requirements:
   run:
     - python<3.12,>=3.9
     - hypothesis
-    - pandera[io]==0.20.4
-    - snowflake-snowpark-python[localtest]
+    - snowflake-snowpark-python
+  run_constrained:
+    - pandera ==0.20.4
 
 test:
-  imports:
-    - snowpark.checkpoints.hypothesis
+  commands:
+    - pip install pandera[io]==0.20.4
+    - pip check
+    - pip list --verbose
+    - python -c "import pandera"
 
 about:
-  summary: snowpark.checkpoints.hypothesis
+  summary: A package for snowpark checkpoints hypothesis.
+  home: https://github.com/snowflakedb/snowpark-checkpoints/
+  license: Apache License 2.0
+
+channels:
+  - conda-forge

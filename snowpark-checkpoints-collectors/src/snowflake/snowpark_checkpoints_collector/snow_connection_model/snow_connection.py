@@ -54,7 +54,11 @@ class SnowConnection:
             stage_path: (str, optional): the stage path.
 
         """
-        input_path = str(Path(input_path).resolve())
+        input_path = (
+            os.path.abspath(input_path)
+            if not os.path.isabs(input_path)
+            else str(Path(input_path).resolve())
+        )
         folder = f"table_files_{int(time.time())}"
         stage_path = stage_path if stage_path else folder
         stage_name = f"{STAGE_NAME}_{self.stage_id}"
@@ -89,7 +93,7 @@ class SnowConnection:
         self,
         stage_name: str,
         folder_name: str,
-        input_directory_path: str,
+        input_path: str,
         filter_func: Callable = None,
     ) -> None:
         """Load files to a stage in Snowflake.
@@ -97,32 +101,42 @@ class SnowConnection:
         Args:
             stage_name (str): the name of the stage.
             folder_name (str): the folder name.
-            input_directory_path (str): the output directory path.
+            input_path (str): the output directory path.
             filter_func (Callable): the filter function to apply to the files.
 
         """
-        input_directory_path = str(Path(input_directory_path).resolve())
+        input_path = (
+            os.path.abspath(input_path)
+            if not os.path.isabs(input_path)
+            else str(Path(input_path).resolve())
+        )
 
         def filter_files(name: str):
             if not os.path.isfile(name):
                 return False
             return True if filter_func is None else filter_func(name)
 
-        target_dir = os.path.join(input_directory_path, "**", "*")
+        target_dir = os.path.join(input_path, "**", "*")
         files_collection = glob.glob(target_dir, recursive=True)
 
         files = [file for file in files_collection if filter_files(file)]
 
         if len(files) == 0:
-            raise Exception(
-                f"No files were found in the input directory: {input_directory_path}"
-            )
+            raise Exception(f"No files were found in the input directory: {input_path}")
 
         for file in files:
-            # Snowflake handle paths with slash, no matters the OS.
-            file_full_path = str(Path(file).resolve())
-            normalize_file_path = Path(file).resolve().as_uri()
-            new_file_path = file_full_path.replace(input_directory_path, folder_name)
+            # if file is relative path, convert to absolute path
+            # if absolute path, then try to resolve as Windows short paths.
+            file_full_path = (
+                str(os.path.abspath(file))
+                if not os.path.isabs(file)
+                else str(Path(file).resolve())
+            )
+            # Snowflake required URI format for input in the put.
+            normalize_file_path = Path(file_full_path).as_uri()
+            new_file_path = file_full_path.replace(input_path, folder_name)
+            # as Posix to convert Windows dir to posix
+            new_file_path = Path(new_file_path).as_posix()
             stage_file_path = STAGE_PATH_FORMAT.format(stage_name, new_file_path)
             put_statement = PUT_FILE_IN_STAGE_STATEMENT_FORMAT.format(
                 normalize_file_path, stage_file_path

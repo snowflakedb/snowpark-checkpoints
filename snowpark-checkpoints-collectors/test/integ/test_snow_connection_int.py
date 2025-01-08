@@ -1,4 +1,5 @@
 import os
+import re
 
 import pytest
 
@@ -41,7 +42,8 @@ def test_load_files_to_stage_exception():
 
     snow_connection.create_tmp_stage(stage_name)
     expected_msg = f"No files were found in the input directory: {input_directory_path}"
-    with pytest.raises(Exception, match=expected_msg):
+    with pytest.raises(Exception) as ex_info:
         snow_connection.load_files_to_stage(
             stage_name, folder_name, input_directory_path, none_file_filter_func
         )
+    assert expected_msg == str(ex_info.value)

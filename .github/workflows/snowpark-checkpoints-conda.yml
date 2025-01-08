@@ -208,7 +208,7 @@ jobs:
           echo "Current directory: $PWD" && ls -laR
           source ~/.bashrc
           conda activate ${{ env.CONDA_ENV_NAME }}
-          find dist -name "*.conda" -exec conda install {} -y \;
+          find . -name "*.conda" -exec conda install {} -y \;
           conda install -c conda-forge conda-build conda-verify -y
           conda list --verbose
         working-directory: ./dist

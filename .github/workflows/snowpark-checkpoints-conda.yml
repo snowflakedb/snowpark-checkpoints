@@ -1,0 +1,51 @@
+name: Build and Test Conda Package
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+    PYTHON_VERSION: "3.11"
+jobs:
+  build:
+    name: Build Conda Packages
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "${{ env.PYTHON_VERSION }}"
+
+    - name: Set up Miniconda
+      uses: conda-incubator/setup-miniconda@v2
+      with:
+        auto-update-conda: true
+        python-version: "${{ env.PYTHON_VERSION }}"
+
+    - name: Conda Create environment
+      run: |
+        conda create --name snow_3_11 -c https://repo.anaconda.com/pkgs/snowflake python=${{ env.PYTHON_VERSION }} -y
+        conda activate snow_3_11
+        conda info --envs
+        conda info
+
+    - name: Conda Setup environment
+      run: |
+        conda config --add channels conda-forge
+        conda install -c conda-forge pytest conda-build conda-verify -y
+        conda list
+
+    - name: Build Conda Package [snowpark-configuration]
+      run: |
+        echo "Current directory: $PWD" && ls -la
+        conda build recipe/ -c conda-forge --python=3.11 --numpy=1.23 --output-folder recipe/dist
+        ls -l recipe/dist
+      working-directory: ./snowpark-checkpoints-configuration

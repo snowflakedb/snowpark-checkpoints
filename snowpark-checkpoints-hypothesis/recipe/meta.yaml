@@ -31,10 +31,13 @@ test:
   commands:
     - pip install pandera[io]==0.20.4
     - pip check
+    - pip list --verbose
     - python -c "import pandera"
 
 about:
   summary: A package for snowpark checkpoints hypothesis.
+  home: https://github.com/snowflakedb/snowpark-checkpoints/
+  license: Apache License 2.0
 
 channels:
   - conda-forge

@@ -39,6 +39,8 @@ test:
 
 about:
   summary: A package for snowpark checkpoints validators.
+  home: https://github.com/snowflakedb/snowpark-checkpoints/
+  license: Apache License 2.0
 
 channels:
   - conda-forge

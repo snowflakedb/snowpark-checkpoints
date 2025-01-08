@@ -1,9 +1,11 @@
 #
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
-
+import json
+import tempfile
 from unittest.mock import MagicMock, patch, mock_open
 import unittest
+from deepdiff import DeepDiff
 
 
 class TelemetryManagerTest(unittest.TestCase):
@@ -733,6 +735,68 @@ class TelemetryManagerTest(unittest.TestCase):
 
         # Assert
         assert result == ["LongType()"]
+
+    def test_sc_write_telemetry_with_temp_folder(self):
+        # Arrange
+        from pathlib import Path
+        from os import getcwd
+
+        event = {"message": {"type": "test"}}
+        batch = [event]
+        rest_mock, mock_DIRS = mock_before_telemetry_import()
+        mock_date = "00-00-0000-00-00-00"
+
+        with tempfile.TemporaryDirectory(dir=getcwd()) as temp_dir:
+            temp_path = Path(temp_dir)
+            with patch(
+                "snowflake.snowpark_checkpoints.utils.telemetry.SNOWFLAKE_DIRS",
+                mock_DIRS,
+            ), patch(
+                "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_validate_folder_space",
+                return_value=f"{json.dumps(event)}",
+            ), patch(
+                "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_enabled",
+                return_value=True,
+            ), patch(
+                "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_testing",
+                return_value=False,
+            ), patch(
+                "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_upload_local_telemetry",
+                return_value=MagicMock(),
+            ), patch(
+                "datetime.datetime",
+                MagicMock(
+                    now=MagicMock(
+                        return_value=MagicMock(
+                            strftime=MagicMock(return_value=mock_date)
+                        )
+                    )
+                ),
+            ):
+                from snowflake.snowpark_checkpoints.utils.telemetry import (
+                    TelemetryManager,
+                )
+
+                telemetry = TelemetryManager(rest_mock)
+
+                # Act
+                telemetry._sc_write_telemetry(batch, output_folder=temp_path)
+
+                # Assert
+                file_path = temp_path / f"{mock_date}_telemetry_test.json"
+                self.assertTrue(file_path.exists(), "File was not created")
+                with open(file_path) as file:
+                    telemetry_output = json.load(file)
+                TelemetryManager._sc_validate_folder_space.assert_called_once_with(
+                    batch[0]
+                )
+
+                diff_telemetry = DeepDiff(
+                    event,
+                    telemetry_output,
+                    ignore_order=True,
+                )
+                assert diff_telemetry == {}
 
 
 def mock_folder_path(stat):

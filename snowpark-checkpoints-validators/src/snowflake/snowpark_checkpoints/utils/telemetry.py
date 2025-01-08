@@ -179,8 +179,7 @@ class TelemetryManager(TelemetryClient):
                     json_content = self._sc_validate_folder_space(event)
                     with open(file_path, "w") as json_file:
                         json_file.write(json_content)
-        except Exception as err:
-            raise err
+        except Exception:
             pass
 
     def _sc_validate_folder_space(self, event: dict) -> str:

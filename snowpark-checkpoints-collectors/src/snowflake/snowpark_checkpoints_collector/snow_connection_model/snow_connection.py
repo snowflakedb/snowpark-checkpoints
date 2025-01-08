@@ -5,13 +5,12 @@ import glob
 import os.path
 import time
 
+from pathlib import Path
 from typing import Callable, Optional
 
 from snowflake.snowpark import Session
 from snowflake.snowpark_checkpoints_collector.collection_common import (
-    BACKSLASH_TOKEN,
     DOT_PARQUET_EXTENSION,
-    SLASH_TOKEN,
 )
 
 
@@ -51,10 +50,11 @@ class SnowConnection:
 
         Args:
             table_name (str): the name of the table to be created.
-            input_path (str): the output directory path.
+            input_path (str): the input directory path.
             stage_path: (str, optional): the stage path.
 
         """
+        input_path = Path(input_path).resolve()
         folder = f"table_files_{int(time.time())}"
         stage_path = stage_path if stage_path else folder
         stage_name = f"{STAGE_NAME}_{self.stage_id}"
@@ -101,6 +101,7 @@ class SnowConnection:
             filter_func (Callable): the filter function to apply to the files.
 
         """
+        input_directory_path = str(Path(input_directory_path).resolve())
 
         def filter_files(name: str):
             if not os.path.isfile(name):
@@ -119,10 +120,8 @@ class SnowConnection:
 
         for file in files:
             # Snowflake handle paths with slash, no matters the OS.
-            normalize_file_path = file.replace(BACKSLASH_TOKEN, SLASH_TOKEN)
-            new_file_path = normalize_file_path.replace(
-                input_directory_path, folder_name
-            )
+            normalize_file_path = Path(file).as_uri()
+            new_file_path = file.replace(input_directory_path, folder_name)
             stage_file_path = STAGE_PATH_FORMAT.format(stage_name, new_file_path)
             put_statement = PUT_FILE_IN_STAGE_STATEMENT_FORMAT.format(
                 normalize_file_path, stage_file_path

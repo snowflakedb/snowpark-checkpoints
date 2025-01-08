@@ -1,7 +1,7 @@
 #
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
-
+from pathlib import Path
 from unittest import mock
 from unittest.mock import MagicMock, call
 
@@ -28,6 +28,7 @@ def test_create_snowflake_table_from_parquet():
     mock_save_as_table.save_as_table.return_value = ["row1", "row2"]
 
     output_directory_path = "output_directory_path_test"
+    output_directory_path_full = str(Path(output_directory_path).resolve())
     parquet_file_path = f"{output_directory_path}/dir1/file1.parquet"
     stage_name = "CHECKPOINT_STAGE_{}"
     checkpoint_name = "checkpoint_name_test"
@@ -48,7 +49,7 @@ def test_create_snowflake_table_from_parquet():
     )
 
     assert mocked_session.method_calls[1] == call.sql(
-        f"PUT 'file://{output_directory_path}/dir1/file1.parquet' "
+        f"PUT 'file://{output_directory_path_full}/dir1/file1.parquet' "
         f"'@{stage_name}/{checkpoint_name}/dir1/file1.parquet' "
         "AUTO_COMPRESS=FALSE"
     )

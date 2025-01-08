@@ -54,7 +54,7 @@ class SnowConnection:
             stage_path: (str, optional): the stage path.
 
         """
-        input_path = Path(input_path).resolve()
+        input_path = str(Path(input_path).resolve())
         folder = f"table_files_{int(time.time())}"
         stage_path = stage_path if stage_path else folder
         stage_name = f"{STAGE_NAME}_{self.stage_id}"
@@ -120,8 +120,9 @@ class SnowConnection:
 
         for file in files:
             # Snowflake handle paths with slash, no matters the OS.
-            normalize_file_path = Path(file).as_uri()
-            new_file_path = file.replace(input_directory_path, folder_name)
+            file_full_path = str(Path(file).resolve())
+            normalize_file_path = Path(file).resolve().as_uri()
+            new_file_path = file_full_path.replace(input_directory_path, folder_name)
             stage_file_path = STAGE_PATH_FORMAT.format(stage_name, new_file_path)
             put_statement = PUT_FILE_IN_STAGE_STATEMENT_FORMAT.format(
                 normalize_file_path, stage_file_path

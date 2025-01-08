@@ -16,8 +16,8 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
 
 
 STAGE_NAME = "CHECKPOINT_STAGE"
-CREATE_STAGE_STATEMENT_FORMAT = "CREATE STAGE IF NOT EXISTS {}"
-REMOVE_STAGE_STATEMENT_FORMAT = "DROP STAGE IF EXISTS {}"
+CREATE_STAGE_STATEMENT_FORMAT = "CREATE TEMP STAGE IF NOT EXISTS {}"
+REMOVE_STAGE_FOLDER_STATEMENT_FORMAT = "REMOVE {}"
 STAGE_PATH_FORMAT = "'@{}/{}'"
 PUT_FILE_IN_STAGE_STATEMENT_FORMAT = "PUT 'file://{}' {} AUTO_COMPRESS=FALSE"
 
@@ -39,6 +39,7 @@ class SnowConnection:
 
         """
         self.session = session if session is not None else Session.builder.getOrCreate()
+        self.stage_id = int(time.time())
 
     def create_snowflake_table_from_local_parquet(
         self,
@@ -54,25 +55,27 @@ class SnowConnection:
             stage_path: (str, optional): the stage path.
 
         """
-        table_id = int(time.time())
-        folder = f"table_files_{table_id}"
+        folder = f"table_files_{int(time.time())}"
         stage_path = stage_path if stage_path else folder
-        stage_directory_path = STAGE_PATH_FORMAT.format(STAGE_NAME, stage_path)
+        stage_name = f"{STAGE_NAME}_{self.stage_id}"
+        stage_directory_path = STAGE_PATH_FORMAT.format(stage_name, stage_path)
 
         def is_parquet_file(file: str):
             return file.endswith(DOT_PARQUET_EXTENSION)
 
         try:
-            self.create_stage(STAGE_NAME)
+            self.create_tmp_stage(stage_name)
             self.load_files_to_stage(
-                STAGE_NAME, stage_path, input_path, is_parquet_file
+                stage_name, stage_path, input_path, is_parquet_file
             )
             self.create_table_from_parquet(table_name, stage_directory_path)
 
         finally:
-            self.remove_stage(STAGE_NAME)
+            self.session.sql(
+                REMOVE_STAGE_FOLDER_STATEMENT_FORMAT.format(stage_directory_path)
+            ).collect()
 
-    def create_stage(self, stage_name: str) -> None:
+    def create_tmp_stage(self, stage_name: str) -> None:
         """Create a temp stage in Snowflake.
 
         Args:
@@ -81,16 +84,6 @@ class SnowConnection:
         """
         create_stage_statement = CREATE_STAGE_STATEMENT_FORMAT.format(stage_name)
         self.session.sql(create_stage_statement).collect()
-
-    def remove_stage(self, stage_name: str) -> None:
-        """Remove a stage in Snowflake.
-
-        Args:
-            stage_name (str): the name of the stage.
-
-        """
-        remove_stage_statement = REMOVE_STAGE_STATEMENT_FORMAT.format(stage_name)
-        self.session.sql(remove_stage_statement).collect()
 
     def load_files_to_stage(
         self,

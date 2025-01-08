@@ -29,6 +29,7 @@ def test_create_snowflake_table_from_parquet():
 
     output_directory_path = "output_directory_path_test"
     parquet_file_path = f"{output_directory_path}/dir1/file1.parquet"
+    stage_name = "CHECKPOINT_STAGE_{}"
     checkpoint_name = "checkpoint_name_test"
 
     with mock.patch("glob.glob") as glob_mock:
@@ -40,22 +41,24 @@ def test_create_snowflake_table_from_parquet():
                 checkpoint_name, output_directory_path, stage_path=checkpoint_name
             )
 
+    stage_name = stage_name.format(snow_connection.stage_id)
+
     assert mocked_session.method_calls[0] == call.sql(
-        "CREATE STAGE IF NOT EXISTS CHECKPOINT_STAGE"
+        f"CREATE TEMP STAGE IF NOT EXISTS {stage_name}"
     )
 
     assert mocked_session.method_calls[1] == call.sql(
         f"PUT 'file://{output_directory_path}/dir1/file1.parquet' "
-        f"'@CHECKPOINT_STAGE/{checkpoint_name}/dir1/file1.parquet' "
+        f"'@{stage_name}/{checkpoint_name}/dir1/file1.parquet' "
         "AUTO_COMPRESS=FALSE"
     )
 
     assert mocked_session.method_calls[2] == call.sql(
-        f"LIST '@CHECKPOINT_STAGE/{checkpoint_name}'"
+        f"LIST '@{stage_name}/{checkpoint_name}'"
     )
 
     assert mocked_session.method_calls[3] == call.read.parquet(
-        path=f"'@CHECKPOINT_STAGE/{checkpoint_name}'"
+        path=f"'@{stage_name}/{checkpoint_name}'"
     )
 
     assert mock_df.method_calls[3] == call.write.save_as_table(
@@ -63,7 +66,7 @@ def test_create_snowflake_table_from_parquet():
     )
 
     assert mocked_session.method_calls[4] == call.sql(
-        "DROP STAGE IF EXISTS CHECKPOINT_STAGE"
+        f"REMOVE '@{stage_name}/{checkpoint_name}'"
     )
 
 

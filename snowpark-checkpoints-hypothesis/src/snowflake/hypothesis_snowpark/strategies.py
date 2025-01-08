@@ -56,13 +56,43 @@ def dataframe_strategy(
         size: The number of rows to generate. If not specified, the strategy will generate an arbitrary number of rows.
 
     Examples:
+        Generate a Snowpark DataFrame from a JSON schema file:
+
         >>> from hypothesis import given
         >>> from snowflake.hypothesis_snowpark import dataframe_strategy
         >>> from snowflake.snowpark import DataFrame, Session
-        >>>
-        >>> @given(df=dataframe_strategy(schema="schema.json", session=Session.builder.getOrCreate(), size=10))
+            <BLANKLINE>
+        >>> @given(
+        ...     df=dataframe_strategy(
+        ...         schema="path/to/schema.json",
+        ...         session=Session.builder.getOrCreate(),
+        ...         size=10,
+        ...     )
+        ... )
         >>> def test_my_function(df: DataFrame):
-        >>>     ...
+        ...     ...
+
+        Generate a Snowpark DataFrame from a Pandera DataFrameSchema object:
+
+        >>> import pandera as pa
+        >>> from hypothesis import given
+        >>> from snowflake.hypothesis_snowpark import dataframe_strategy
+        >>> from snowflake.snowpark import DataFrame, Session
+            <BLANKLINE>
+        >>> @given(
+        ...    df=dataframe_strategy(
+        ...        schema=pa.DataFrameSchema(
+        ...            {
+        ...                "A": pa.Column(pa.Int, checks=pa.Check.in_range(0, 10)),
+        ...                "B": pa.Column(pa.Bool),
+        ...            }
+        ...        ),
+        ...        session=Session.builder.getOrCreate(),
+        ...        size=10,
+        ...    )
+        ... )
+        >>> def test_my_function(df: DataFrame):
+        ...     ...
 
     Returns:
         A Hypothesis strategy that generates Snowpark DataFrames.

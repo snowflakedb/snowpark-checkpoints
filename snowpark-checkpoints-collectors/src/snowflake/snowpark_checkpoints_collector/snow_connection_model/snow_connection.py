@@ -112,9 +112,7 @@ class SnowConnection:
         )
 
         def filter_files(name: str):
-            if not os.path.isfile(name):
-                return False
-            return True if filter_func is None else filter_func(name)
+            return os.path.isfile(name) and (filter_func(name) if filter_func else True)
 
         target_dir = os.path.join(input_path, "**", "*")
         files_collection = glob.glob(target_dir, recursive=True)

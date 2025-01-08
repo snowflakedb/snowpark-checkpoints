@@ -126,7 +126,7 @@ class SnowConnection:
 
         for file in files:
             # if file is relative path, convert to absolute path
-            # if absolute path, then try to resolve as Windows short paths.
+            # if absolute path, then try to resolve as some Win32 paths are  not in LPN.
             file_full_path = (
                 str(os.path.abspath(file))
                 if not os.path.isabs(file)

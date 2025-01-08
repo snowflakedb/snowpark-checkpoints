@@ -10,6 +10,8 @@ on:
 
 env:
   PYTHON_VERSION: "3.11"
+  CONDA_ENV_NAME: "snow_3_11"
+
 jobs:
   build:
     name: Build Conda Packages
@@ -30,22 +32,31 @@ jobs:
           auto-update-conda: true
           python-version: "${{ env.PYTHON_VERSION }}"
 
+      - name: Initialize Conda
+        run: |
+          conda init bash
+          source ~/.bashrc
+
       - name: Conda Create environment
         run: |
-          conda create --name snow_3_11 -c https://repo.anaconda.com/pkgs/snowflake python=${{ env.PYTHON_VERSION }} -y
-          conda init bash
-          conda activate snow_3_11
+          conda create --name ${{ env.CONDA_ENV_NAME }} -c https://repo.anaconda.com/pkgs/snowflake python=${{ env.PYTHON_VERSION }} -y
+          source ~/.bashrc
+          conda activate ${{ env.CONDA_ENV_NAME }}
           conda info --envs
           conda info
 
       - name: Conda Setup environment
         run: |
+          source ~/.bashrc
+          conda activate ${{ env.CONDA_ENV_NAME }}
           conda config --add channels conda-forge
           conda install -c conda-forge pytest conda-build conda-verify -y
           conda list
 
       - name: Build Conda Package [snowpark-configuration]
         run: |
+          source ~/.bashrc
+          conda activate ${{ env.CONDA_ENV_NAME }}
           echo "Current directory: $PWD" && ls -la
           conda build recipe/ -c conda-forge --python=3.11 --numpy=1.23 --output-folder recipe/dist
           ls -l recipe/dist

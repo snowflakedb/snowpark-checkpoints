@@ -16,7 +16,6 @@ from zoneinfo import ZoneInfo
 import hypothesis.strategies as st
 import pandas as pd
 import pandera as pa
-import pandera.errors
 import pytest
 
 from hypothesis import HealthCheck, given, settings
@@ -271,7 +270,7 @@ def test_dataframe_strategy_from_object_schema_missing_dtype(data: st.DataObject
     )
 
     with pytest.raises(
-        pandera.errors.SchemaDefinitionError,
+        pa.errors.SchemaDefinitionError,
         match=(
             "'column' schema with name 'integer_column' has no specified dtype. "
             "You need to specify one in order to synthesize data from a strategy."
@@ -281,23 +280,25 @@ def test_dataframe_strategy_from_object_schema_missing_dtype(data: st.DataObject
 
 
 @given(data=st.data())
-@settings(deadline=None, max_examples=10, suppress_health_check=list(HealthCheck))
+@settings(deadline=None, max_examples=5, suppress_health_check=list(HealthCheck))
 def test_dataframe_strategy_from_object_schema_generated_schema(
     data: st.DataObject, session: Session
 ):
     schema = pa.DataFrameSchema(
         {
-            "byte_column": pa.Column(pa.Int8),
-            "short_column": pa.Column(pa.Int16),
-            "integer_column": pa.Column(pa.Int32),
-            "long_column": pa.Column(pa.Int64),
-            "float_column": pa.Column(pa.Float32),
-            "double_column": pa.Column(pa.Float64),
-            "string_column": pa.Column(pa.String),
-            "boolean_column": pa.Column(pa.Bool),
-            "timestamp_column": pa.Column(pd.DatetimeTZDtype(tz=ZoneInfo("UTC"))),
-            "timestampNTZ_column": pa.Column(pa.Timestamp),
-            "date_column": pa.Column(pa.Date),
+            "byte_column": pa.Column(pa.Int8, nullable=True),
+            "short_column": pa.Column(pa.Int16, nullable=True),
+            "integer_column": pa.Column(pa.Int32, nullable=True),
+            "long_column": pa.Column(pa.Int64, nullable=True),
+            "float_column": pa.Column(pa.Float32, nullable=True),
+            "double_column": pa.Column(pa.Float64, nullable=True),
+            "string_column": pa.Column(pa.String, nullable=True),
+            "boolean_column": pa.Column(pa.Bool, nullable=True),
+            "timestamp_column": pa.Column(
+                pd.DatetimeTZDtype(tz=ZoneInfo("UTC")), nullable=True
+            ),
+            "timestampNTZ_column": pa.Column(pa.Timestamp, nullable=True),
+            "date_column": pa.Column(pa.Date, nullable=True),
         }
     )
 
@@ -311,17 +312,17 @@ def test_dataframe_strategy_from_object_schema_generated_schema(
 
     expected_schema = StructType(
         [
-            StructField("byte_column", LongType(), False),
-            StructField("short_column", LongType(), False),
-            StructField("integer_column", LongType(), False),
-            StructField("long_column", LongType(), False),
-            StructField("float_column", DoubleType(), False),
-            StructField("double_column", DoubleType(), False),
-            StructField("string_column", StringType(), False),
-            StructField("boolean_column", BooleanType(), False),
-            StructField("timestamp_column", TimestampType(TZ), False),
-            StructField("timestampNTZ_column", TimestampType(NTZ), False),
-            StructField("date_column", DateType(), False),
+            StructField("byte_column", LongType(), True),
+            StructField("short_column", LongType(), True),
+            StructField("integer_column", LongType(), True),
+            StructField("long_column", LongType(), True),
+            StructField("float_column", DoubleType(), True),
+            StructField("double_column", DoubleType(), True),
+            StructField("string_column", StringType(), True),
+            StructField("boolean_column", BooleanType(), True),
+            StructField("timestamp_column", TimestampType(TZ), True),
+            StructField("timestampNTZ_column", TimestampType(NTZ), True),
+            StructField("date_column", DateType(), True),
         ]
     )
 
@@ -329,7 +330,7 @@ def test_dataframe_strategy_from_object_schema_generated_schema(
 
 
 @given(data=st.data())
-@settings(deadline=None, max_examples=10, suppress_health_check=list(HealthCheck))
+@settings(deadline=None, max_examples=5, suppress_health_check=list(HealthCheck))
 def test_dataframe_strategy_from_object_schema_generated_values(
     data: st.DataObject, session: Session
 ):

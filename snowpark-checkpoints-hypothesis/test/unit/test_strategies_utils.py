@@ -199,7 +199,7 @@ def test_generate_snowpark_schema_invalid_pyspark_type():
         ]
     }
 
-    with pytest.raises(ValueError, match="Unsupported PySpark data type: unknown_type"):
+    with pytest.raises(TypeError, match="Unsupported PySpark data type: unknown_type"):
         generate_snowpark_schema(pandera_schema, custom_data)
 
 

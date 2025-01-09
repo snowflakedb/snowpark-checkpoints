@@ -12,11 +12,6 @@ from snowflake.hypothesis_snowpark import dataframe_strategy
 from snowflake.snowpark import Session
 
 
-def test_dataframe_strategy_none_schema():
-    with pytest.raises(ValueError, match="Schema cannot be None."):
-        dataframe_strategy(schema=None, session=Mock(spec=Session))
-
-
 def test_dataframe_strategy_none_session():
     with pytest.raises(ValueError, match="Session cannot be None."):
         dataframe_strategy(schema="schema.json", session=None)

@@ -12,7 +12,6 @@ from snowflake.hypothesis_snowpark.constants import (
 from snowflake.snowpark.types import (
     BooleanType,
     ByteType,
-    DataType,
     DateType,
     DoubleType,
     FloatType,
@@ -22,6 +21,9 @@ from snowflake.snowpark.types import (
     StringType,
     TimestampTimeZone,
     TimestampType,
+)
+from snowflake.snowpark.types import (
+    DataType as SnowparkDataType,
 )
 
 
@@ -48,7 +50,7 @@ pandera_dtype_to_snowpark_dtype_dict = {
 }
 
 
-def pandera_dtype_to_snowpark_dtype(pandera_dtype: pa.DataType) -> DataType:
+def pandera_dtype_to_snowpark_dtype(pandera_dtype: pa.DataType) -> SnowparkDataType:
     """Convert a Pandera data type to the equivalent Snowpark data type.
 
     Args:
@@ -70,11 +72,11 @@ def pandera_dtype_to_snowpark_dtype(pandera_dtype: pa.DataType) -> DataType:
     return snowpark_dtype
 
 
-def pyspark_dtype_to_snowpark_dtype(pyspark_type: str) -> DataType:
+def pyspark_dtype_to_snowpark_dtype(pyspark_dtype: str) -> SnowparkDataType:
     """Convert a PySpark data type to the equivalent Snowpark data type.
 
     Args:
-        pyspark_type: The PySpark data type to convert.
+        pyspark_dtype: The PySpark data type to convert.
 
     Raises:
         ValueError: If the PySpark data type is not supported.
@@ -83,7 +85,7 @@ def pyspark_dtype_to_snowpark_dtype(pyspark_type: str) -> DataType:
         The equivalent Snowpark data type.
 
     """
-    snowpark_type = PYSPARK_TO_SNOWPARK_SUPPORTED_TYPES.get(pyspark_type)
+    snowpark_type = PYSPARK_TO_SNOWPARK_SUPPORTED_TYPES.get(pyspark_dtype)
     if not snowpark_type:
-        raise ValueError(f"Unsupported PySpark data type: {pyspark_type}")
+        raise TypeError(f"Unsupported PySpark data type: {pyspark_dtype}")
     return snowpark_type

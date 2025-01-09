@@ -98,9 +98,6 @@ def dataframe_strategy(
         A Hypothesis strategy that generates Snowpark DataFrames.
 
     """
-    if not schema:
-        raise ValueError("Schema cannot be None.")
-
     if not session:
         raise ValueError("Session cannot be None.")
 
@@ -160,7 +157,7 @@ def _dataframe_strategy_from_json_schema(
         size: The number of rows to generate.
 
     Returns:
-        A Hypothesis strategy that generates Snowpark DataFrames
+        A Hypothesis strategy that generates Snowpark DataFrames.
 
     """
     json_schema_dict = load_json_schema(schema)

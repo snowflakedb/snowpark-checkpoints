@@ -186,7 +186,7 @@ def test_pyspark_dtype_to_snowpark_dtype_valid_types():
 def test_pyspark_dtype_to_snowpark_dtype_invalid_types():
     pyspark_type = "unknown_type"
     with pytest.raises(
-        ValueError, match=f"Unsupported PySpark data type: {pyspark_type}"
+        TypeError, match=f"Unsupported PySpark data type: {pyspark_type}"
     ):
         pyspark_dtype_to_snowpark_dtype(pyspark_type)
 

@@ -185,6 +185,7 @@ def generate_snowpark_schema(
                 raise ValueError(f"Column '{column_name}' is missing from custom_data")
 
             pyspark_type = custom_data_column.get(CUSTOM_DATA_TYPE_KEY)
+
             if pyspark_type is None:
                 raise ValueError(
                     f"Type for column '{column_name}' is missing from custom_data"

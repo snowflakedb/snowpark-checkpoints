@@ -253,7 +253,7 @@ def test_dataframe_strategy_generated_values(data: st.DataObject, session: Sessi
     )
 
 
-def get_expected(file_name) -> str:
+def get_expected(file_name: str) -> str:
     current_directory_path = os.path.dirname(__file__)
     expected_file_path = os.path.join(
         current_directory_path,

@@ -48,10 +48,6 @@ NTZ = TimestampTimeZone.NTZ
 
 @pytest.fixture(scope="session", autouse=True)
 def telemetry_testing_mode():
-    from snowflake.snowpark_checkpoints_collector.utils.telemetry import (
-        get_telemetry_manager,
-    )
-
     telemetry_manager = get_telemetry_manager()
     telemetry_manager.sc_is_testing = True
     telemetry_manager.sc_is_enabled = True

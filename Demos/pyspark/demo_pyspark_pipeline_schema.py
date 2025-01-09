@@ -1,3 +1,4 @@
+import os
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, when
 from snowflake.snowpark_checkpoints_collector import collect_dataframe_checkpoint
@@ -21,10 +22,15 @@ from pyspark.sql.types import (
 )
 from datetime import datetime
 
+from snowflake.snowpark_checkpoints_collector.collection_common import (
+    SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH_ENV_VAR,
+)
+
 date_format = "%Y-%m-%d"
 timestamp_format = "%Y-%m-%d %H:%M:%S"
 timestamp_ntz_format = "%Y-%m-%d %H:%M:%S"
 
+os.environ[SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH_ENV_VAR] = "Demos/pyspark"
 
 spark = SparkSession.builder.appName("demo").getOrCreate()
 

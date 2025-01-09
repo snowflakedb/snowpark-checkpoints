@@ -102,6 +102,11 @@ SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME: Final[str] = "snowpark-checkpoints-o
 CHECKPOINT_PARQUET_OUTPUT_FILE_FORMAT_NAME: Final[str] = "{}.parquet"
 VALIDATION_RESULTS_JSON_FILE_NAME: Final[str] = "checkpoint_validation_results.json"
 
+# Environment variables
+SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH_ENV_VAR: Final[
+    str
+] = "SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH"
+
 # Misc keys
 DOT_PARQUET_EXTENSION: Final[str] = ".parquet"
 BACKSLASH_TOKEN: Final[str] = "\\"

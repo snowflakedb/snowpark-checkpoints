@@ -2,7 +2,12 @@
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
 
+import os
 from unittest.mock import MagicMock, patch
+
+from snowflake.snowpark_checkpoints.utils.constant import (
+    SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH_ENV_VAR,
+)
 
 
 def test_is_checkpoint_import_error():
@@ -64,3 +69,21 @@ def test_is_checkpoint_enabled_checkpoint_disabled():
 
         actual = is_checkpoint_enabled("my-checkpoint")
         assert actual == False
+
+
+def test_get_checkpoint_contract_file_path_env_var_set():
+    os.environ[SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH_ENV_VAR] = "/mock/path"
+    from snowflake.snowpark_checkpoints.utils.extra_config import (
+        _get_checkpoint_contract_file_path,
+    )
+
+    assert _get_checkpoint_contract_file_path() == "/mock/path"
+
+
+def test_get_checkpoint_contract_file_path_env_var_not_set():
+    os.environ.pop(SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH_ENV_VAR)
+    from snowflake.snowpark_checkpoints.utils.extra_config import (
+        _get_checkpoint_contract_file_path,
+    )
+
+    assert _get_checkpoint_contract_file_path() == os.getcwd()

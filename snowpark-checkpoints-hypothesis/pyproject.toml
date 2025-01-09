@@ -25,7 +25,7 @@ classifiers = [
 ]
 dependencies = [
   "snowflake-snowpark-python[localtest]",
-  "snowflake-connector-python",
+  "snowflake-connector-python[pandas]",
   "hypothesis",
   "pandera[io]==0.20.4",
 ]

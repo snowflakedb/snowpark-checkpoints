@@ -780,7 +780,8 @@ class TelemetryManagerTest(unittest.TestCase):
                 telemetry = TelemetryManager(rest_mock)
 
                 # Act
-                telemetry._sc_write_telemetry(batch, output_folder=temp_path)
+                telemetry.set_sc_output_path(temp_path)
+                telemetry._sc_write_telemetry(batch)
 
                 # Assert
                 file_path = temp_path / f"{mock_date}_telemetry_test.json"

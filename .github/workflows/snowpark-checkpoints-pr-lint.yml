@@ -7,6 +7,10 @@ jobs:
   pr-lint:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - uses: morrisoncole/pr-lint-action@327d08270eeda69f390c2073935506556987b9a1
         with:
@@ -16,12 +20,6 @@ jobs:
           on-failed-regex-create-review: false
           on-failed-regex-comment: "Please prefix your PR title with a JIRA ticket number. e.g SNOW-123456 <Description>"
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
-
-      - name: Check out the repository
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-          fetch-depth: 0
 
       - name: Check PR Description
         run: |

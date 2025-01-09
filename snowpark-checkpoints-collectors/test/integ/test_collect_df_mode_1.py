@@ -59,15 +59,24 @@ from snowflake.snowpark_checkpoints_collector import Singleton
 
 import tempfile
 
+from snowflake.snowpark_checkpoints_collector.utils.telemetry import (
+    get_telemetry_manager,
+)
+
 TEST_COLLECT_DF_MODE_1_EXPECTED_DIRECTORY_NAME = "test_collect_df_mode_1_expected"
+telemetry_folder = "telemetry"
 
 
 @pytest.fixture(scope="function")
 def output_path():
     folder = os.urandom(8).hex()
-    directory = str(Path(tempfile.gettempdir()).resolve() / folder)
+    directory = Path(tempfile.gettempdir()).resolve() / folder
     os.makedirs(directory)
-    return directory
+    telemetry_dir = directory / telemetry_folder
+
+    telemetry_manager = get_telemetry_manager()
+    telemetry_manager.set_sc_output_path(telemetry_dir)
+    return str(directory)
 
 
 @pytest.fixture
@@ -82,10 +91,6 @@ def singleton():
 
 @pytest.fixture(scope="session", autouse=True)
 def telemetry_testing_mode():
-    from snowflake.snowpark_checkpoints_collector.utils.telemetry import (
-        get_telemetry_manager,
-    )
-
     telemetry_manager = get_telemetry_manager()
     telemetry_manager.sc_is_testing = True
     telemetry_manager.sc_is_enabled = True
@@ -424,8 +429,9 @@ def test_collect_empty_dataframe_without_schema(spark_session, singleton, output
     pyspark_df = spark_session.createDataFrame(data=data, schema=columns)
 
     with pytest.raises(Exception) as ex_info:
-        collect_dataframe_checkpoint(pyspark_df, checkpoint_name=checkpoint_name,
-                                     output_path=output_path)
+        collect_dataframe_checkpoint(
+            pyspark_df, checkpoint_name=checkpoint_name, output_path=output_path
+        )
     assert "It is not possible to collect an empty DataFrame without schema" == str(
         ex_info.value
     )
@@ -447,17 +453,20 @@ def test_collect_dataframe_with_only_null_values(spark_session, singleton, outpu
     pyspark_df = spark_session.createDataFrame(data=data, schema=columns)
 
     collect_dataframe_checkpoint(
-        pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size,
-        output_path=output_path
+        pyspark_df,
+        checkpoint_name=checkpoint_name,
+        sample=sample_size,
+        output_path=output_path,
     )
 
     validate_checkpoint_file_output(output_path, checkpoint_name)
+
 
 def get_checkpoint_file_name(checkpoint_name) -> str:
     return CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(checkpoint_name)
 
 
-def validate_checkpoint_file_output(output_path:str, checkpoint_name:str) -> None:
+def validate_checkpoint_file_output(output_path: str, checkpoint_name: str) -> None:
     checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
         checkpoint_name
     )
@@ -508,12 +517,8 @@ def get_output(output_path, file_name) -> str:
         return f.read().strip()
 
 
-def get_output_telemetry(output_path:str) -> str:
-    telemetry_directory_path = os.path.join(
-        output_path,
-        SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
-        "telemetry"
-    )
+def get_output_telemetry(output_path: str) -> str:
+    telemetry_directory_path = os.path.join(output_path, telemetry_folder)
     for file in os.listdir(telemetry_directory_path):
         if file.endswith(".json"):
             output_file_path = os.path.join(telemetry_directory_path, file)
@@ -522,7 +527,7 @@ def get_output_telemetry(output_path:str) -> str:
     return "{}"
 
 
-def get_expected(file_name:str) -> str:
+def get_expected(file_name: str) -> str:
     current_directory_path = os.path.dirname(__file__)
     expected_file_path = os.path.join(
         current_directory_path,

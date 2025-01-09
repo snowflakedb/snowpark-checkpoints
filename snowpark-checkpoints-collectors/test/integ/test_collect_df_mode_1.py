@@ -399,6 +399,28 @@ def test_collect_empty_dataframe_without_schema(spark_session, singleton):
     integration_test_utils.remove_output_directory()
 
 
+def test_collect_dataframe_with_only_null_values(spark_session, singleton):
+    sample_size = 1.0
+    checkpoint_name = "test_df_with_only_null_values"
+
+    data = [(None, None, None)]
+    columns = StructType(
+        [
+            StructField("Description", StringType(), True),
+            StructField("Price", DoubleType(), True),
+            StructField("Active", BooleanType(), True),
+        ]
+    )
+
+    pyspark_df = spark_session.createDataFrame(data=data, schema=columns)
+
+    collect_dataframe_checkpoint(
+        pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size
+    )
+
+    validate_checkpoint_file_output(checkpoint_name)
+
+
 def validate_checkpoint_file_output(checkpoint_name) -> None:
     checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
         checkpoint_name

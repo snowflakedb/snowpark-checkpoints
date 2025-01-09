@@ -498,16 +498,16 @@ def handle_result(
             telemetry_m.sc_log_info(VALUE_VALIDATOR_MIRROR, telemetry_data)
     elif func_name == "dataframe_strategy":
         is_logged = telemetry_m.sc_is_hypothesis_event_logged(
-            (param_data.get("json_schema"), 0)
+            (param_data.get(DATAFRAME_STRATEGY_SCHEMA_PARAM_NAME), 0)
         )
         if not is_logged:
-            json_data = get_load_json(param_data.get("json_schema"))["custom_data"][
-                "columns"
-            ]
+            json_data = get_load_json(
+                param_data.get(DATAFRAME_STRATEGY_SCHEMA_PARAM_NAME)
+            )["custom_data"]["columns"]
             telemetry_data[SCHEMA_TYPES_KEY] = [column["type"] for column in json_data]
             telemetry_m.sc_log_info(HYPOTHESIS_INPUT_SCHEMA, telemetry_data)
             telemetry_m.sc_hypothesis_input_events.append(
-                (param_data.get("json_schema"), 0)
+                (param_data.get(DATAFRAME_STRATEGY_SCHEMA_PARAM_NAME), 0)
             )
 
 
@@ -554,13 +554,13 @@ def handle_exception(func_name: str, param_data: dict, err: Exception) -> None:
             )
         telemetry_m.sc_log_error(DATAFRAME_VALIDATOR_ERROR, telemetry_data)
     elif func_name == "dataframe_strategy":
-        input_json = param_data.get("json_schema")
+        input_json = param_data.get(DATAFRAME_STRATEGY_SCHEMA_PARAM_NAME)
         if input_json:
             is_logged = telemetry_m.sc_is_hypothesis_event_logged((input_json, 1))
             if not is_logged:
                 telemetry_m.sc_log_error(HYPOTHESIS_INPUT_SCHEMA_ERROR, telemetry_data)
                 telemetry_m.sc_hypothesis_input_events.append(
-                    (param_data.get("json_schema"), 1)
+                    (param_data.get(DATAFRAME_STRATEGY_SCHEMA_PARAM_NAME), 1)
                 )
 
 
@@ -636,6 +636,8 @@ ERROR_KEY = "error"
 MODE_KEY = "mode"
 SNOWFLAKE_SCHEMA_TYPES_KEY = "snowflake_schema_types"
 SPARK_SCHEMA_TYPES_KEY = "spark_schema_types"
+
+DATAFRAME_STRATEGY_SCHEMA_PARAM_NAME = "schema"
 
 
 class CheckpointMode(IntEnum):

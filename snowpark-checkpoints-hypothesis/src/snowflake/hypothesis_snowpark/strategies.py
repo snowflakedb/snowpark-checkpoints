@@ -43,7 +43,7 @@ from snowflake.hypothesis_snowpark.telemetry.telemetry import report_telemetry
 from snowflake.snowpark import DataFrame, Session
 
 
-@report_telemetry(params_list=["json_schema"])
+@report_telemetry(params_list=["schema"])
 def dataframe_strategy(
     schema: Union[str, pa.DataFrameSchema], session: Session, size: Optional[int] = None
 ) -> SearchStrategy[DataFrame]:

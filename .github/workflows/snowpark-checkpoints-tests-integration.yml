@@ -65,6 +65,14 @@ jobs:
         shell: bash
         working-directory: ${{ github.workspace }}
 
+      - name: Install Python packages
+        run: |
+          python -m pip install --upgrade pip -q
+          pip install requests -q
+          pip list
+        shell: bash
+        working-directory: ${{ github.workspace }}
+
       - name: Display Host Info
         run: |
           python .github/scripts/py_show_host.py

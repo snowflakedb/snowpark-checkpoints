@@ -1,0 +1,51 @@
+{% set name = "snowpark.checkpoints.collectors" %}
+{% set version = "0.0.0" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  path: ../
+
+build:
+  noarch: python
+  script: |
+    set -e
+    {{ PYTHON }} -m pip install . --no-deps -vvv
+
+requirements:
+  host:
+    - python<3.12,>=3.9
+    - pip
+    - wheel
+    - hatchling
+  run:
+    - python<3.12,>=3.9
+    - snowflake-connector-python
+    - snowflake-snowpark-python
+    - pyspark
+  run_constrained:
+    - pandera ==0.20.4
+
+test:
+  requires:
+    - pip
+    - snowflake-snowpark-python>=1.26.0
+    - snowflake-connector-python
+    - pyspark
+    - pandera
+
+  commands:
+    - pip install pandera[io]==0.20.4
+    - pip check
+    - pip list --verbose
+    - python -c "import pandera"
+
+about:
+  summary: A package for snowpark checkpoints collectors.
+  home: https://github.com/snowflakedb/snowpark-checkpoints/
+  license: Apache License 2.0
+
+channels:
+  - conda-forge

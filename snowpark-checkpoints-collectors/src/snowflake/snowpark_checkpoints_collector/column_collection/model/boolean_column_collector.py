@@ -3,9 +3,9 @@
 #
 
 from pandas import Series
+from pyspark.sql.types import StructField
 
 from snowflake.snowpark_checkpoints_collector.collection_common import (
-    BOOLEAN_COLUMN_TYPE,
     COLUMN_FALSE_COUNT_KEY,
     COLUMN_TRUE_COUNT_KEY,
 )
@@ -21,19 +21,23 @@ class BooleanColumnCollector(ColumnCollectorBase):
     Attributes:
         name (str): the name of the column.
         type (str): the type of the column.
+        struct_field (pyspark.sql.types.StructField): the struct field of the column type.
         values (pandas.Series): the column values as Pandas.Series.
 
     """
 
-    def __init__(self, clm_name: str, clm_values: Series) -> None:
+    def __init__(
+        self, clm_name: str, struct_field: StructField, clm_values: Series
+    ) -> None:
         """Init BooleanColumnCollector.
 
         Args:
             clm_name (str): the name of the column.
+            struct_field (pyspark.sql.types.StructField): the struct field of the column type.
             clm_values (pandas.Series): the column values as Pandas.Series.
 
         """
-        super().__init__(clm_name, BOOLEAN_COLUMN_TYPE, clm_values)
+        super().__init__(clm_name, struct_field, clm_values)
 
     def get_custom_data(self) -> dict[str, any]:
         rows_count = self.values.count().item()

@@ -1,0 +1,45 @@
+{% set name = "snowpark-checkpoints-configuration" %}
+{% set version = "0.0.0" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  path: ../
+
+build:
+  noarch: python
+  script: |
+    set -e
+    {{ PYTHON }} -m pip install . --no-deps -vvv  
+
+requirements:
+  host:
+    - python<3.12,>=3.9
+    - pip
+    - wheel
+    - hatchling
+  run:
+    - python<3.12,>=3.9
+    - pydantic>=1.8.2
+    - snowflake-snowpark-python>=1.26.0
+
+test:
+  requires:
+    - pip
+    - snowflake-snowpark-python>=1.26.0
+    - pandas
+    - pydantic
+    - snowpark-checkpoints-configuration
+  commands:
+    - pip check 
+    - pip list --verbose
+    - python -c "import pydantic"
+    - python -c "import pandas"
+    - python -c "import snowflake.snowpark"
+
+about:
+  summary: A package for snowpark checkpoints configuration
+  home: https://github.com/snowflakedb/snowpark-checkpoints/
+  license: Apache License 2.0

@@ -9,6 +9,7 @@ from typing import Optional
 import pandera as pa
 
 from pyspark.sql import DataFrame as SparkDataFrame
+from pyspark.sql.types import StructField
 
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT,
@@ -17,9 +18,13 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
     DATAFRAME_CUSTOM_DATA_KEY,
     DATAFRAME_PANDERA_SCHEMA_KEY,
     DECIMAL_COLUMN_TYPE,
-    SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
-    STRING_COLUMN_TYPE,
+    PANDAS_OBJECT_TYPE_COLLECTION,
     CheckpointMode,
+)
+from snowflake.snowpark_checkpoints_collector.collection_result.model import (
+    CollectionPointResult,
+    CollectionPointResultManager,
+    CollectionResult,
 )
 from snowflake.snowpark_checkpoints_collector.column_collection import (
     ColumnCollectorManager,
@@ -30,6 +35,7 @@ from snowflake.snowpark_checkpoints_collector.column_pandera_checks import (
 from snowflake.snowpark_checkpoints_collector.snow_connection_model import (
     SnowConnection,
 )
+from snowflake.snowpark_checkpoints_collector.utils import file_utils
 from snowflake.snowpark_checkpoints_collector.utils.extra_config import (
     get_checkpoint_mode,
     get_checkpoint_sample,
@@ -59,6 +65,13 @@ def collect_dataframe_checkpoint(
         Exception: Invalid mode value.
 
     """
+    collection_point_file_path = file_utils.get_collection_point_source_file_path()
+    collection_point_line_of_code = file_utils.get_collection_point_line_of_code()
+    collection_point_result = CollectionPointResult(
+        collection_point_file_path, collection_point_line_of_code, checkpoint_name
+    )
+    file_utils.create_output_directory()
+
     try:
         if is_checkpoint_enabled(checkpoint_name):
 
@@ -86,9 +99,16 @@ def collect_dataframe_checkpoint(
             else:
                 raise Exception("Invalid mode value.")
 
+            collection_point_result.result = CollectionResult.PASS
+
     except Exception as err:
+        collection_point_result.result = CollectionResult.FAIL
         error_message = str(err)
         raise Exception(error_message) from err
+
+    finally:
+        collection_point_result_manager = CollectionPointResultManager()
+        collection_point_result_manager.add_result(collection_point_result)
 
 
 @report_telemetry(params_list=["column_type_dict"])
@@ -102,9 +122,9 @@ def _collect_dataframe_checkpoint_mode_schema(
     if source_df.isEmpty():
         source_df = df
     pandas_df = source_df.toPandas()
-    is_empty_df_with_string_column = _is_empty_dataframe_with_string_column(df)
+    is_empty_df_with_object_column = _is_empty_dataframe_with_object_column(df)
     pandera_infer_schema = (
-        pa.infer_schema(pandas_df) if not is_empty_df_with_string_column else {}
+        pa.infer_schema(pandas_df) if not is_empty_df_with_object_column else {}
     )
 
     column_name_collection = df.schema.names
@@ -114,8 +134,9 @@ def _collect_dataframe_checkpoint_mode_schema(
     column_pandera_checks_manager = PanderaColumnChecksManager()
 
     for column in column_name_collection:
-        column_type = column_type_dict[column]
-        is_empty_column = len(pandas_df[column]) == 0
+        struct_field_column = column_type_dict[column]
+        column_type = struct_field_column.dataType.typeName()
+        is_empty_column = len(pandas_df[column].dropna()) == 0
         is_column_to_remove_from_pandera_schema = (
             _is_column_to_remove_from_pandera_schema(column_type)
         )
@@ -125,7 +146,7 @@ def _collect_dataframe_checkpoint_mode_schema(
 
         if is_empty_column:
             custom_data = column_collector_manager.collect_empty_custom_data(
-                column, column_type, pandas_df[column]
+                column, struct_field_column, pandas_df[column]
             )
             column_custom_data_collection.append(custom_data)
             continue
@@ -137,13 +158,13 @@ def _collect_dataframe_checkpoint_mode_schema(
         )
 
         custom_data = column_collector_manager.collect_column(
-            column, column_type, pandas_df[column]
+            column, struct_field_column, pandas_df[column]
         )
         column_custom_data_collection.append(custom_data)
 
     pandera_infer_schema_dict = _get_pandera_infer_schema_as_dict(
         pandera_infer_schema,
-        is_empty_df_with_string_column,
+        is_empty_df_with_object_column,
         columns_to_remove_from_pandera_schema_collection,
     )
 
@@ -157,13 +178,12 @@ def _collect_dataframe_checkpoint_mode_schema(
     _generate_json_checkpoint_file(checkpoint_name, dataframe_schema_contract_json)
 
 
-def _get_spark_column_types(df: SparkDataFrame) -> dict[str, any]:
+def _get_spark_column_types(df: SparkDataFrame) -> dict[str, StructField]:
     schema = df.schema
     column_type_collection = {}
     for field in schema.fields:
         column_name = field.name
-        type_name = field.dataType.typeName()
-        column_type_collection[column_name] = type_name
+        column_type_collection[column_name] = field
     return column_type_collection
 
 
@@ -173,13 +193,13 @@ def _is_empty_dataframe_without_schema(df: SparkDataFrame) -> bool:
     return is_empty and not has_schema
 
 
-def _is_empty_dataframe_with_string_column(df: SparkDataFrame):
+def _is_empty_dataframe_with_object_column(df: SparkDataFrame):
     is_empty = df.isEmpty()
     if not is_empty:
         return False
 
     for field in df.schema.fields:
-        if field.dataType.typeName() == STRING_COLUMN_TYPE:
+        if field.dataType.typeName() in PANDAS_OBJECT_TYPE_COLLECTION:
             return True
 
     return False
@@ -204,16 +224,10 @@ def _get_pandera_infer_schema_as_dict(
 
 
 def _generate_json_checkpoint_file(checkpoint_name, dataframe_schema_contract) -> None:
-    current_directory_path = os.getcwd()
-    output_directory_path = os.path.join(
-        current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME
-    )
-    if not os.path.exists(output_directory_path):
-        os.makedirs(output_directory_path)
-
     checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
         checkpoint_name
     )
+    output_directory_path = file_utils.get_output_directory_path()
     checkpoint_file_path = os.path.join(output_directory_path, checkpoint_file_name)
     with open(checkpoint_file_path, "w") as f:
         f.write(dataframe_schema_contract)
@@ -227,7 +241,7 @@ def _collect_dataframe_checkpoint_mode_dataframe(
 
 
 def _generate_parquet_checkpoint_file(checkpoint_name, df: SparkDataFrame) -> None:
-    output_directory_path = _get_output_directory_path()
+    output_directory_path = file_utils.get_output_directory_path()
 
     checkpoint_file_name = CHECKPOINT_PARQUET_OUTPUT_FILE_NAME_FORMAT.format(
         checkpoint_name
@@ -236,20 +250,9 @@ def _generate_parquet_checkpoint_file(checkpoint_name, df: SparkDataFrame) -> No
     df.write.parquet(checkpoint_file_path, mode="overwrite")
 
 
-def _get_output_directory_path() -> str:
-    current_directory_path = os.getcwd()
-    output_directory_path = os.path.join(
-        current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME
-    )
-    if not os.path.exists(output_directory_path):
-        os.makedirs(output_directory_path)
-
-    return output_directory_path
-
-
 def _upload_to_snowflake(checkpoint_name, snow_connection) -> None:
     try:
-        output_directory_path = _get_output_directory_path()
+        output_directory_path = file_utils.get_output_directory_path()
         checkpoint_file_name = CHECKPOINT_PARQUET_OUTPUT_FILE_NAME_FORMAT.format(
             checkpoint_name
         )

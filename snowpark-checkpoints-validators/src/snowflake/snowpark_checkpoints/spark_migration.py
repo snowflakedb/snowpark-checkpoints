@@ -21,7 +21,7 @@ fn = TypeVar("F", bound=Callable)
 def check_with_spark(
     job_context: Optional[SnowparkJobContext],
     spark_function: fn,
-    check_name: Optional[str] = None,
+    checkpoint_name: str,
     sample_number: Optional[int] = 100,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
     check_dtypes: Optional[bool] = True,
@@ -37,7 +37,7 @@ def check_with_spark(
     Args:
         job_context (SnowparkJobContext): The job context containing configuration and details for the validation.
         spark_function (fn): The equivalent PySpark function to compare against the Snowpark implementation.
-        check_name (Optional[str], optional): A name for the checkpoint. Defaults to None.
+        checkpoint_name (str): A name for the checkpoint. Defaults to None.
         sample_number (Optional[int], optional): The number of rows for validation. Defaults to 100.
         sampling_strategy (Optional[SamplingStrategy], optional): The strategy used for sampling data.
             Defaults to SamplingStrategy.RANDOM_SAMPLE.
@@ -52,9 +52,9 @@ def check_with_spark(
     """
 
     def check_with_spark_decorator(snowpark_fn):
-        checkpoint_name = check_name
-        if check_name is None:
-            checkpoint_name = snowpark_fn.__name__
+        _checkpoint_name = checkpoint_name
+        if checkpoint_name is None:
+            _checkpoint_name = snowpark_fn.__name__
 
         def wrapper(*args, **kwargs):
             sampler = SamplingAdapter(

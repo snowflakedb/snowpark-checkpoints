@@ -1,0 +1,1 @@
+{"pandera_schema": {}, "custom_data": {"columns": [{"name": "Name", "type": "string", "nullable": true, "rows_count": 0, "rows_not_null_count": 0, "rows_null_count": 0}, {"name": "Active", "type": "boolean", "nullable": true, "rows_count": 0, "rows_not_null_count": 0, "rows_null_count": 0}]}}

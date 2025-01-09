@@ -3,6 +3,7 @@
 #
 
 from pandas import Series
+from pyspark.sql.types import StructField
 
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     COLUMN_DECIMAL_PRECISION_KEY,
@@ -25,21 +26,24 @@ class NumericColumnCollector(ColumnCollectorBase):
     Attributes:
         name (str): the name of the column.
         type (str): the type of the column.
+        struct_field (pyspark.sql.types.StructField): the struct field of the column type.
         values (pandas.Series): the column values as Pandas.Series.
         is_integer (boolean): a flag to indicate if values are integer or do not.
 
     """
 
-    def __init__(self, clm_name: str, clm_type: str, clm_values: Series) -> None:
+    def __init__(
+        self, clm_name: str, struct_field: StructField, clm_values: Series
+    ) -> None:
         """Init NumericColumnCollector.
 
         Args:
             clm_name (str): the name of the column.
-            clm_type (str): the type of the column.
+            struct_field (pyspark.sql.types.StructField): the struct field of the column type.
             clm_values (pandas.Series): the column values as Pandas.Series.
 
         """
-        super().__init__(clm_name, clm_type, clm_values)
+        super().__init__(clm_name, struct_field, clm_values)
         self.is_integer = self.type in INTEGER_TYPE_COLLECTION
 
     def get_custom_data(self) -> dict[str, any]:
@@ -67,7 +71,7 @@ class NumericColumnCollector(ColumnCollectorBase):
         decimal_token = get_decimal_token()
         max_decimal_digits_counted = 0
 
-        for value in self.values:
+        for value in self.values.dropna():
             value_str = str(value)
             value_split_by_token = value_str.split(decimal_token)
             decimal_part = value_split_by_token[decimal_part_index]

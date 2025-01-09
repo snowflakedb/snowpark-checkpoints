@@ -26,6 +26,7 @@ classifiers = [
 
 dependencies = [
   "pydantic>=1.8.2",
+  "snowflake-snowpark-python",
 ]
 
 description = "Migration tools for Snowpark"
@@ -41,7 +42,7 @@ license = {file = "LICENSE"}
 name = "snowpark-checkpoints-configuration"
 readme = "README.md"
 requires-python = ">=3.9"
-version = "0.0.0"
+dynamic = ['version']
 
 
 [project.optional-dependencies]
@@ -61,8 +62,8 @@ development = [
 "Source code" = "https://github.com/snowflakedb/snowpark-checkpoints/"
 
 [tool.hatch.version]
-path = "snowpark-checkpoints-configuration/__init__.py"
-pattern = '^__version__ = "(.*)"'
+path = "__version__.py"
+pattern = '^__version__ = "(?P<version>.*)"'
 source = "regex"
 
 [tool.setuptools.packages.find]
@@ -87,7 +88,6 @@ include = [
   'test/',
   'CHANGELOG.md',
   'pyproject.toml',
-  'snowpark-testdf-schema.json',
 ]
 
 [tool.hatch.envs.default]

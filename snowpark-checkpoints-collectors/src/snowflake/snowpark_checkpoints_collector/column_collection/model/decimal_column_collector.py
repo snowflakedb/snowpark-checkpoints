@@ -3,16 +3,16 @@
 #
 
 from pandas import Series
+from pyspark.sql.types import StructField
 
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     COLUMN_DECIMAL_PRECISION_KEY,
     COLUMN_MAX_KEY,
     COLUMN_MEAN_KEY,
     COLUMN_MIN_KEY,
-    DECIMAL_COLUMN_TYPE,
     get_decimal_token,
 )
-from snowflake.snowpark_checkpoints_collector.column_collection.model import (
+from snowflake.snowpark_checkpoints_collector.column_collection.model.column_collector_base import (
     ColumnCollectorBase,
 )
 
@@ -23,19 +23,24 @@ class DecimalColumnCollector(ColumnCollectorBase):
 
     Attributes:
         name (str): the name of the column.
+        type (str): the type of the column.
+        struct_field (pyspark.sql.types.StructField): the struct field of the column type.
         values (pandas.Series): the column values as Pandas.Series.
 
     """
 
-    def __init__(self, clm_name: str, clm_values: Series) -> None:
+    def __init__(
+        self, clm_name: str, struct_field: StructField, clm_values: Series
+    ) -> None:
         """Init DecimalColumnCollector.
 
         Args:
             clm_name (str): the name of the column.
+            struct_field (pyspark.sql.types.StructField): the struct field of the column type.
             clm_values (pandas.Series): the column values as Pandas.Series.
 
         """
-        super().__init__(clm_name, DECIMAL_COLUMN_TYPE, clm_values)
+        super().__init__(clm_name, struct_field, clm_values)
 
     def get_custom_data(self) -> dict[str, any]:
         min_value = str(self.values.min())
@@ -55,7 +60,7 @@ class DecimalColumnCollector(ColumnCollectorBase):
     def _compute_decimal_precision(self) -> int:
         decimal_part_index = 1
         decimal_token = get_decimal_token()
-        value = self.values[0]
+        value = self.values.dropna()[0]
         value_str = str(value)
         value_split_by_token = value_str.split(decimal_token)
         decimal_part = value_split_by_token[decimal_part_index]

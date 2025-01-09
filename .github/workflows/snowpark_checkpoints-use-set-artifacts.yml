@@ -46,7 +46,7 @@ jobs:
           echo "Package Version updated:" && cat ${FILE_VERSION}
         env:
           NEW_VERSION: ${{ steps.gitversion.outputs.version }}
-          FILE_VERSION: ../snowpark-checkpoints-validators/src/snowflake/snowpark_checkpoints/__version__.py
+          FILE_VERSION: ../snowpark-checkpoints-validators/__version__.py
         working-directory: ./snowpark-checkpoints-validators
 
       - name: Setup Python

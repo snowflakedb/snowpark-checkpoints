@@ -101,7 +101,7 @@ class SnowConnection:
         Args:
             stage_name (str): the name of the stage.
             folder_name (str): the folder name.
-            input_path (str): the output directory path.
+            input_path (str): the input directory path.
             filter_func (Callable): the filter function to apply to the files.
 
         """
@@ -141,7 +141,9 @@ class SnowConnection:
             )
             self.session.sql(put_statement).collect()
 
-    def create_table_from_parquet(self, table_name, stage_directory_path) -> None:
+    def create_table_from_parquet(
+        self, table_name: str, stage_directory_path: str
+    ) -> None:
         """Create a table from a parquet file in Snowflake.
 
         Args:

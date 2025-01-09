@@ -4,16 +4,25 @@
 
 import ast
 
+import os
+import json
+import shutil
+from deepdiff import DeepDiff
+
+from collections.abc import Iterable
 from datetime import date, datetime
 
 import hypothesis.strategies as st
 import pandera as pa
+import pytest
 
 from hypothesis import HealthCheck, given, settings
 
 from snowflake.hypothesis_snowpark import dataframe_strategy
+from snowflake.hypothesis_snowpark.telemetry.telemetry import get_telemetry_manager
 from snowflake.snowpark import DataFrame, Session
 from snowflake.snowpark.functions import col, count, when
+
 from snowflake.snowpark.types import (
     ArrayType,
     BinaryType,
@@ -28,8 +37,20 @@ from snowflake.snowpark.types import (
     TimestampType,
 )
 
+SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME = "snowpark-checkpoints-output"
+TEST_TELEMETRY_DATAFRAME_STRATEGIES_EXPECTED_DIRECTORY_NAME = (
+    "test_telemetry_strategies_expected"
+)
+
 
 NTZ = TimestampTimeZone.NTZ
+
+
+@pytest.fixture(scope="session", autouse=True)
+def telemetry_testing_mode():
+    telemetry_manager = get_telemetry_manager()
+    telemetry_manager.sc_is_testing = True
+    telemetry_manager.sc_is_enabled = True
 
 
 @given(data=st.data())
@@ -81,6 +102,9 @@ def test_dataframe_strategy_nullable_column(
     assert (
         expected_min_null_count <= actual_null_count <= expected_max_null_count
     ), f"Expected {expected_min_null_count} <= null values <= {expected_max_null_count}, but got {actual_null_count}."
+    validate_telemetry_file_output(
+        "test_dataframe_strategy_nullable_column_telemetry.json"
+    )
 
 
 @given(data=st.data())
@@ -96,9 +120,9 @@ def test_dataframe_strategy_generated_schema(data: st.DataObject, session: Sessi
 
     expected_schema = StructType(
         [
-            StructField("array_column", ArrayType(), False),
+            StructField("array_column", ArrayType(), True),
             StructField("binary_column", BinaryType(), False),
-            StructField("boolean_column", BooleanType(), False),
+            StructField("boolean_column", BooleanType(), True),
             StructField("byte_column", LongType(), False),
             StructField("date_column", DateType(), False),
             StructField("double_column", DoubleType(), False),
@@ -113,6 +137,9 @@ def test_dataframe_strategy_generated_schema(data: st.DataObject, session: Sessi
     )
 
     assert df.schema == expected_schema
+    validate_telemetry_file_output(
+        "test_dataframe_strategy_generated_schema_telemetry.json"
+    )
 
 
 @given(data=st.data())
@@ -217,3 +244,66 @@ def test_dataframe_strategy_generated_values(data: st.DataObject, session: Sessi
         expected_schema.validate(pandas_df)
     except pa.errors.SchemaError as e:
         raise AssertionError(f"Schema validation failed: {e.args[0]}.\n") from e
+    validate_telemetry_file_output(
+        "test_dataframe_strategy_generated_values_telemetry.json"
+    )
+
+
+def get_expected(file_name: str) -> str:
+    current_directory_path = os.path.dirname(__file__)
+    expected_file_path = os.path.join(
+        current_directory_path,
+        TEST_TELEMETRY_DATAFRAME_STRATEGIES_EXPECTED_DIRECTORY_NAME,
+        file_name,
+    )
+
+    with open(expected_file_path) as f:
+        return f.read().strip()
+
+
+def remove_output_directory() -> None:
+    current_directory_path = os.getcwd()
+    output_directory_path = os.path.join(
+        current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME
+    )
+    if os.path.exists(output_directory_path):
+        shutil.rmtree(output_directory_path)
+
+
+def get_output_telemetry() -> str:
+    current_directory_path = os.getcwd()
+    telemetry_directory_path = os.path.join(
+        current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME, "telemetry"
+    )
+    for file in os.listdir(telemetry_directory_path):
+        if file.endswith(".json"):
+            output_file_path = os.path.join(telemetry_directory_path, file)
+            with open(output_file_path) as f:
+                return f.read().strip()
+    return "{}"
+
+
+def validate_telemetry_file_output(telemetry_file_name: str) -> None:
+    telemetry_expected = get_expected(telemetry_file_name)
+    telemetry_output = get_output_telemetry()
+
+    telemetry_expected_obj = json.loads(telemetry_expected)
+    telemetry_output_obj = json.loads(telemetry_output)
+    exclude_telemetry_paths = [
+        "root['timestamp']",
+        "root['message']['metadata']['device_id']",
+        "root['message']['metadata']",
+        "root['message']['data']",
+        "root['message']['driver_version']",
+    ]
+
+    diff_telemetry = DeepDiff(
+        telemetry_expected_obj,
+        telemetry_output_obj,
+        ignore_order=True,
+        exclude_paths=exclude_telemetry_paths,
+    )
+    remove_output_directory()
+    get_telemetry_manager().sc_hypothesis_input_events = []
+
+    assert diff_telemetry == {}

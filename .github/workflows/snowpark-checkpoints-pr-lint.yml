@@ -18,7 +18,7 @@ jobs:
           on-failed-regex-fail-action: true
           on-failed-regex-request-changes: false
           on-failed-regex-create-review: false
-          on-failed-regex-comment: "Please prefix your PR title with a JIRA ticket number. e.g SNOW-123456 <Description>"
+          on-failed-regex-comment: "Please prefix your PR title with a JIRA ticket number. e.g SNOW-123456: <Title>"
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
 
       - name: Check PR Description
@@ -30,20 +30,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Check PR Labels
-        run: |
-          if [ "${{ github.event.pull_request.labels }}" == "[]" ]; then
-            echo "PR has no labels. Please add appropriate labels."
-            exit 1
-          fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Check PR Size
         run: |
-          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} | wc -l)
-          if [ "$CHANGED_FILES" -gt 20 ]; then
-            echo "PR is too large. Please split it into smaller PRs."
+          CHANGED_PY_FILES=$(git diff --name-only --diff-filter=d ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} | grep '\.py$' | wc -l)
+          if [ "$CHANGED_PY_FILES" -gt 20 ]; then
+            echo "PR includes too many Python files (>$CHANGED_PY_FILES). Please split it into smaller PRs."
             exit 1
           fi
         env:

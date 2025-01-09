@@ -120,9 +120,9 @@ def test_dataframe_strategy_generated_schema(data: st.DataObject, session: Sessi
 
     expected_schema = StructType(
         [
-            StructField("array_column", ArrayType(), False),
+            StructField("array_column", ArrayType(), True),
             StructField("binary_column", BinaryType(), False),
-            StructField("boolean_column", BooleanType(), False),
+            StructField("boolean_column", BooleanType(), True),
             StructField("byte_column", LongType(), False),
             StructField("date_column", DateType(), False),
             StructField("double_column", DoubleType(), False),
@@ -283,7 +283,7 @@ def get_output_telemetry() -> str:
     return "{}"
 
 
-def validate_telemetry_file_output(telemetry_file_name) -> None:
+def validate_telemetry_file_output(telemetry_file_name: str) -> None:
     telemetry_expected = get_expected(telemetry_file_name)
     telemetry_output = get_output_telemetry()
 

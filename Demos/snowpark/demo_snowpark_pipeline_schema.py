@@ -1,4 +1,5 @@
 from datetime import datetime
+import os
 from snowflake.snowpark import Session
 
 from pyspark.sql import SparkSession
@@ -22,7 +23,11 @@ from snowflake.snowpark_checkpoints.checkpoint import (
     validate_dataframe_checkpoint,
 )
 from snowflake.snowpark_checkpoints.spark_migration import check_with_spark
-from snowflake.snowpark_checkpoints.utils.constant import CheckpointMode
+from snowflake.snowpark_checkpoints.utils.constant import (
+    SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH_ENV_VAR,
+)
+
+os.environ[SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH_ENV_VAR] = "Demos/snowpark"
 
 session = Session.builder.getOrCreate()
 job_context = SnowparkJobContext(

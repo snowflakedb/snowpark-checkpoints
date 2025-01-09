@@ -122,6 +122,11 @@ UNKNOWN_LINE_OF_CODE = -1
 BACKSLASH_TOKEN = "\\"
 SLASH_TOKEN = "/"
 
+# ENVIRONMENT VARIABLES
+SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH_ENV_VAR = (
+    "SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH"
+)
+
 
 def get_decimal_token() -> str:
     """Return the decimal token based on the local environment.

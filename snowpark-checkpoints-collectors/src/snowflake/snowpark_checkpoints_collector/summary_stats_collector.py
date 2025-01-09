@@ -136,7 +136,7 @@ def _collect_dataframe_checkpoint_mode_schema(
     for column in column_name_collection:
         struct_field_column = column_type_dict[column]
         column_type = struct_field_column.dataType.typeName()
-        is_empty_column = len(pandas_df[column]) == 0
+        is_empty_column = len(pandas_df[column].dropna()) == 0
         is_column_to_remove_from_pandera_schema = (
             _is_column_to_remove_from_pandera_schema(column_type)
         )

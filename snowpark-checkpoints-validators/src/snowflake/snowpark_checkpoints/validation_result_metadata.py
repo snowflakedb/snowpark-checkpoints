@@ -7,6 +7,7 @@ import os
 from typing import Optional
 
 from snowflake.snowpark_checkpoints.utils.constant import (
+    SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
     VALIDATION_RESULTS_JSON_FILE_NAME,
 )
 from snowflake.snowpark_checkpoints.validation_results import (
@@ -52,7 +53,11 @@ class ValidationResultsMetadata:
         validation_results_file = (
             path
             if path is not None
-            else os.path.join(os.getcwd(), VALIDATION_RESULTS_JSON_FILE_NAME)
+            else os.path.join(
+                os.getcwd(),
+                SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
+                VALIDATION_RESULTS_JSON_FILE_NAME,
+            )
         )
 
         self.validation_results = ValidationResults(results=[])
@@ -91,7 +96,9 @@ class ValidationResultsMetadata:
 
         """
         validation_results_file = os.path.join(
-            os.getcwd(), VALIDATION_RESULTS_JSON_FILE_NAME
+            os.getcwd(),
+            SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
+            VALIDATION_RESULTS_JSON_FILE_NAME,
         )
 
         with open(validation_results_file, "w") as output_file:

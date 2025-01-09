@@ -68,7 +68,7 @@ jobs:
       - name: Install Python packages
         run: |
           python -m pip install --upgrade pip -q
-          pip install requests -q
+          pip install requests pytest -q
           pip list
         shell: bash
         working-directory: ${{ github.workspace }}

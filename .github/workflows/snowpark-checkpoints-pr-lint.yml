@@ -1,0 +1,36 @@
+name: PR Lint
+on:
+  pull_request:
+    types: [edited, opened, reopened, synchronize]
+    branches: [main]
+jobs:
+  pr-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: morrisoncole/pr-lint-action@main
+        with:
+          title-regex: "^[a-zA-Z]+-[0-9]+"
+          on-failed-regex-fail-action: true
+          on-failed-regex-request-changes: false
+          on-failed-regex-create-review: false
+          on-failed-regex-comment: "Please prefix your PR title with a JIRA ticket number. e.g SNOW-123456 <Description>"
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+      - name: Check PR Description
+        run: |
+          if [ -z "${{ github.event.pull_request.body }}" ]; then
+            echo "PR description is empty. Please provide a description."
+            exit 1
+          fi
+      - name: Check PR Labels
+        run: |
+          if [ "${{ github.event.pull_request.labels }}" == "[]" ]; then
+            echo "PR has no labels. Please add appropriate labels."
+            exit 1
+          fi
+      - name: Check PR Size
+        run: |
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} | wc -l)
+          if [ "$CHANGED_FILES" -gt 25 ]; then
+            echo "PR is too large. Please split it into smaller PRs."
+            exit 1
+          fi

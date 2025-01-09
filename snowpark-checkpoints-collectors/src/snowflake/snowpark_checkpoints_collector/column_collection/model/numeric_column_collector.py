@@ -71,7 +71,7 @@ class NumericColumnCollector(ColumnCollectorBase):
         decimal_token = get_decimal_token()
         max_decimal_digits_counted = 0
 
-        for value in self.values:
+        for value in self.values.dropna():
             value_str = str(value)
             value_split_by_token = value_str.split(decimal_token)
             decimal_part = value_split_by_token[decimal_part_index]

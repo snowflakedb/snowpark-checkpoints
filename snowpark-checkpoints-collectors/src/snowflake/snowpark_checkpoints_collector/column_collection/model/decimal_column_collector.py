@@ -60,7 +60,7 @@ class DecimalColumnCollector(ColumnCollectorBase):
     def _compute_decimal_precision(self) -> int:
         decimal_part_index = 1
         decimal_token = get_decimal_token()
-        value = self.values[0]
+        value = self.values.dropna()[0]
         value_str = str(value)
         value_split_by_token = value_str.split(decimal_token)
         decimal_part = value_split_by_token[decimal_part_index]

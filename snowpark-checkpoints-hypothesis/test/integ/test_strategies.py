@@ -14,6 +14,7 @@ from datetime import date, datetime
 
 import hypothesis.strategies as st
 import pandera as pa
+import pytest
 
 from hypothesis import HealthCheck, given, settings
 
@@ -43,6 +44,17 @@ TEST_TELEMETRY_DATAFRAME_STRATEGIES_EXPECTED_DIRECTORY_NAME = (
 
 
 NTZ = TimestampTimeZone.NTZ
+
+
+@pytest.fixture(scope="session", autouse=True)
+def telemetry_testing_mode():
+    from snowflake.snowpark_checkpoints_collector.utils.telemetry import (
+        get_telemetry_manager,
+    )
+
+    telemetry_manager = get_telemetry_manager()
+    telemetry_manager.sc_is_testing = True
+    telemetry_manager.sc_is_enabled = True
 
 
 @given(data=st.data())

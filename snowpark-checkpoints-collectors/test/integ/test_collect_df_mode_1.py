@@ -69,6 +69,17 @@ def singleton():
     Singleton._instances = {}
 
 
+@pytest.fixture(scope="session", autouse=True)
+def telemetry_testing_mode():
+    from snowflake.snowpark_checkpoints_collector.utils.telemetry import (
+        get_telemetry_manager,
+    )
+
+    telemetry_manager = get_telemetry_manager()
+    telemetry_manager.sc_is_testing = True
+    telemetry_manager.sc_is_enabled = True
+
+
 def test_collect_dataframe(spark_session, singleton):
     sample_size = 1.0
     checkpoint_name = "test_full_df"

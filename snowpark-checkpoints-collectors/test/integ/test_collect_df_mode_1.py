@@ -5,6 +5,8 @@ import decimal
 import json
 import os
 from datetime import date, datetime, timezone, timedelta
+from pathlib import Path
+
 from pyspark.sql import SparkSession
 import pytest
 import pandas as pd
@@ -55,7 +57,17 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
 )
 from snowflake.snowpark_checkpoints_collector import Singleton
 
+import tempfile
+
 TEST_COLLECT_DF_MODE_1_EXPECTED_DIRECTORY_NAME = "test_collect_df_mode_1_expected"
+
+
+@pytest.fixture(scope="function")
+def output_path():
+    folder = os.urandom(8).hex()
+    directory = str(Path(tempfile.gettempdir()).resolve() / folder)
+    os.makedirs(directory)
+    return directory
 
 
 @pytest.fixture
@@ -88,7 +100,10 @@ def test_collect_dataframe(spark_session, singleton, output_path):
     )
 
     collect_dataframe_checkpoint(
-        pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size
+        pyspark_df,
+        checkpoint_name=checkpoint_name,
+        sample=sample_size,
+        output_path=output_path,
     )
 
     validate_checkpoint_file_output(output_path, checkpoint_name)
@@ -205,8 +220,10 @@ def test_collect_dataframe_all_column_types(spark_session, singleton, output_pat
 
     pyspark_df = spark_session.createDataFrame(data=data_df, schema=schema_df)
     collect_dataframe_checkpoint(
-        pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size,
-        output_path=output_path
+        pyspark_df,
+        checkpoint_name=checkpoint_name,
+        sample=sample_size,
+        output_path=output_path,
     )
 
     validate_checkpoint_file_output(output_path, checkpoint_name)
@@ -226,15 +243,21 @@ def test_collect_empty_dataframe_with_schema(spark_session, singleton, output_pa
 
     pyspark_df = spark_session.createDataFrame(data=data, schema=columns)
     collect_dataframe_checkpoint(
-        pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size
+        pyspark_df,
+        checkpoint_name=checkpoint_name,
+        sample=sample_size,
+        output_path=output_path,
     )
 
     validate_checkpoint_file_output(output_path, checkpoint_name)
 
 
-def test_collect_empty_dataframe_with_object_column(spark_session, singleton, output_path):
+def test_collect_empty_dataframe_with_object_column(
+    spark_session, singleton, output_path
+):
     sample_size = 1.0
     checkpoint_name = "test_empty_df_with_object_column"
+
     data = []
     columns = StructType(
         [
@@ -245,7 +268,10 @@ def test_collect_empty_dataframe_with_object_column(spark_session, singleton, ou
 
     pyspark_df = spark_session.createDataFrame(data=data, schema=columns)
     collect_dataframe_checkpoint(
-        pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size
+        pyspark_df,
+        checkpoint_name=checkpoint_name,
+        sample=sample_size,
+        output_path=output_path,
     )
 
     validate_checkpoint_file_output(output_path, checkpoint_name)
@@ -256,6 +282,7 @@ def test_collect_dataframe_with_unsupported_pandera_column_type(
 ):
     sample_size = 1.0
     checkpoint_name = "test_dataframe_with_unsupported_pandera_column_type"
+
     data = [
         ["A1", decimal.Decimal("1.123456789")],
         ["A2", decimal.Decimal("2.12345678")],
@@ -272,7 +299,10 @@ def test_collect_dataframe_with_unsupported_pandera_column_type(
 
     pyspark_df = spark_session.createDataFrame(data=data, schema=columns)
     collect_dataframe_checkpoint(
-        pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size
+        pyspark_df,
+        checkpoint_name=checkpoint_name,
+        sample=sample_size,
+        output_path=output_path,
     )
 
     validate_checkpoint_file_output(output_path, checkpoint_name)
@@ -294,7 +324,10 @@ def test_collect_dataframe_with_null_values(spark_session, singleton, output_pat
     )
 
     collect_dataframe_checkpoint(
-        pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size
+        pyspark_df,
+        checkpoint_name=checkpoint_name,
+        sample=sample_size,
+        output_path=output_path,
     )
 
     validate_checkpoint_file_output(output_path, checkpoint_name)
@@ -303,9 +336,7 @@ def test_collect_dataframe_with_null_values(spark_session, singleton, output_pat
 def test_collect_sampled_dataframe(spark_session, singleton, output_path):
     sample_size = 0.1
     checkpoint_name = "test_sampled_df"
-    checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
-        checkpoint_name
-    )
+
     pandas_df = pd.DataFrame(
         {
             "name": ["Peter", "Frank", "Rose", "Arthur", "Gloria"],
@@ -331,15 +362,18 @@ def test_collect_sampled_dataframe(spark_session, singleton, output_path):
 
     pyspark_df = spark_session.createDataFrame(pandas_df)
     collect_dataframe_checkpoint(
-        pyspark_df, checkpoint_name=checkpoint_name, sample=sample_size,
-        output_path=output_path
+        pyspark_df,
+        checkpoint_name=checkpoint_name,
+        sample=sample_size,
+        output_path=output_path,
     )
 
-    current_directory_path = os.getcwd()
-    output_directory_path = os.path.join(
-        current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME
+    output_file_path = os.path.join(
+        output_path,
+        SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
+        get_checkpoint_file_name(checkpoint_name),
     )
-    output_file_path = os.path.join(output_directory_path, checkpoint_file_name)
+
     assert os.path.exists(output_file_path) is True
 
     schema_contract_output = open(output_file_path).read()
@@ -418,6 +452,9 @@ def test_collect_dataframe_with_only_null_values(spark_session, singleton, outpu
     )
 
     validate_checkpoint_file_output(output_path, checkpoint_name)
+
+def get_checkpoint_file_name(checkpoint_name) -> str:
+    return CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(checkpoint_name)
 
 
 def validate_checkpoint_file_output(output_path:str, checkpoint_name:str) -> None:

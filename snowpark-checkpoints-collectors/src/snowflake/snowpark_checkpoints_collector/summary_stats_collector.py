@@ -82,6 +82,11 @@ def collect_dataframe_checkpoint(
 
             _sample = get_checkpoint_sample(checkpoint_name, sample)
 
+            if _is_empty_dataframe_without_schema(df):
+                raise Exception(
+                    "It is not possible to collect an empty DataFrame without schema"
+                )
+
             _mode = get_checkpoint_mode(checkpoint_name, mode)
 
             if _mode == CheckpointMode.SCHEMA:

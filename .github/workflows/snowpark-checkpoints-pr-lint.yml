@@ -42,7 +42,7 @@ jobs:
       - name: Check PR Size
         run: |
           CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} | wc -l)
-          if [ "$CHANGED_FILES" -gt 25 ]; then
+          if [ "$CHANGED_FILES" -gt 20 ]; then
             echo "PR is too large. Please split it into smaller PRs."
             exit 1
           fi

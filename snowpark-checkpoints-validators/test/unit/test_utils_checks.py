@@ -7,7 +7,7 @@ import os
 from unittest.mock import ANY, call, patch, mock_open
 from numpy import float64
 
-from pytest import raises
+from pytest import mark, raises
 from snowflake.snowpark_checkpoints.errors import SchemaValidationError
 from snowflake.snowpark_checkpoints.utils.constant import (
     BOOLEAN_TYPE,
@@ -682,35 +682,32 @@ def test_update_validation_result_without_file():
         mock_pipeline_result_metadata.save.assert_called_once()
 
 
-def test_is_valid_checkpoint_name_valid():
-    valid_names = ["checkpoint1", "Checkpoint_2", "CHECKPOINT_3"]
-    for name in valid_names:
-        assert _is_valid_checkpoint_name(name)
+@mark.parametrize("name", ["checkpoint1", "Checkpoint_2", "CHECKPOINT_3"])
+def test_is_valid_checkpoint_name_valid(name: str):
+    assert _is_valid_checkpoint_name(name)
 
 
-def test_is_valid_checkpoint_name_invalid():
-    invalid_names = [
+@mark.parametrize(
+    "name",
+    ["checkpoint-1", "Checkpoint 2", "CHECKPOINT@3", "checkpoint!", "123checkpoint"],
+)
+def test_is_valid_checkpoint_name_invalid(name: str):
+    assert _is_valid_checkpoint_name(name) is False
+
+
+@mark.parametrize(
+    "name",
+    [
         "checkpoint-1",
         "Checkpoint 2",
         "CHECKPOINT@3",
         "checkpoint!",
         "123checkpoint",
-    ]
-    for name in invalid_names:
-        assert _is_valid_checkpoint_name(name) is False
-
-
-def test_validate_checkpoint_name_invalid():
-    invalid_names = [
-        "checkpoint-1",
-        "Checkpoint 2",
-        "CHECKPOINT@3",
-        "checkpoint!",
-        "123checkpoint",
-    ]
-    for name in invalid_names:
-        with raises(
-            ValueError,
-            match=f"Invalid checkpoint name: {name}. Checkpoint names must only contain alphanumeric characters and underscores.",
-        ):
-            _validate_checkpoint_name(name)
+    ],
+)
+def test_validate_checkpoint_name_invalid(name: str):
+    with raises(
+        ValueError,
+        match=f"Invalid checkpoint name: {name}. Checkpoint names must only contain alphanumeric characters and underscores.",
+    ):
+        _validate_checkpoint_name(name)

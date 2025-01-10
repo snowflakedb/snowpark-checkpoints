@@ -12,14 +12,17 @@ from snowflake.hypothesis_snowpark import dataframe_strategy
 from snowflake.snowpark import Session
 
 
-def test_dataframe_strategy_none_schema():
-    with pytest.raises(ValueError, match="JSON schema cannot be None."):
-        dataframe_strategy(json_schema=None, session=Mock(spec=Session))
-
-
 def test_dataframe_strategy_none_session():
     with pytest.raises(ValueError, match="Session cannot be None."):
-        dataframe_strategy(json_schema="schema.json", session=None)
+        dataframe_strategy(schema="schema.json", session=None)
+
+
+def test_dataframe_strategy_invalid_schema():
+    with pytest.raises(
+        ValueError,
+        match="Schema must be a path to a JSON schema file or a Pandera DataFrameSchema object.",
+    ):
+        dataframe_strategy(schema="123", session=Mock(spec=Session))
 
 
 def test_dataframe_strategy_invalid_json_file():
@@ -40,7 +43,7 @@ def test_dataframe_strategy_invalid_json_file():
             ),
         ):
             dataframe_strategy(
-                json_schema="schema.json",
+                schema="schema.json",
                 session=Mock(spec=Session),
             )
 
@@ -77,6 +80,6 @@ def test_dataframe_strategy_not_supported_dtypes():
             ),
         ):
             dataframe_strategy(
-                json_schema="schema.json",
+                schema="schema.json",
                 session=Mock(spec=Session),
             )

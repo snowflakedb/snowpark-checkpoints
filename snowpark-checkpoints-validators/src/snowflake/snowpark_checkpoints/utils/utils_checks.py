@@ -55,6 +55,38 @@ from snowflake.snowpark_checkpoints.validation_result_metadata import (
 from snowflake.snowpark_checkpoints.validation_results import ValidationResult
 
 
+def _validate_checkpoint_name(checkpoint_name: str) -> None:
+    """Validate the given checkpoint name.
+
+    Args:
+        checkpoint_name (str): The name of the checkpoint to validate.
+
+    Raises:
+        ValueError: If the checkpoint name is invalid.
+        Checkpoint names must only contain alphanumeric characters and underscores.
+
+    """
+    if not _is_valid_checkpoint_name(checkpoint_name):
+        raise ValueError(
+            f"Invalid checkpoint name: {checkpoint_name}. "
+            "Checkpoint names must only contain alphanumeric characters and underscores."
+        )
+
+
+def _is_valid_checkpoint_name(checkpoint_name: str) -> None:
+    """Validate the given checkpoint name against a specific regex pattern.
+
+    Args:
+        checkpoint_name (str): The name of the checkpoint to validate.
+
+    Returns:
+        Match object if the checkpoint name matches the regex pattern, None otherwise.
+
+    """
+    regex = r"^[a-zA-Z0-9_]+$"
+    return re.match(regex, checkpoint_name)
+
+
 def _process_sampling(
     df: SnowparkDataFrame,
     pandera_schema: DataFrameSchema,

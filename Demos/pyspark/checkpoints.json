@@ -4,7 +4,7 @@
       "entryPoint": "",
       "checkpoints": [
         {
-          "name": "demo-initial-creation-checkpoint",
+          "name": "demo_initial_creation_checkpoint",
           "function": "df",
           "file": "demo_snowpark_pipeline_schema.py",
           "location": 1,
@@ -13,7 +13,7 @@
           "mode": 1
         },
         {
-          "name": "demo-add-a-column",
+          "name": "demo_add_a_column",
           "function": "df1",
           "file": "demo_snowpark_pipeline_schema.py",
           "location": 1,

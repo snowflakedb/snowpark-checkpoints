@@ -16,6 +16,7 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
     SamplingStrategy,
 )
 from snowflake.snowpark_checkpoints.utils.telemetry import STATUS_KEY, report_telemetry
+from snowflake.snowpark_checkpoints.utils.utils_checks import _validate_checkpoint_name
 
 
 fn = TypeVar("F", bound=Callable)
@@ -58,6 +59,7 @@ def check_with_spark(
         _checkpoint_name = checkpoint_name
         if checkpoint_name is None:
             _checkpoint_name = snowpark_fn.__name__
+        _validate_checkpoint_name(checkpoint_name)
 
         def wrapper(*args, **kwargs):
             sampler = SamplingAdapter(

@@ -5,6 +5,8 @@ import inspect
 import os
 import tempfile
 
+from typing import Optional
+
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     COLLECTION_RESULT_FILE_NAME,
     DOT_IPYNB_EXTENSION,
@@ -14,17 +16,17 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
 )
 
 
-def get_output_file_path() -> str:
+def get_output_file_path(out_path: Optional[str] = None) -> str:
     """Get the output file path.
+
+    Args:
+        out_path (Optional[str], optional): the output path. Defaults to None.
 
     Returns:
         str: returns the output file path.
 
     """
-    current_working_directory_path = os.getcwd()
-    output_directory_path = os.path.join(
-        current_working_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME
-    )
+    output_directory_path = get_output_directory_path(out_path)
     output_file_path = os.path.join(output_directory_path, COLLECTION_RESULT_FILE_NAME)
     return output_file_path
 
@@ -43,29 +45,19 @@ def get_relative_file_path(path: str) -> str:
     return relative_file_path
 
 
-def get_output_directory_path() -> str:
+def get_output_directory_path(output_path: Optional[str] = None) -> str:
     """Get the output directory path.
 
     Returns:
         str: returns the output directory path.
 
     """
-    current_working_directory_path = os.getcwd()
+    current_working_directory_path = output_path if output_path else os.getcwd()
     checkpoints_output_directory_path = os.path.join(
         current_working_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME
     )
+    os.makedirs(checkpoints_output_directory_path, exist_ok=True)
     return checkpoints_output_directory_path
-
-
-def create_output_directory() -> None:
-    """Create the output directory in the current working directory.
-
-    The name of the directory is snowpark-checkpoints-output.
-
-    """
-    checkpoints_output_directory_path = get_output_directory_path()
-    if not os.path.exists(checkpoints_output_directory_path):
-        os.makedirs(checkpoints_output_directory_path)
 
 
 def get_collection_point_source_file_path() -> str:

@@ -3,6 +3,8 @@
 #
 import json
 
+from typing import Optional
+
 from snowflake.snowpark_checkpoints_collector import Singleton
 from snowflake.snowpark_checkpoints_collector.collection_result.model import (
     CollectionPointResult,
@@ -23,10 +25,10 @@ class CollectionPointResultManager(metaclass=Singleton):
 
     """
 
-    def __init__(self) -> None:
+    def __init__(self, output_path: Optional[str] = None) -> None:
         """Init CollectionPointResultManager."""
         self.result_collection: list[any] = []
-        self.output_file_path = file_utils.get_output_file_path()
+        self.output_file_path = file_utils.get_output_file_path(output_path)
 
     def add_result(self, result: CollectionPointResult) -> None:
         """Add the CollectionPointResult result to the collection.

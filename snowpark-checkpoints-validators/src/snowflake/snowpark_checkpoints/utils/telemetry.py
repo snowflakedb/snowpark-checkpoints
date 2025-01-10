@@ -6,6 +6,7 @@ import datetime
 import hashlib
 import inspect
 import json
+import os
 
 from enum import IntEnum
 from os import getcwd, getenv, makedirs
@@ -52,7 +53,6 @@ class TelemetryManager(TelemetryClient):
         self.sc_folder_path = (
             Path(SNOWFLAKE_DIRS.user_config_path) / "snowpark-checkpoints-telemetry"
         )
-
         self.sc_sf_path_telemetry = "/telemetry/send"
         self.sc_flush_size = 25
         self.sc_is_enabled = self._sc_is_telemetry_enabled()
@@ -61,6 +61,16 @@ class TelemetryManager(TelemetryClient):
         self._sc_upload_local_telemetry()
         self.sc_log_batch = []
         self.sc_hypothesis_input_events = []
+
+    def set_sc_output_path(self, path: Path) -> None:
+        """Set the output path for testing.
+
+        Args:
+            path: path to write telemetry.
+
+        """
+        os.makedirs(path, exist_ok=True)
+        self.sc_folder_path = path
 
     def sc_log_error(
         self, event_name: str, parameters_info: Optional[dict] = None
@@ -115,8 +125,7 @@ class TelemetryManager(TelemetryClient):
         """
         self.sc_log_batch.append(event)
         if self.sc_is_testing:
-            output_folder = Path(getcwd()) / "snowpark-checkpoints-output" / "telemetry"
-            self._sc_write_telemetry(self.sc_log_batch, output_folder=output_folder)
+            self._sc_write_telemetry(self.sc_log_batch)
             self.sc_log_batch = []
             return
 
@@ -154,25 +163,20 @@ class TelemetryManager(TelemetryClient):
             return False
         return True
 
-    def _sc_write_telemetry(
-        self, batch: list, output_folder: Optional[str] = None
-    ) -> None:
+    def _sc_write_telemetry(self, batch: list) -> None:
         """Write telemetry events to local folder. If the folder is full, free up space for the new events.
 
         Args:
             batch (list): The batch of events to write.
-            output_folder (str, optional): folder used for testing.
-
 
         """
         try:
-            folder = output_folder or self.sc_folder_path
-            makedirs(folder, exist_ok=True)
+            makedirs(self.sc_folder_path, exist_ok=True)
             for event in batch:
                 message = event.get("message")
                 if message is not None:
                     file_path = (
-                        folder
+                        self.sc_folder_path
                         / f'{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")}'
                         f'_telemetry_{message.get("type")}.json'
                     )
@@ -235,9 +239,13 @@ class TelemetryManager(TelemetryClient):
         return self._rest is not None
 
     def _sc_is_telemetry_testing(self) -> bool:
-        if getenv("SNOWPARK_CHECKPOINTS_TELEMETRY_TESTING") == "true":
-            return True
-        return False
+        is_testing = getenv("SNOWPARK_CHECKPOINTS_TELEMETRY_TESTING") == "true"
+        if is_testing:
+            local_telemetry_path = (
+                Path(getcwd()) / "snowpark-checkpoints-output" / "telemetry"
+            )
+            self.set_sc_output_path(local_telemetry_path)
+        return is_testing
 
     def _sc_is_telemetry_manager(self) -> bool:
         """Check if the class is telemetry manager.
@@ -489,18 +497,16 @@ def handle_result(
         else:
             telemetry_m.sc_log_info(VALUE_VALIDATOR_MIRROR, telemetry_data)
     elif func_name == "dataframe_strategy":
-        is_logged = telemetry_m.sc_is_hypothesis_event_logged(
-            (param_data.get("json_schema"), 0)
-        )
-        if not is_logged:
-            json_data = get_load_json(param_data.get("json_schema"))["custom_data"][
-                "columns"
-            ]
-            telemetry_data[SCHEMA_TYPES_KEY] = [column["type"] for column in json_data]
-            telemetry_m.sc_log_info(HYPOTHESIS_INPUT_SCHEMA, telemetry_data)
-            telemetry_m.sc_hypothesis_input_events.append(
-                (param_data.get("json_schema"), 0)
-            )
+        schema_param = param_data.get(DATAFRAME_STRATEGY_SCHEMA_PARAM_NAME)
+        if isinstance(schema_param, str):
+            is_logged = telemetry_m.sc_is_hypothesis_event_logged((schema_param, 0))
+            if not is_logged:
+                json_data = get_load_json(schema_param)["custom_data"]["columns"]
+                telemetry_data[SCHEMA_TYPES_KEY] = [
+                    column["type"] for column in json_data
+                ]
+                telemetry_m.sc_log_info(HYPOTHESIS_INPUT_SCHEMA, telemetry_data)
+                telemetry_m.sc_hypothesis_input_events.append((schema_param, 0))
 
 
 def handle_exception(func_name: str, param_data: dict, err: Exception) -> None:
@@ -546,14 +552,15 @@ def handle_exception(func_name: str, param_data: dict, err: Exception) -> None:
             )
         telemetry_m.sc_log_error(DATAFRAME_VALIDATOR_ERROR, telemetry_data)
     elif func_name == "dataframe_strategy":
-        input_json = param_data.get("json_schema")
+        input_json = param_data.get(DATAFRAME_STRATEGY_SCHEMA_PARAM_NAME)
         if input_json:
             is_logged = telemetry_m.sc_is_hypothesis_event_logged((input_json, 1))
             if not is_logged:
                 telemetry_m.sc_log_error(HYPOTHESIS_INPUT_SCHEMA_ERROR, telemetry_data)
-                telemetry_m.sc_hypothesis_input_events.append(
-                    (param_data.get("json_schema"), 1)
-                )
+                if isinstance(input_json, str):
+                    telemetry_m.sc_hypothesis_input_events.append(
+                        (param_data.get(DATAFRAME_STRATEGY_SCHEMA_PARAM_NAME), 1)
+                    )
 
 
 fn = TypeVar("fn", bound=Callable)
@@ -628,6 +635,8 @@ ERROR_KEY = "error"
 MODE_KEY = "mode"
 SNOWFLAKE_SCHEMA_TYPES_KEY = "snowflake_schema_types"
 SPARK_SCHEMA_TYPES_KEY = "spark_schema_types"
+
+DATAFRAME_STRATEGY_SCHEMA_PARAM_NAME = "schema"
 
 
 class CheckpointMode(IntEnum):

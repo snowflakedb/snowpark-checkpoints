@@ -32,7 +32,7 @@ def test_is_checkpoint_enabled_default():
             is_checkpoint_enabled,
         )
 
-        actual = is_checkpoint_enabled("demo-initial-creation-checkpoint")
+        actual = is_checkpoint_enabled("demo_initial_creation_checkpoint")
         assert actual
 
 
@@ -52,7 +52,7 @@ def test_is_checkpoint_enabled_no_checkpoint_name():
 def test_is_checkpoint_enabled_no_file():
     from snowflake.snowpark_checkpoints.utils.extra_config import is_checkpoint_enabled
 
-    actual = is_checkpoint_enabled("demo-initial-creation-checkpoint")
+    actual = is_checkpoint_enabled("demo_initial_creation_checkpoint")
     assert actual == True
 
 

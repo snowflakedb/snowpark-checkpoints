@@ -266,7 +266,7 @@ data = [
 df = session.create_dataframe(data, schema)
 
 # Check a schema/stats here!
-validate_dataframe_checkpoint(df, "demo-initial-creation-checkpoint", job_context)
+validate_dataframe_checkpoint(df, "demo_initial_creation_checkpoint", job_context)
 
 
 def original_spark_code_I_dont_understand(df):
@@ -284,7 +284,7 @@ def original_spark_code_I_dont_understand(df):
 @check_with_spark(
     job_context=job_context,
     spark_function=original_spark_code_I_dont_understand,
-    checkpoint_name="snowpark-function",
+    checkpoint_name="snowpark_function",
 )
 def new_snowpark_code_I_do_understand(df):
     from snowflake.snowpark.functions import col, lit, when
@@ -301,4 +301,4 @@ def new_snowpark_code_I_do_understand(df):
 df1 = new_snowpark_code_I_do_understand(df)
 
 # Check a schema/stats here!
-validate_dataframe_checkpoint(df1, "demo-add-a-column", job_context)
+validate_dataframe_checkpoint(df1, "demo_add_a_column", job_context)

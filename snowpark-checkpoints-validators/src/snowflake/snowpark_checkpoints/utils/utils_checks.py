@@ -73,18 +73,22 @@ def _validate_checkpoint_name(checkpoint_name: str) -> None:
         )
 
 
-def _is_valid_checkpoint_name(checkpoint_name: str) -> None:
-    """Validate the given checkpoint name against a specific regex pattern.
+def _is_valid_checkpoint_name(checkpoint_name: str) -> bool:
+    """Check if the provided checkpoint name is valid.
+
+    A valid checkpoint name must:
+    - Start with a letter (a-z, A-Z) or an underscore (_)
+    - Be followed by any combination of letters, digits (0-9), underscores (_), or dollar signs ($)
 
     Args:
-        checkpoint_name (str): The name of the checkpoint to validate.
+        checkpoint_name (str): The checkpoint name to validate.
 
     Returns:
-        Match object if the checkpoint name matches the regex pattern, None otherwise.
+        bool: True if the checkpoint name is valid, False otherwise.
 
     """
-    regex = r"^[a-zA-Z0-9_]+$"
-    return re.match(regex, checkpoint_name)
+    regex = r"^[a-zA-Z_][a-zA-Z0-9_$]*$"
+    return bool(re.match(regex, checkpoint_name))
 
 
 def _process_sampling(

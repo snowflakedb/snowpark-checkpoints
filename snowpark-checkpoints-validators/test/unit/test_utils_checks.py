@@ -685,17 +685,29 @@ def test_update_validation_result_without_file():
 def test_validate_checkpoint_name_valid():
     valid_names = ["checkpoint1", "Checkpoint_2", "CHECKPOINT_3"]
     for name in valid_names:
-        assert _is_valid_checkpoint_name(name) is not None
+        assert _is_valid_checkpoint_name(name)
 
 
 def test_validate_checkpoint_name_invalid():
-    invalid_names = ["checkpoint-1", "Checkpoint 2", "CHECKPOINT@3", "checkpoint!"]
+    invalid_names = [
+        "checkpoint-1",
+        "Checkpoint 2",
+        "CHECKPOINT@3",
+        "checkpoint!",
+        "123checkpoint",
+    ]
     for name in invalid_names:
-        assert _is_valid_checkpoint_name(name) is None
+        assert _is_valid_checkpoint_name(name) is False
 
 
 def test_validate_checkpoint_name_invalid():
-    invalid_names = ["checkpoint-1", "Checkpoint 2", "CHECKPOINT@3", "checkpoint!"]
+    invalid_names = [
+        "checkpoint-1",
+        "Checkpoint 2",
+        "CHECKPOINT@3",
+        "checkpoint!",
+        "123checkpoint",
+    ]
     for name in invalid_names:
         with raises(
             ValueError,

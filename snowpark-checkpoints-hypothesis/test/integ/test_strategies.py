@@ -3,11 +3,9 @@
 #
 
 import ast
-
-import os
 import json
+import os
 import shutil
-from deepdiff import DeepDiff
 
 from datetime import date, datetime
 from unittest.mock import Mock
@@ -18,13 +16,13 @@ import pandas as pd
 import pandera as pa
 import pytest
 
+from deepdiff import DeepDiff
 from hypothesis import HealthCheck, given, settings
 
 from snowflake.hypothesis_snowpark import dataframe_strategy
 from snowflake.hypothesis_snowpark.telemetry.telemetry import get_telemetry_manager
 from snowflake.snowpark import DataFrame, Session
 from snowflake.snowpark.functions import col, count, when
-
 from snowflake.snowpark.types import (
     ArrayType,
     BinaryType,
@@ -38,6 +36,7 @@ from snowflake.snowpark.types import (
     TimestampTimeZone,
     TimestampType,
 )
+
 
 SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME = "snowpark-checkpoints-output"
 TEST_TELEMETRY_DATAFRAME_STRATEGIES_EXPECTED_DIRECTORY_NAME = (
@@ -334,6 +333,13 @@ def test_dataframe_strategy_from_object_schema_generated_schema(
 def test_dataframe_strategy_from_object_schema_generated_values(
     data: st.DataObject, session: Session
 ):
+    min_timestamp_value = datetime(
+        2023, 1, 8, 19, 56, 47, 124971, tzinfo=ZoneInfo("UTC")
+    )
+    max_timestamp_value = datetime(
+        2025, 12, 5, 20, 56, 47, 124971, tzinfo=ZoneInfo("UTC")
+    )
+
     schema = pa.DataFrameSchema(
         {
             "BYTE_COLUMN": pa.Column(pa.Int8, checks=pa.Check.in_range(-128, 127)),
@@ -360,8 +366,8 @@ def test_dataframe_strategy_from_object_schema_generated_values(
             "TIMESTAMP_COLUMN": pa.Column(
                 pd.DatetimeTZDtype(tz=ZoneInfo("UTC")),
                 checks=pa.Check.in_range(
-                    datetime(2025, 1, 8, 19, 56, 47, 124971, tzinfo=ZoneInfo("UTC")),
-                    datetime(2025, 12, 5, 20, 56, 47, 124971, tzinfo=ZoneInfo("UTC")),
+                    min_timestamp_value,
+                    max_timestamp_value,
                 ),
             ),
             "TIMESTAMPNTZ_COLUMN": pa.Column(
@@ -385,14 +391,26 @@ def test_dataframe_strategy_from_object_schema_generated_values(
     snowpark_df = data.draw(strategy)
     pandas_df = snowpark_df.to_pandas()
 
-    for column in schema.columns.values():
+    # Remove the TIMESTAMP_COLUMN from the expected schema because Pandera cannot validate it correctly.
+    # Instead, we will validate the values manually.
+    expected_schema = schema.remove_columns(["TIMESTAMP_COLUMN"])
+
+    for column in expected_schema.columns.values():
         # Skip the validation of the data types. Just check the values
         column.dtype = None
 
     try:
-        schema.validate(pandas_df)
+        expected_schema.validate(pandas_df)
     except pa.errors.SchemaError as e:
-        raise AssertionError(f"Schema validation failed: {e.args[0]}.\n") from e
+        raise AssertionError(f"Pandera schema validation failed: {e.args[0]}.\n") from e
+
+    out_of_range_timestamps_df = snowpark_df.filter(
+        (col("TIMESTAMP_COLUMN") < min_timestamp_value)
+        | (col("TIMESTAMP_COLUMN") > max_timestamp_value)
+    )
+    assert (
+        out_of_range_timestamps_df.count() == 0
+    ), f"TIMESTAMP_COLUMN values are out of range: {out_of_range_timestamps_df.collect()}"
 
 
 def get_expected(file_name: str) -> str:

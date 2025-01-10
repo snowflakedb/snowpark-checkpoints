@@ -11,7 +11,7 @@ import hypothesis.strategies as st
 import pandas as pd
 import pytest
 
-from hypothesis import given, settings
+from hypothesis import given, settings, HealthCheck
 
 from snowflake.hypothesis_snowpark.constants import (
     CUSTOM_DATA_MAX_SIZE_KEY,
@@ -57,7 +57,7 @@ def test_array_strategy(data: st.DataObject):
 
 
 @given(data=st.data())
-@settings(max_examples=MAX_EXAMPLES)
+@settings(max_examples=MAX_EXAMPLES, suppress_health_check=list(HealthCheck))
 def test_array_strategy_default_values(data: st.DataObject):
     result = data.draw(array_strategy(dtype=PYSPARK_STRING_TYPE))
     assert isinstance(result, list)

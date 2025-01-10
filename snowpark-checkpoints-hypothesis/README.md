@@ -11,12 +11,13 @@ from hypothesis import given
 from snowflake.hypothesis_snowpark import dataframe_strategy
 from snowflake.snowpark import DataFrame, Session
 
+
 @given(
-   df=dataframe_strategy(
-      json_schema="schema.json", 
-      session=Session.builder.getOrCreate(), 
-      size=10
-   )
+    df=dataframe_strategy(
+        schema="schema.json",
+        session=Session.builder.getOrCreate(),
+        size=10
+    )
 )
 def test_my_function(df: DataFrame):
     # Test your function here

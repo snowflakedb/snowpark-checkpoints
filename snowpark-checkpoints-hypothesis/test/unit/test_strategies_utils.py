@@ -12,16 +12,15 @@ import pandera as pa
 import pytest
 
 from snowflake.hypothesis_snowpark.strategies_utils import (
-    PYSPARK_TO_SNOWPARK_SUPPORTED_TYPES,
     apply_custom_null_values,
     generate_snowpark_dataframe,
+    generate_snowpark_schema,
     load_json_schema,
-    pyspark_to_snowpark_type,
     temporary_random_seed,
 )
-from snowflake.snowpark import DataFrame, Session
+from snowflake.snowpark import DataFrame, Row, Session
 from snowflake.snowpark.types import (
-    DataType,
+    IntegerType,
     LongType,
     StringType,
     StructField,
@@ -48,24 +47,6 @@ def test_load_json_schema_invalid_json(tmp_path: Path):
     invalid_json_file.write_text("{invalid_json}")
     with pytest.raises(ValueError, match="Error reading JSON schema file:"):
         load_json_schema(str(invalid_json_file))
-
-
-def test_pyspark_to_snowpark_type_valid_types():
-    for (
-        pyspark_type,
-        expected_snowpark_type,
-    ) in PYSPARK_TO_SNOWPARK_SUPPORTED_TYPES.items():
-        actual_snowpark_type = pyspark_to_snowpark_type(pyspark_type)
-        assert isinstance(actual_snowpark_type, DataType)
-        assert actual_snowpark_type == expected_snowpark_type
-
-
-def test_pyspark_to_snowpark_type_invalid_types():
-    pyspark_type = "unknown_type"
-    with pytest.raises(
-        ValueError, match=f"Unsupported PySpark data type: {pyspark_type}"
-    ):
-        pyspark_to_snowpark_type(pyspark_type)
 
 
 def test_apply_custom_null_values_no_nulls():
@@ -119,9 +100,26 @@ def test_apply_custom_null_values_invalid_column():
     assert "col3" not in result_df.columns
 
 
-def test_generate_snowpark_dataframe_valid_schema(local_session: Session):
-    pandas_df = pd.DataFrame({"name": ["Alice", "Bob", "Charlie"], "age": [25, 30, 35]})
+def test_generate_snowpark_schema_no_custom_data():
+    pandera_schema = pa.DataFrameSchema(
+        {
+            "name": pa.Column(pa.String, nullable=False),
+            "age": pa.Column(pa.Int, nullable=True),
+        }
+    )
 
+    expected_schema = StructType(
+        [
+            StructField("name", StringType(), False),
+            StructField("age", LongType(), True),
+        ]
+    )
+
+    snowpark_schema = generate_snowpark_schema(pandera_schema)
+    assert snowpark_schema == expected_schema
+
+
+def test_generate_snowpark_schema_with_custom_data():
     pandera_schema = pa.DataFrameSchema(
         {
             "name": pa.Column(pa.String, nullable=False),
@@ -136,27 +134,18 @@ def test_generate_snowpark_dataframe_valid_schema(local_session: Session):
         ]
     }
 
-    snowpark_df = generate_snowpark_dataframe(
-        pandas_df, local_session, pandera_schema, custom_data
-    )
-
     expected_schema = StructType(
         [
             StructField("name", StringType(), False),
-            StructField("age", LongType(), True),
+            StructField("age", IntegerType(), True),
         ]
     )
 
-    assert isinstance(snowpark_df, DataFrame)
-    assert snowpark_df.schema == expected_schema
-    assert snowpark_df.collect() == [("Alice", 25), ("Bob", 30), ("Charlie", 35)]
+    snowpark_schema = generate_snowpark_schema(pandera_schema, custom_data)
+    assert snowpark_schema == expected_schema
 
 
-def test_generate_snowpark_dataframe_missing_column_in_custom_data(
-    local_session: Session,
-):
-    pandas_df = pd.DataFrame({"name": ["Alice", "Bob", "Charlie"], "age": [25, 30, 35]})
-
+def test_generate_snowpark_schema_missing_column_in_custom_data():
     pandera_schema = pa.DataFrameSchema(
         {
             "name": pa.Column(pa.String, nullable=False),
@@ -171,16 +160,10 @@ def test_generate_snowpark_dataframe_missing_column_in_custom_data(
     }
 
     with pytest.raises(ValueError, match="Column 'age' is missing from custom_data"):
-        generate_snowpark_dataframe(
-            pandas_df, local_session, pandera_schema, custom_data
-        )
+        generate_snowpark_schema(pandera_schema, custom_data)
 
 
-def test_generate_snowpark_dataframe_missing_type_in_custom_data(
-    local_session: Session,
-):
-    pandas_df = pd.DataFrame({"name": ["Alice", "Bob", "Charlie"], "age": [25, 30, 35]})
-
+def test_generate_snowpark_schema_missing_type_in_custom_data():
     pandera_schema = pa.DataFrameSchema(
         {
             "name": pa.Column(pa.String, nullable=False),
@@ -198,14 +181,10 @@ def test_generate_snowpark_dataframe_missing_type_in_custom_data(
     with pytest.raises(
         ValueError, match="Type for column 'age' is missing from custom_data"
     ):
-        generate_snowpark_dataframe(
-            pandas_df, local_session, pandera_schema, custom_data
-        )
+        generate_snowpark_schema(pandera_schema, custom_data)
 
 
-def test_generate_snowpark_dataframe_invalid_pyspark_type(local_session: Session):
-    pandas_df = pd.DataFrame({"name": ["Alice", "Bob", "Charlie"], "age": [25, 30, 35]})
-
+def test_generate_snowpark_schema_invalid_pyspark_type():
     pandera_schema = pa.DataFrameSchema(
         {
             "name": pa.Column(pa.String, nullable=False),
@@ -220,10 +199,48 @@ def test_generate_snowpark_dataframe_invalid_pyspark_type(local_session: Session
         ]
     }
 
-    with pytest.raises(ValueError, match="Unsupported PySpark data type: unknown_type"):
-        generate_snowpark_dataframe(
-            pandas_df, local_session, pandera_schema, custom_data
-        )
+    with pytest.raises(TypeError, match="Unsupported PySpark data type: unknown_type"):
+        generate_snowpark_schema(pandera_schema, custom_data)
+
+
+def test_generate_snowpark_dataframe_with_valid_data(session: Session):
+    pandas_df = pd.DataFrame({"col1": [1, 2], "col2": ["a", "b"]})
+    snowpark_schema = StructType(
+        [
+            StructField("col1", IntegerType(), nullable=False),
+            StructField("col2", StringType(), nullable=False),
+        ]
+    )
+    result = generate_snowpark_dataframe(pandas_df, snowpark_schema, session)
+    assert isinstance(result, DataFrame)
+    assert result.collect() == [Row(COL1=1, COL2="a"), Row(COL1=2, COL2="b")]
+
+
+def test_generate_snowpark_dataframe_with_empty_dataframe(session: Session):
+    pandas_df = pd.DataFrame(columns=["col1", "col2"])
+    snowpark_schema = StructType(
+        [
+            StructField("col1", IntegerType(), nullable=False),
+            StructField("col2", StringType(), nullable=False),
+        ]
+    )
+    result = generate_snowpark_dataframe(pandas_df, snowpark_schema, session)
+    assert isinstance(result, DataFrame)
+    assert result.count() == 0
+
+
+def test_generate_snowpark_dataframe_with_null_values(session: Session):
+    pandas_df = pd.DataFrame({"col1": [1, None], "col2": ["a", None]})
+    snowpark_schema = StructType(
+        [
+            StructField("col1", IntegerType(), nullable=True),
+            StructField("col2", StringType(), nullable=True),
+        ]
+    )
+    result = generate_snowpark_dataframe(pandas_df, snowpark_schema, session)
+    assert isinstance(result, DataFrame)
+    assert result.filter(result["col1"].isNull()).count() == 1
+    assert result.filter(result["col2"].isNull()).count() == 1
 
 
 def test_temporary_random_seed_no_seed():

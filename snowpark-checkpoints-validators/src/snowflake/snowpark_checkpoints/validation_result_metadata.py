@@ -95,6 +95,9 @@ class ValidationResultsMetadata:
             OSError: If the file cannot be opened or written to.
 
         """
+        if not os.path.exists(SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME):
+            os.makedirs(SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME)
+
         validation_results_file = os.path.join(
             os.getcwd(),
             SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,

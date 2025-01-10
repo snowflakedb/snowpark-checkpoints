@@ -95,7 +95,7 @@ def _process_sampling(
     df: SnowparkDataFrame,
     pandera_schema: DataFrameSchema,
     job_context: Optional[SnowparkJobContext] = None,
-    sample_frac: Optional[float] = 0.1,
+    sample_frac: Optional[float] = 1.0,
     sample_number: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
 ):
@@ -208,14 +208,20 @@ def _add_boolean_checks(
     schema.columns[col].checks.extend(
         [
             Check(
-                lambda series: percentage_true - std
-                <= series.value_counts().get(True, 0) / series.count()
-                <= percentage_true + std
+                lambda series: (
+                    percentage_true - std
+                    <= series.value_counts().get(True, 0) / series.count()
+                    if series.count() > 0
+                    else 1 <= percentage_true + std
+                ),
             ),
             Check(
-                lambda series: percentage_false - std
-                <= series.value_counts().get(False, 0) / series.count()
-                <= percentage_false + std
+                lambda series: (
+                    percentage_false - std
+                    <= series.value_counts().get(False, 0) / series.count()
+                    if series.count() > 0
+                    else 1 <= percentage_false + std
+                ),
             ),
         ]
     )

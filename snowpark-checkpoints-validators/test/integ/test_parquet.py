@@ -18,6 +18,7 @@ from snowflake.snowpark_checkpoints.checkpoint import validate_dataframe_checkpo
 from snowflake.snowpark_checkpoints.errors import SchemaValidationError
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from snowflake.snowpark_checkpoints.utils.constant import (
+    DATAFRAME_EXECUTION_MODE,
     CheckpointMode,
     FAIL_STATUS,
     PASS_STATUS,
@@ -257,7 +258,7 @@ def test_df_mode_dataframe(job_context, snowpark_schema, data):
         )
 
     mocked_update.assert_called_once_with(checkpoint_name, PASS_STATUS)
-    mocked_session.assert_called_once_with(checkpoint_name)
+    mocked_session.assert_called_once_with(checkpoint_name, DATAFRAME_EXECUTION_MODE)
 
 
 def test_df_mode_dataframe_mismatch(job_context, snowpark_schema, data):

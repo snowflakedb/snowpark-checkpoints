@@ -424,7 +424,9 @@ def check_input_schema(
                         )
 
                         if job_context is not None:
-                            job_context.mark_pass(_checkpoint_name)
+                            job_context.mark_pass(
+                                _checkpoint_name,
+                            )
 
                         logger = CheckpointLogger().get_logger()
                         logger.info(

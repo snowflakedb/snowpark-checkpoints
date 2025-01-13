@@ -16,7 +16,9 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
     SamplingStrategy,
 )
 from snowflake.snowpark_checkpoints.utils.telemetry import STATUS_KEY, report_telemetry
-from snowflake.snowpark_checkpoints.utils.utils_checks import _validate_checkpoint_name
+from snowflake.snowpark_checkpoints.utils.utils_checks import (
+    _validate_checkpoint_name,
+)
 
 
 fn = TypeVar("F", bound=Callable)

@@ -26,6 +26,7 @@ from snowflake.snowpark_checkpoints.utils.constant import (
     CHECKPOINT_TABLE_NAME_FORMAT,
     COLUMNS_KEY,
     DATAFRAME_CUSTOM_DATA_KEY,
+    DATAFRAME_EXECUTION_MODE,
     DATAFRAME_PANDERA_SCHEMA_KEY,
     DECIMAL_PRECISION_KEY,
     DEFAULT_KEY,
@@ -404,6 +405,7 @@ def _compare_data(
             error_message,
             checkpoint_name,
             df,
+            DATAFRAME_EXECUTION_MODE,
         )
         _update_validation_result(
             checkpoint_name,
@@ -417,7 +419,7 @@ def _compare_data(
         )
     else:
         _update_validation_result(checkpoint_name, PASS_STATUS)
-        job_context.mark_pass(checkpoint_name)
+        job_context.mark_pass(checkpoint_name, DATAFRAME_EXECUTION_MODE)
 
 
 def _find_frame_in(stack: list[inspect.FrameInfo]) -> tuple:

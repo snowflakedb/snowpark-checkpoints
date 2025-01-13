@@ -16,6 +16,7 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
     SamplingAdapter,
     SamplingStrategy,
 )
+from snowflake.snowpark_checkpoints.utils.checkpoint_logger import CheckpointLogger
 from snowflake.snowpark_checkpoints.utils.constant import (
     FAIL_STATUS,
     PASS_STATUS,
@@ -41,7 +42,7 @@ def validate_dataframe_checkpoint(
     mode: Optional[CheckpointMode] = CheckpointMode.SCHEMA,
     custom_checks: Optional[dict[Any, Any]] = None,
     skip_checks: Optional[dict[Any, Any]] = None,
-    sample_frac: Optional[float] = 0.1,
+    sample_frac: Optional[float] = 1.0,
     sample_number: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
 ) -> Union[tuple[bool, PandasDataFrame], None]:
@@ -99,7 +100,7 @@ def _check_dataframe_schema_file(
     job_context: Optional[SnowparkJobContext] = None,
     custom_checks: Optional[dict[Any, Any]] = None,
     skip_checks: Optional[dict[Any, Any]] = None,
-    sample_frac: Optional[float] = 0.1,
+    sample_frac: Optional[float] = 1.0,
     sample_number: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
 ) -> tuple[bool, PandasDataFrame]:
@@ -156,7 +157,7 @@ def check_dataframe_schema(
     job_context: Optional[SnowparkJobContext] = None,
     custom_checks: Optional[dict[str, list[Check]]] = None,
     skip_checks: Optional[dict[Any, Any]] = None,
-    sample_frac: Optional[float] = 0.1,
+    sample_frac: Optional[float] = 1.0,
     sample_number: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
 ) -> Union[tuple[bool, PandasDataFrame], None]:
@@ -222,7 +223,7 @@ def _check_dataframe_schema(
     job_context: SnowparkJobContext = None,
     custom_checks: Optional[dict[str, list[Check]]] = None,
     skip_checks: Optional[dict[Any, Any]] = None,
-    sample_frac: Optional[float] = 0.1,
+    sample_frac: Optional[float] = 1.0,
     sample_number: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
 ) -> tuple[bool, PandasDataFrame]:
@@ -262,7 +263,7 @@ def _check_dataframe_schema(
 def check_output_schema(
     pandera_schema: DataFrameSchema,
     check_name: str,
-    sample_frac: Optional[float] = 0.1,
+    sample_frac: Optional[float] = 1.0,
     sample_number: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
     job_context: Optional[SnowparkJobContext] = None,
@@ -322,13 +323,17 @@ def check_output_schema(
             try:
                 validator = DataFrameValidator()
                 validation_result = validator.validate(
-                    pandera_schema, pandas_sample_args[0], validity_flag=True
+                    pandera_schema, pandas_sample_args[0]
                 )
 
                 if job_context is not None:
                     job_context.mark_pass(checkpoint_name)
 
-                print(validation_result)
+                logger = CheckpointLogger().get_logger()
+                logger.info(
+                    f"Checkpoint {checkpoint_name} validation result:\n{validation_result}"
+                )
+
             except Exception as pandera_ex:
                 validation_result_status = FAIL_STATUS
                 raise SchemaValidationError(
@@ -350,7 +355,7 @@ def check_output_schema(
 def check_input_schema(
     pandera_schema: DataFrameSchema,
     checkpoint_name: str,
-    sample_frac: Optional[float] = 0.1,
+    sample_frac: Optional[float] = 1.0,
     sample_number: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
     job_context: Optional[SnowparkJobContext] = None,
@@ -414,13 +419,18 @@ def check_input_schema(
                     try:
                         validator = DataFrameValidator()
                         validation_result = validator.validate(
-                            pandera_schema, arg, validity_flag=True
+                            pandera_schema,
+                            arg,
                         )
 
                         if job_context is not None:
                             job_context.mark_pass(_checkpoint_name)
 
-                        print(validation_result)
+                        logger = CheckpointLogger().get_logger()
+                        logger.info(
+                            f"Checkpoint {checkpoint_name} validation result:\n{validation_result}"
+                        )
+
                     except Exception as pandera_ex:
                         validation_result_status = FAIL_STATUS
                         raise SchemaValidationError(

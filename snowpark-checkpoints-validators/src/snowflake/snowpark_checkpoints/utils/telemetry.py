@@ -9,6 +9,7 @@ import json
 import os
 
 from enum import IntEnum
+from functools import wraps
 from os import getcwd, getenv, makedirs
 from pathlib import Path
 from platform import python_version
@@ -586,6 +587,7 @@ def report_telemetry(
     def report_telemetry_decorator(func):
         func_name = func.__name__
 
+        @wraps(func)
         def wrapper(*args, **kwargs):
             func_exception = None
             result = None

@@ -12,6 +12,11 @@ class CheckpointMode(IntEnum):
     DATAFRAME = 2
 
 
+# Execution mode
+SCHEMA_EXECUTION_MODE: Final[str] = "Schema"
+DATAFRAME_EXECUTION_MODE: Final[str] = "Dataframe"
+
+
 # File position on stack
 STACK_POSITION_CHECKPOINT: Final[int] = 6
 

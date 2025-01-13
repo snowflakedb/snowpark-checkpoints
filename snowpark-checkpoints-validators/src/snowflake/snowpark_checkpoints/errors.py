@@ -5,6 +5,7 @@
 from typing import Optional
 
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
+from snowflake.snowpark_checkpoints.utils.constant import SCHEMA_EXECUTION_MODE
 
 
 class SnowparkCheckpointError(Exception):
@@ -20,7 +21,12 @@ class SnowparkCheckpointError(Exception):
             f"Job: {job_name} Checkpoint: {checkpoint_name}\n{message} \n {data}"
         )
         if job_context:
-            job_context.mark_fail(message, checkpoint_name, data)
+            job_context.mark_fail(
+                message,
+                checkpoint_name,
+                SCHEMA_EXECUTION_MODE,
+                data,
+            )
 
 
 class SparkMigrationError(SnowparkCheckpointError):

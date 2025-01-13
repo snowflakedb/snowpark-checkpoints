@@ -1,9 +1,13 @@
-import { describe, it, before } from "mocha";
+import { after, before, describe, it } from "mocha";
 import * as assert from "assert";
 import * as h from "../helpers/helpers";
 
 describe("Snowpark Checkpoints Test Suite", () => {
   before(() => {
+    h.clearCheckpointsConfiguration();
+  });
+
+  after(() => {
     h.clearCheckpointsConfiguration();
   });
 

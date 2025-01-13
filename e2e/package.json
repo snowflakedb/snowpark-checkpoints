@@ -7,7 +7,8 @@
 		"vscode:prepublish": "npm run compile",
 		"compile": "tsc -p ./ --rootDir ./test --outDir ./out",
 		"lint": "eslint",
-		"pretest": "npm run compile",
+		"envs:test": "NODE_ENV=$(grep NODE_ENV .env.test | cut -d '=' -f2)",
+		"pretest": "npm run compile && npm run envs:test",
 		"test": "node ./out/runTest.js"
 	},
 	"devDependencies": {
@@ -18,6 +19,7 @@
 		"@types/node": "^20",
 		"@types/vscode": "^1.73.0",
 		"@vscode/test-electron": "^2.3.9",
+		"dotenv": "^16.4.7",
 		"eslint": "^9.13.0",
 		"glob": "^7.2.0",
 		"minimatch": "^5.1.0",

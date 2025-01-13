@@ -163,6 +163,23 @@ jobs:
           conda-verify --ignore C1115 recipe/dist/conda/**/*.conda
         working-directory: ./snowpark-checkpoints-collectors
 
+      - name: Build Conda Package v2 [snowpark-checkpoints]
+        run: |
+          source ~/.bashrc
+          conda activate ${{ env.CONDA_ENV_NAME }}
+          echo "Current directory: $PWD" && ls -la
+          conda config --set conda_build.pkg_format 2
+          conda build recipe/ -c conda-forge --python=3.11 --numpy=1.23 --output-folder recipe/dist/conda
+          ls -lR recipe/dist/conda
+        working-directory: ${{ github.workspace }}
+
+      - name: Verify Conda package v2 [snowpark-checkpoints]
+        run: |
+          source ~/.bashrc
+          conda activate ${{ env.CONDA_ENV_NAME }}
+          conda-verify --ignore C1115 recipe/dist/conda/**/*.conda
+        working-directory: ${{ github.workspace }}
+
       - name: Upload Conda Artifacts
         uses: actions/upload-artifact@v4
         with:

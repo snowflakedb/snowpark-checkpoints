@@ -20,7 +20,6 @@ from snowflake.snowpark_checkpoints.utils.checkpoint_logger import CheckpointLog
 from snowflake.snowpark_checkpoints.utils.constant import (
     FAIL_STATUS,
     PASS_STATUS,
-    SCHEMA_EXECUTION_MODE,
     CheckpointMode,
 )
 from snowflake.snowpark_checkpoints.utils.extra_config import is_checkpoint_enabled
@@ -245,7 +244,7 @@ def _check_dataframe_schema(
         )
 
         if job_context is not None:
-            job_context.mark_pass(checkpoint_name, SCHEMA_EXECUTION_MODE)
+            job_context.mark_pass(checkpoint_name)
 
         return validation_result
     except Exception as pandera_ex:
@@ -328,7 +327,7 @@ def check_output_schema(
                 )
 
                 if job_context is not None:
-                    job_context.mark_pass(checkpoint_name, SCHEMA_EXECUTION_MODE)
+                    job_context.mark_pass(checkpoint_name)
 
                 logger = CheckpointLogger().get_logger()
                 logger.info(
@@ -427,7 +426,6 @@ def check_input_schema(
                         if job_context is not None:
                             job_context.mark_pass(
                                 _checkpoint_name,
-                                SCHEMA_EXECUTION_MODE,
                             )
 
                         logger = CheckpointLogger().get_logger()

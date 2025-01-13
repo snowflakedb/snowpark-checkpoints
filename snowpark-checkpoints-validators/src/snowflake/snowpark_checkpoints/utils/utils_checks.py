@@ -404,8 +404,8 @@ def _compare_data(
         job_context.mark_fail(
             error_message,
             checkpoint_name,
-            DATAFRAME_EXECUTION_MODE,
             df,
+            DATAFRAME_EXECUTION_MODE,
         )
         _update_validation_result(
             checkpoint_name,

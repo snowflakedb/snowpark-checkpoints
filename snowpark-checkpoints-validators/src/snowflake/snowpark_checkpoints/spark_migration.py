@@ -15,7 +15,6 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
     SamplingAdapter,
     SamplingStrategy,
 )
-from snowflake.snowpark_checkpoints.utils.constant import SCHEMA_EXECUTION_MODE
 from snowflake.snowpark_checkpoints.utils.telemetry import STATUS_KEY, report_telemetry
 from snowflake.snowpark_checkpoints.utils.utils_checks import (
     _validate_checkpoint_name,
@@ -120,7 +119,7 @@ def _assert_return(
                 "DataFrame difference:\n", job_context, checkpoint_name, cmp
             )
             return False, exception_result
-        job_context.mark_pass(checkpoint_name, SCHEMA_EXECUTION_MODE)
+        job_context.mark_pass(checkpoint_name)
         return True, None
     else:
 
@@ -132,7 +131,7 @@ def _assert_return(
                 f"{snowpark_results} != {spark_results}",
             )
             return False, exception_result
-        job_context.mark_pass(checkpoint_name, SCHEMA_EXECUTION_MODE)
+        job_context.mark_pass(checkpoint_name)
         return True, None
 
 

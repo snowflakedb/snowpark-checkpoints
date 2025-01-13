@@ -214,6 +214,8 @@ class TelemetryManager(TelemetryClient):
             with open(file) as json_file:
                 data_dict = json.load(json_file)
                 batch.append(data_dict)
+        if batch == []:
+            return
         body = {"logs": batch}
         ret = self._rest.request(
             self.sc_sf_path_telemetry,

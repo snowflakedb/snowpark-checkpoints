@@ -51,7 +51,7 @@ from snowflake.snowpark_checkpoints_collector.utils.telemetry import report_tele
 
 def collect_dataframe_checkpoint(
     df: SparkDataFrame,
-    checkpoint_name,
+    checkpoint_name: str,
     sample: Optional[float] = None,
     mode: Optional[CheckpointMode] = None,
     output_path: Optional[str] = None,

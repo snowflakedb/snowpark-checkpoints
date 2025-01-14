@@ -4,6 +4,7 @@
 from datetime import datetime
 import glob
 import os
+from pathlib import Path
 import tempfile
 import time
 
@@ -31,6 +32,7 @@ from snowflake.snowpark_checkpoints_collector import (
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     CheckpointMode,
     DOT_PARQUET_EXTENSION,
+    SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
 )
 from snowflake.snowpark_checkpoints_collector.snow_connection_model import (
     SnowConnection,
@@ -255,6 +257,47 @@ def data():
             # datetime.strptime("2023-12-01 12:00:00", timestamp_ntz_format),
         ],
     ]
+
+
+def test_collect_checkpoint_mode_2_parquet_directory(
+    spark_session, data, spark_schema, snowpark_schema, singleton, test_id
+):
+    checkpoint_name = f"test_collect_checkpoint_mode_2_{test_id}"
+
+    pyspark_df = spark_session.createDataFrame(data, schema=spark_schema).orderBy(
+        "INTEGER"
+    )
+
+    temp_dir = Path(tempfile.gettempdir()).resolve()
+    output_path = os.path.join(temp_dir, checkpoint_name)
+
+    collect_dataframe_checkpoint(
+        pyspark_df,
+        checkpoint_name=checkpoint_name,
+        mode=CheckpointMode.DATAFRAME,
+        output_path=output_path,
+    )
+
+    parquet_directory = os.path.join(
+        output_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME, checkpoint_name
+    )
+
+    assert os.path.exists(parquet_directory)
+    parquet_files_first = glob.glob(
+        os.path.join(parquet_directory, f"*{DOT_PARQUET_EXTENSION}")
+    )
+
+    collect_dataframe_checkpoint(
+        pyspark_df,
+        checkpoint_name=checkpoint_name,
+        mode=CheckpointMode.DATAFRAME,
+        output_path=output_path,
+    )
+
+    parquet_files_second = glob.glob(
+        os.path.join(parquet_directory, f"*{DOT_PARQUET_EXTENSION}")
+    )
+    assert parquet_files_first != parquet_files_second
 
 
 def test_collect_checkpoint_mode_2(

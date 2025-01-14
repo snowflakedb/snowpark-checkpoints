@@ -4,6 +4,7 @@
 import glob
 import json
 import os
+import shutil
 
 from typing import Optional
 
@@ -251,8 +252,11 @@ def _collect_dataframe_checkpoint_mode_dataframe(
     output_path: Optional[str] = None,
 ) -> None:
     output_path = file_utils.get_output_directory_path(output_path)
-    generate_parquet_for_spark_df(df, output_path)
-    _create_snowflake_table_from_parquet(checkpoint_name, output_path, snow_connection)
+    parquet_directory = os.path.join(output_path, checkpoint_name)
+    generate_parquet_for_spark_df(df, parquet_directory)
+    _create_snowflake_table_from_parquet(
+        checkpoint_name, parquet_directory, snow_connection
+    )
 
 
 def generate_parquet_for_spark_df(spark_df: SparkDataFrame, output_path: str) -> None:
@@ -280,6 +284,10 @@ def generate_parquet_for_spark_df(spark_df: SparkDataFrame, output_path: str) ->
         for (c, t) in spark_df.dtypes
     ]
     converted_df = spark_df.select(new_cols)
+
+    if os.path.exists(output_path):
+        shutil.rmtree(output_path)
+
     converted_df.write.parquet(output_path, mode="overwrite")
 
     target_dir = os.path.join(output_path, "**", f"*{DOT_PARQUET_EXTENSION}")

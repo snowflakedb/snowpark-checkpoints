@@ -462,6 +462,127 @@ def test_collect_dataframe_with_only_null_values(spark_session, singleton, outpu
     validate_checkpoint_file_output(output_path, checkpoint_name)
 
 
+def test_collect_dataframe_all_column_types_with_null_values(
+    spark_session, singleton, output_path
+):
+    sample_size = 1.0
+    checkpoint_name = "test_dataframe_all_column_types_with_null_values"
+
+    day_time_interval_data = timedelta(days=13)
+    date_data = date(2000, 1, 1)
+    decimal_data = decimal.Decimal("3.141516171819")
+    timestamp_data = datetime(2000, 1, 1, 12, 0, 0)
+    timestamp_ntz_data = datetime(2000, 1, 1, 12, 53, 0, tzinfo=timezone.utc)
+    inner_schema = StructType(
+        [
+            StructField("inner1", StringType(), False),
+            StructField("inner2", LongType(), True),
+        ]
+    )
+
+    data_df = [
+        [
+            True,
+            1,
+            date_data,
+            day_time_interval_data,
+            2.10,
+            3.11,
+            4,
+            5,
+            6,
+            "string1",
+            timestamp_data,
+            timestamp_ntz_data,
+            decimal_data,
+            ["A", "B", "C", "D", "E"],
+            bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00]),
+            {
+                "C1": "black",
+                "C2": "yellow",
+                "C3": "orange",
+                "C4": "blue",
+                "C5": "brown",
+            },
+            None,
+            {"inner1": "A1", "inner2": None},
+        ],
+        [
+            False,
+            1,
+            date_data,
+            day_time_interval_data,
+            2.10,
+            3.11,
+            4,
+            5,
+            6,
+            "string2",
+            timestamp_data,
+            timestamp_ntz_data,
+            decimal_data,
+            ["q", "w", "e", "r", "t"],
+            bytes([0x13, 0x00]),
+            {"FA": "AF", "GA": "AG", "HA": "AH", "WE": "EW"},
+            None,
+            {"inner1": "A1", "inner2": 5},
+        ],
+        [
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        ],
+    ]
+
+    schema_df = StructType(
+        [
+            StructField("a", BooleanType(), True),
+            StructField("b", ByteType(), True),
+            StructField("c", DateType(), True),
+            StructField("d", DayTimeIntervalType(), True),
+            StructField("e", DoubleType(), True),
+            StructField("f", FloatType(), True),
+            StructField("g", IntegerType(), True),
+            StructField("h", LongType(), True),
+            StructField("i", ShortType(), True),
+            StructField("j", StringType(), True),
+            StructField("m", TimestampType(), True),
+            StructField("n", TimestampNTZType(), True),
+            StructField("o", DecimalType(15, 13), True),
+            StructField("p", ArrayType(StringType(), True), True),
+            StructField("q", BinaryType(), True),
+            StructField("r", MapType(StringType(), StringType(), True), True),
+            StructField("s", NullType(), True),
+            StructField("t", inner_schema, True),
+        ]
+    )
+
+    pyspark_df = spark_session.createDataFrame(data=data_df, schema=schema_df)
+    collect_dataframe_checkpoint(
+        pyspark_df,
+        checkpoint_name=checkpoint_name,
+        sample=sample_size,
+        output_path=output_path,
+    )
+
+    validate_checkpoint_file_output(output_path, checkpoint_name)
+
+
 def get_checkpoint_file_name(checkpoint_name) -> str:
     return CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(checkpoint_name)
 

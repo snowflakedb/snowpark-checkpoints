@@ -9,7 +9,7 @@ from enum import IntEnum
 
 class CheckpointMode(IntEnum):
 
-    """Enum class representing the mode of execution."""
+    """Enum class representing the collection mode."""
 
     SCHEMA = 1
     """Collect automatic schema inference"""

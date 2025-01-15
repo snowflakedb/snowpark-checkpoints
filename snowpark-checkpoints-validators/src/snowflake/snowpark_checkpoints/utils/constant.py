@@ -9,7 +9,7 @@ from typing import Final
 
 class CheckpointMode(IntEnum):
 
-    """Enum class representing the mode of validation."""
+    """Enum class representing the validation mode."""
 
     SCHEMA = 1
     """Validate against a schema file"""

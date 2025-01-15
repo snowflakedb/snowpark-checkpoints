@@ -38,8 +38,22 @@ jobs:
       - name: Get version from tag
         id: get_version
         run: |
-          VERSION=${GITHUB_REF#refs/tags/}
-          VERSION=${VERSION#v}
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+            VERSION=${VERSION#v}
+            echo "version=$VERSION"
+          else
+            VERSION=$(git describe --tags $(git rev-list --tags --max-count=1))
+            VERSION=${VERSION#v}
+            echo "version=$VERSION"
+          fi
+
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(rc[0-9]+)?$ ]]; then
+            echo "version=$VERSION"
+            echo "Error: No version found"
+            exit 1
+          fi
+
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Update Version [snowpark-checkpoints]
@@ -134,11 +148,24 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           name: py-artifacts
           path: ./dist
+
+      - name: Upload Packages to Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for file in dist/*; do
+            echo "Uploading $file..."
+            gh release upload "${GITHUB_REF#refs/tags/}" "$file"
+          done
+        working-directory: ./dist
 
       - name: Install Python packages
         run: |

@@ -59,7 +59,7 @@ html_show_sphinx = False
 # -- Options for autodoc -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html#configuration
 
-autoclass_content = "both"
+autoclass_content = "class"
 autodoc_default_options = {
     "member-order": "alphabetical",
     "undoc-members": True,

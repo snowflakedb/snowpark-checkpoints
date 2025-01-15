@@ -5,10 +5,10 @@ import json
 
 from typing import Optional
 
-from snowflake.snowpark_checkpoints_collector import Singleton
 from snowflake.snowpark_checkpoints_collector.collection_result.model import (
     CollectionPointResult,
 )
+from snowflake.snowpark_checkpoints_collector.singleton import Singleton
 from snowflake.snowpark_checkpoints_collector.utils import file_utils
 
 

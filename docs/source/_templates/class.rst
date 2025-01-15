@@ -2,6 +2,8 @@
 .. currentmodule:: {{ module }}
 
 .. autoclass:: {{ objname }}
+   {% set attributes = (attributes | reject("in", inherited_members) | list) %}
+
    {% block attributes %}
 
    {% if attributes %}
@@ -13,7 +15,7 @@
    {% endif %}
    {% endblock %}
 
-   {% set methods = (methods | reject("equalto", "__init__") | list) %}
+   {% set methods = (methods | reject("equalto", "__init__") | reject("in", inherited_members) | list) %}
 
    {% block methods %}
 

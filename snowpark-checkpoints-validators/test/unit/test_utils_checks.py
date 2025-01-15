@@ -559,10 +559,10 @@ def test_compare_data_match():
         call().count(),
     ]
     session.sql.assert_has_calls(calls)
-    job_context.mark_pass.assert_called_once_with(
+    job_context._mark_pass.assert_called_once_with(
         checkpoint_name, DATAFRAME_EXECUTION_MODE
     )
-    job_context.mark_fail.assert_not_called()
+    job_context._mark_fail.assert_not_called()
 
 
 def test_compare_data_mismatch():
@@ -609,8 +609,8 @@ def test_compare_data_mismatch():
         call().count(),
     ]
     session.sql.assert_has_calls(calls)
-    job_context.mark_fail.assert_called()
-    job_context.mark_pass.assert_not_called()
+    job_context._mark_fail.assert_called()
+    job_context._mark_pass.assert_not_called()
 
 
 def test_update_validation_result_with_file():

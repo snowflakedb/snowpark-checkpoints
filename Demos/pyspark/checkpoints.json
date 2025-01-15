@@ -4,40 +4,34 @@
       "entryPoint": "",
       "checkpoints": [
         {
-          "name": "demo_initial_creation_checkpoint",
-          "function": "df",
-          "file": "demo_snowpark_pipeline_schema.py",
-          "location": 1,
-          "enabled": true,
-          "job_context": "job_context",
-          "mode": 1
-        },
-        {
-          "name": "demo_add_a_column",
-          "function": "df1",
-          "file": "demo_snowpark_pipeline_schema.py",
-          "location": 1,
-          "enabled": true,
-          "job_context": "job_context",
-          "mode": 1
-        },
-        {
           "name": "demo_initial_creation_checkpoint_dataframe",
           "function": "df",
-          "file": "demo_snowpark_pipeline_dataframe.py",
+          "file": "Demos/pyspark/demo_pyspark_pipeline_dataframe.py",
           "location": 1,
           "enabled": true,
-          "job_context": "job_context",
           "mode": 2
         },
         {
           "name": "demo_add_a_column_dataframe",
           "function": "df1",
-          "file": "demo_snowpark_pipeline_dataframe.py",
+          "file": "Demos/pyspark/demo_pyspark_pipeline_dataframe.py",
           "location": 1,
           "enabled": true,
-          "job_context": "job_context",
           "mode": 2
+        },
+        {
+          "name": "demo_initial_creation_checkpoint",
+          "function": "df",
+          "file": "Demos/pyspark/demo_pyspark_pipeline_schema.py",
+          "location": 0,
+          "sample": "0.5"
+        },
+        {
+          "name": "demo_add_a_column",
+          "function": "df1",
+          "file": "Demos/pyspark/demo_pyspark_pipeline_schema.py",
+          "location": 0,
+          "sample": "0.5"
         }
       ]
     }

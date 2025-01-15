@@ -10,7 +10,6 @@ permissions:
 
 env:
   PYTHON_VERSION: "3.11"
-  PACKAGE_VERSION: "0.0.1rc1"
 
 jobs:
   deploy:
@@ -39,7 +38,6 @@ jobs:
       - name: Get version from tag
         id: get_version
         run: |
-          # Extract version from GitHub
           VERSION=${GITHUB_REF#refs/tags/}
           VERSION=${VERSION#v}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
@@ -53,7 +51,7 @@ jobs:
           echo "Package Version updated:" && cat ${FILE_VERSION}
         env:
           FILE_VERSION: __version__.py
-          NEW_VERSION: ${{ env.PACKAGE_VERSION }}
+          NEW_VERSION: ${{ steps.get_version.outputs.version }}
         working-directory: ${{ github.workspace }}
 
       - name: Update Version [snowpark-configuration]
@@ -62,7 +60,7 @@ jobs:
           sed -i "s/^__version__ = \".*\"/__version__ = \"${NEW_VERSION}\"/" ${FILE_VERSION}
           echo "Package Version updated:" && cat ${FILE_VERSION}
         env:
-          NEW_VERSION: ${{ env.PACKAGE_VERSION }}
+          NEW_VERSION: ${{ steps.get_version.outputs.version }}
           FILE_VERSION: ../snowpark-checkpoints-configuration/__version__.py
         working-directory: ./snowpark-checkpoints-configuration
 
@@ -71,7 +69,7 @@ jobs:
           sed -i "s/^__version__ = \".*\"/__version__ = \"${NEW_VERSION}\"/" ${FILE_VERSION}
           echo "Package Version updated:" && cat ${FILE_VERSION}
         env:
-          NEW_VERSION: ${{ env.PACKAGE_VERSION }}
+          NEW_VERSION: ${{ steps.get_version.outputs.version }}
           FILE_VERSION: ../snowpark-checkpoints-hypothesis/__version__.py
         working-directory: ./snowpark-checkpoints-hypothesis
 
@@ -80,7 +78,7 @@ jobs:
           sed -i "s/^__version__ = \".*\"/__version__ = \"${NEW_VERSION}\"/" ${FILE_VERSION}
           echo "Package Version updated:" && cat ${FILE_VERSION}
         env:
-          NEW_VERSION: ${{ env.PACKAGE_VERSION }}
+          NEW_VERSION: ${{ steps.get_version.outputs.version }}
           FILE_VERSION: ../snowpark-checkpoints-validators/__version__.py
         working-directory: ./snowpark-checkpoints-validators
 
@@ -89,7 +87,7 @@ jobs:
           sed -i "s/^__version__ = \".*\"/__version__ = \"${NEW_VERSION}\"/" ${FILE_VERSION}
           echo "Package Version updated:" && cat ${FILE_VERSION}
         env:
-          NEW_VERSION: ${{ env.PACKAGE_VERSION }}
+          NEW_VERSION: ${{ steps.get_version.outputs.version }}
           FILE_VERSION: ../snowpark-checkpoints-collectors/__version__.py
         working-directory: ./snowpark-checkpoints-collectors
 

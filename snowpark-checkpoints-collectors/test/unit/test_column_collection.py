@@ -214,14 +214,19 @@ def test_boolean_column_collection():
     struct_field_mock = MagicMock()
     data_type_mock = MagicMock()
     series_mock = MagicMock()
+    series_without_na = MagicMock()
     numpy_mock = MagicMock()
 
     struct_field_mock.nullable = nullable
     struct_field_mock.dataType = data_type_mock
     data_type_mock.typeName.return_value = BOOLEAN_COLUMN_TYPE
-    series_mock.__len__.return_value = 4
-    series_mock.where.return_value = series_mock
+
     series_mock.count.return_value = numpy_mock
+    series_mock.dropna.return_value = series_without_na
+    series_mock.__len__.return_value = 4
+
+    series_without_na.where.return_value = series_without_na
+    series_without_na.count.return_value = numpy_mock
     numpy_mock.item.return_value = 4
 
     collector = BooleanColumnCollector(clm_name, struct_field_mock, series_mock)
@@ -238,18 +243,24 @@ def test_date_column_collection():
     struct_field_mock = MagicMock()
     data_type_mock = MagicMock()
     series_mock = MagicMock()
+    series_without_na = MagicMock()
     numpy_mock = MagicMock()
 
     struct_field_mock.nullable = nullable
     struct_field_mock.dataType = data_type_mock
     data_type_mock.typeName.return_value = DATE_COLUMN_TYPE
-    series_mock.__len__.return_value = 4
-    series_mock.count.return_value = numpy_mock
     numpy_mock.item.return_value = 4
 
+    series_mock.count.return_value = numpy_mock
+    series_mock.dropna.return_value = series_without_na
+    series_mock.__len__.return_value = 4
+
+    series_without_na.where.return_value = series_without_na
+    series_without_na.count.return_value = numpy_mock
+
     date_str = "YYYY-mm-dd"
-    series_mock.min.return_value = numpy_mock
-    series_mock.max.return_value = numpy_mock
+    series_without_na.min.return_value = numpy_mock
+    series_without_na.max.return_value = numpy_mock
     numpy_mock.__str__.return_value = date_str
 
     collector = DateColumnCollector(clm_name, struct_field_mock, series_mock)
@@ -266,19 +277,24 @@ def test_day_time_interval_column_collection():
     struct_field_mock = MagicMock()
     data_type_mock = MagicMock()
     series_mock = MagicMock()
+    series_without_na = MagicMock()
     numpy_mock = MagicMock()
 
     struct_field_mock.nullable = nullable
     struct_field_mock.dataType = data_type_mock
     data_type_mock.typeName.return_value = DAYTIMEINTERVAL_COLUMN_TYPE
 
-    series_mock.__len__.return_value = 4
     series_mock.count.return_value = numpy_mock
+    series_mock.dropna.return_value = series_without_na
+    series_mock.__len__.return_value = 4
+
+    series_without_na.where.return_value = series_without_na
+    series_without_na.count.return_value = numpy_mock
     numpy_mock.item.return_value = 4
 
     dayTimeInterval_str = "13 days 00:00:00"
-    series_mock.min.return_value = numpy_mock
-    series_mock.max.return_value = numpy_mock
+    series_without_na.min.return_value = numpy_mock
+    series_without_na.max.return_value = numpy_mock
     numpy_mock.__str__.return_value = dayTimeInterval_str
 
     collector = DayTimeIntervalColumnCollector(clm_name, struct_field_mock, series_mock)
@@ -295,20 +311,25 @@ def test_decimal_column_collection():
     struct_field_mock = MagicMock()
     data_type_mock = MagicMock()
     series_mock = MagicMock()
+    series_without_na = MagicMock()
     numpy_mock = MagicMock()
 
     struct_field_mock.nullable = nullable
     struct_field_mock.dataType = data_type_mock
     data_type_mock.typeName.return_value = DECIMAL_COLUMN_TYPE
 
-    series_mock.__len__.return_value = 4
     series_mock.count.return_value = numpy_mock
+    series_mock.dropna.return_value = series_without_na
+    series_mock.__len__.return_value = 4
+
+    series_without_na.where.return_value = series_without_na
+    series_without_na.count.return_value = numpy_mock
     numpy_mock.item.return_value = 4
 
     decimal_str = "0.000000000"
-    series_mock.min.return_value = numpy_mock
-    series_mock.max.return_value = numpy_mock
-    series_mock.mean.return_value = numpy_mock
+    series_without_na.min.return_value = numpy_mock
+    series_without_na.max.return_value = numpy_mock
+    series_without_na.mean.return_value = numpy_mock
     numpy_mock.__str__.return_value = decimal_str
 
     collector = DecimalColumnCollector(clm_name, struct_field_mock, series_mock)
@@ -495,20 +516,25 @@ def test_numeric_column_collection():
     struct_field_mock = MagicMock()
     data_type_mock = MagicMock()
     series_mock = MagicMock()
+    series_without_na = MagicMock()
     numpy_mock = MagicMock()
 
     struct_field_mock.nullable = nullable
     struct_field_mock.dataType = data_type_mock
     data_type_mock.typeName.return_value = INTEGER_COLUMN_TYPE
 
-    series_mock.__len__.return_value = 4
     series_mock.count.return_value = numpy_mock
+    series_mock.dropna.return_value = series_without_na
+    series_mock.__len__.return_value = 4
+
+    series_without_na.where.return_value = series_without_na
+    series_without_na.count.return_value = numpy_mock
     numpy_mock.item.return_value = 4
 
-    series_mock.min.return_value = numpy_mock
-    series_mock.max.return_value = numpy_mock
-    series_mock.mean.return_value = numpy_mock
-    series_mock.std.return_value = numpy_mock
+    series_without_na.min.return_value = numpy_mock
+    series_without_na.max.return_value = numpy_mock
+    series_without_na.mean.return_value = numpy_mock
+    series_without_na.std.return_value = numpy_mock
 
     collector = NumericColumnCollector(clm_name, struct_field_mock, series_mock)
     NumericColumnCollector._compute_decimal_precision = MagicMock(return_value=10)
@@ -582,19 +608,24 @@ def test_timestamp_column_collection():
     struct_field_mock = MagicMock()
     data_type_mock = MagicMock()
     series_mock = MagicMock()
+    series_without_na = MagicMock()
     numpy_mock = MagicMock()
 
     struct_field_mock.nullable = nullable
     struct_field_mock.dataType = data_type_mock
     data_type_mock.typeName.return_value = TIMESTAMP_COLUMN_TYPE
 
-    series_mock.__len__.return_value = 4
     series_mock.count.return_value = numpy_mock
+    series_mock.dropna.return_value = series_without_na
+    series_mock.__len__.return_value = 4
+
+    series_without_na.where.return_value = series_without_na
+    series_without_na.count.return_value = numpy_mock
     numpy_mock.item.return_value = 4
 
     date_str = "YYYY-mm-dd HH:MM:SS"
-    series_mock.min.return_value = numpy_mock
-    series_mock.max.return_value = numpy_mock
+    series_without_na.min.return_value = numpy_mock
+    series_without_na.max.return_value = numpy_mock
     numpy_mock.__str__.return_value = date_str
 
     collector = TimestampColumnCollector(clm_name, struct_field_mock, series_mock)
@@ -611,19 +642,24 @@ def test_timestamp_ntz_column_collection():
     struct_field_mock = MagicMock()
     data_type_mock = MagicMock()
     series_mock = MagicMock()
+    series_without_na = MagicMock()
     numpy_mock = MagicMock()
 
     struct_field_mock.nullable = nullable
     struct_field_mock.dataType = data_type_mock
     data_type_mock.typeName.return_value = TIMESTAMP_NTZ_COLUMN_TYPE
 
-    series_mock.__len__.return_value = 4
     series_mock.count.return_value = numpy_mock
+    series_mock.dropna.return_value = series_without_na
+    series_mock.__len__.return_value = 4
+
+    series_without_na.where.return_value = series_without_na
+    series_without_na.count.return_value = numpy_mock
     numpy_mock.item.return_value = 4
 
     date_str = "YYYY-mm-dd HH:MM:SS z"
-    series_mock.min.return_value = numpy_mock
-    series_mock.max.return_value = numpy_mock
+    series_without_na.min.return_value = numpy_mock
+    series_without_na.max.return_value = numpy_mock
     numpy_mock.__str__.return_value = date_str
 
     collector = TimestampNTZColumnCollector(clm_name, struct_field_mock, series_mock)

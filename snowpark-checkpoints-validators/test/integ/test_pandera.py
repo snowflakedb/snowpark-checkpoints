@@ -30,6 +30,7 @@ from snowflake.snowpark_checkpoints.utils.constant import (
 
 def test_input():
     checkpoint_name = "test_checkpoint"
+    output__path = "test_output_path/unit/"
     df = PandasDataFrame(
         {
             "COLUMN1": [1, 4, 0, 10, 9],
@@ -44,7 +45,7 @@ def test_input():
         }
     )
 
-    @check_input_schema(in_schema, checkpoint_name)
+    @check_input_schema(in_schema, checkpoint_name, output_path=output__path)
     def preprocessor(dataframe: SnowparkDataFrame):
         dataframe = dataframe.withColumn(
             "column3", dataframe["COLUMN1"] + dataframe["COLUMN2"]
@@ -59,7 +60,9 @@ def test_input():
     ) as mock_update_validation_result:
         preprocessor(sp_df)
 
-    mock_update_validation_result.assert_called_once_with(checkpoint_name, PASS_STATUS)
+    mock_update_validation_result.assert_called_once_with(
+        checkpoint_name, PASS_STATUS, output__path
+    )
 
 
 def test_output():
@@ -90,11 +93,14 @@ def test_output():
     ) as mock_update_validation_result:
         preprocessor(sp_df)
 
-    mock_update_validation_result.assert_called_once_with(checkpoint_name, PASS_STATUS)
+    mock_update_validation_result.assert_called_once_with(
+        checkpoint_name, PASS_STATUS, None
+    )
 
 
 def test_df_check():
     checkpoint_name = "test_checkpoint"
+    output_path = "test_output_path/unit/"
     df = PandasDataFrame(
         {
             "COLUMN1": [1, 4, 0, 10, 9],
@@ -121,9 +127,9 @@ def test_df_check():
             "snowflake.snowpark_checkpoints.checkpoint._update_validation_result"
         ) as mocked_update,
     ):
-        check_dataframe_schema(sp_df, schema, checkpoint_name)
+        check_dataframe_schema(sp_df, schema, checkpoint_name, output_path=output_path)
 
-    mocked_update.assert_called_once_with(checkpoint_name, PASS_STATUS)
+    mocked_update.assert_called_once_with(checkpoint_name, PASS_STATUS, output_path)
 
 
 def test_df_check_from_file():
@@ -208,7 +214,7 @@ def test_df_check_from_file():
     ):
         _check_dataframe_schema_file(sp_df, checkpoint_name)
 
-    mocked_update.assert_called_once_with(checkpoint_name, PASS_STATUS)
+    mocked_update.assert_called_once_with(checkpoint_name, PASS_STATUS, None)
 
 
 def test_df_check_custom_check():
@@ -252,7 +258,7 @@ def test_df_check_custom_check():
             },
         )
 
-    mocked_update.assert_called_once_with(checkpoint_name, PASS_STATUS)
+    mocked_update.assert_called_once_with(checkpoint_name, PASS_STATUS, None)
     assert len(schema.columns["COLUMN1"].checks) == 3
     assert len(schema.columns["COLUMN2"].checks) == 2
 
@@ -301,6 +307,6 @@ def test_df_check_skip_check():
             },
         )
 
-    mocked_update.assert_called_once_with(checkpoint_name, PASS_STATUS)
+    mocked_update.assert_called_once_with(checkpoint_name, PASS_STATUS, None)
     assert len(schema.columns["COLUMN1"].checks) == 0
     assert len(schema.columns["COLUMN2"].checks) == 1

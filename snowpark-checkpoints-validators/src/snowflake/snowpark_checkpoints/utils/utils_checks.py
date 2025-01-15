@@ -21,6 +21,7 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
     SamplingAdapter,
     SamplingStrategy,
 )
+from snowflake.snowpark_checkpoints.utils.checkpoint_logger import CheckpointLogger
 from snowflake.snowpark_checkpoints.utils.constant import (
     CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME,
     CHECKPOINT_TABLE_NAME_FORMAT,
@@ -36,6 +37,8 @@ from snowflake.snowpark_checkpoints.utils.constant import (
     MARGIN_ERROR_KEY,
     MEAN_KEY,
     NAME_KEY,
+    NULL_COUNT_KEY,
+    NULLABLE_KEY,
     PASS_STATUS,
     ROWS_COUNT_KEY,
     SKIP_ALL,
@@ -228,7 +231,44 @@ def _add_boolean_checks(
     )
 
 
-def _generate_schema(checkpoint_name: str) -> DataFrameSchema:
+def _add_null_checks(
+    schema: DataFrameSchema, col: str, additional_check: dict[str, Any]
+):
+    """Add null checks to a specified column in a DataFrameSchema.
+
+    Args:
+        schema (DataFrameSchema): The schema to which the checks will be added.
+        col (str): The name of the column to which the checks will be applied.
+        additional_check (dict[str, Any]): A dictionary containing additional check parameters.
+            - NULL_COUNT_KEY (int): Expected count of Null values in the column.
+            - ROWS_COUNT_KEY (int): Total number of rows in the column.
+            - MARGIN_ERROR_KEY (int): Margin of error allowed for the counts.
+
+    Returns:
+        None
+
+    """
+    count_of_null = additional_check.get(NULL_COUNT_KEY, 0)
+    rows_count = additional_check.get(ROWS_COUNT_KEY, 0)
+    std = additional_check.get(MARGIN_ERROR_KEY, 0)
+    percentage_null = count_of_null / rows_count
+
+    schema.columns[col].checks.extend(
+        [
+            Check(
+                lambda series: (
+                    percentage_null - std <= series.isnull().sum() / series.count()
+                    if series.count() > 0
+                    else 1 <= percentage_null + std
+                ),
+            ),
+        ]
+    )
+
+
+def _generate_schema(
+    checkpoint_name: str, output_path: Optional[str] = None
+) -> DataFrameSchema:
     """Generate a DataFrameSchema based on the checkpoint name provided.
 
     This function reads a JSON file corresponding to the checkpoint name,
@@ -239,13 +279,14 @@ def _generate_schema(checkpoint_name: str) -> DataFrameSchema:
     Args:
         checkpoint_name (str): The name of the checkpoint used to locate
                                the JSON file containing schema information.
+        output_path (str): The path to the output directory.
 
         DataFrameSchema: A schema object representing the structure and
                          constraints of the DataFrame.
                          constraints of the DataFrame.
 
     """
-    current_directory_path = os.getcwd()
+    current_directory_path = output_path if output_path else os.getcwd()
 
     output_directory_path = os.path.join(
         current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME
@@ -289,10 +330,13 @@ Please run the Snowpark checkpoint collector first."""
             f"Columns not found in the JSON file for checkpoint: {checkpoint_name}"
         )
 
+    logger = CheckpointLogger().get_logger()
+
     for additional_check in custom_data.get(COLUMNS_KEY):
 
         type = additional_check.get(TYPE_KEY, None)
         name = additional_check.get(NAME_KEY, None)
+        is_nullable = additional_check.get(NULLABLE_KEY, False)
 
         if name is None:
             raise ValueError(f"Column name not defined in the schema {checkpoint_name}")
@@ -300,11 +344,18 @@ Please run the Snowpark checkpoint collector first."""
         if type is None:
             raise ValueError(f"Type not defined for column {name}")
 
+        if schema.columns.get(name) is None:
+            logger.warning(f"Column {name} not found in schema")
+            continue
+
         if type in NumericTypes:
             _add_numeric_checks(schema, name, additional_check)
 
         elif type in BooleanTypes:
             _add_boolean_checks(schema, name, additional_check)
+
+        if is_nullable:
+            _add_null_checks(schema, name, additional_check)
 
     return schema
 
@@ -375,6 +426,7 @@ def _compare_data(
     df: SnowparkDataFrame,
     job_context: Optional[SnowparkJobContext],
     checkpoint_name: str,
+    output_path: Optional[str] = None,
 ):
     """Compare the data in the provided Snowpark DataFrame with the data in a checkpoint table.
 
@@ -386,6 +438,7 @@ def _compare_data(
         df (SnowparkDataFrame): The Snowpark DataFrame to compare.
         job_context (SnowparkJobContext): The job context containing the Snowpark session and job state.
         checkpoint_name (str): The name of the checkpoint table to compare against.
+        output_path (str): The path to the output directory.
 
     Raises:
         SchemaValidationError: If there is a data mismatch between the DataFrame and the checkpoint table.
@@ -410,6 +463,7 @@ def _compare_data(
         _update_validation_result(
             checkpoint_name,
             FAIL_STATUS,
+            output_path,
         )
         raise SchemaValidationError(
             error_message,
@@ -418,7 +472,7 @@ def _compare_data(
             df,
         )
     else:
-        _update_validation_result(checkpoint_name, PASS_STATUS)
+        _update_validation_result(checkpoint_name, PASS_STATUS, output_path)
         job_context.mark_pass(checkpoint_name, DATAFRAME_EXECUTION_MODE)
 
 
@@ -444,7 +498,7 @@ def _find_frame_in(stack: list[inspect.FrameInfo]) -> tuple:
         r"(validate_dataframe_checkpoint|check_dataframe_schema)"
     )
 
-    first_frames = stack[:6]
+    first_frames = stack[:7]
     first_frames.reverse()
 
     for i, frame in enumerate(first_frames):
@@ -471,12 +525,15 @@ def _get_relative_path(file_path: str) -> str:
     return os.path.relpath(file_path, current_directory)
 
 
-def _update_validation_result(checkpoint_name: str, validation_status: str) -> None:
+def _update_validation_result(
+    checkpoint_name: str, validation_status: str, output_path: Optional[str] = None
+) -> None:
     """Update the validation result file with the status of a given checkpoint.
 
     Args:
         checkpoint_name (str): The name of the checkpoint to update.
         validation_status (str): The validation status to record for the checkpoint.
+        output_path (str): The path to the output directory.
 
     Returns:
         None
@@ -488,7 +545,7 @@ def _update_validation_result(checkpoint_name: str, validation_status: str) -> N
 
     _file_from_stack, _line_of_code = _find_frame_in(stack)
 
-    pipeline_result_metadata = ValidationResultsMetadata()
+    pipeline_result_metadata = ValidationResultsMetadata(output_path)
 
     pipeline_result_metadata.add_validation_result(
         ValidationResult(

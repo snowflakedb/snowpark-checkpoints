@@ -39,7 +39,7 @@ collect_dataframe_schema(df:SparkDataFrame,
 The `validate_dataframe_checkpoint` function validates a Snowpark DataFrame against a checkpoint schema file or dataframe.
 
 ```python
-from snowflake.snowpark_checkpoints import check_dataframe_schema_file
+from snowflake.snowpark_checkpoints.checkpoint import check_dataframe_schema_file
 
 validate_dataframe_checkpoint(
     df: SnowparkDataFrame,
@@ -51,6 +51,7 @@ validate_dataframe_checkpoint(
     sample_frac: Optional[float] = 1.0,
     sample_number: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
+    output_path: Optional[str] = None,
 )
 ```
 
@@ -63,13 +64,14 @@ validate_dataframe_checkpoint(
 - `sample_frac`: Fraction of the DataFrame to sample.
 - `sample_number`: Number of rows to sample.
 - `sampling_strategy`: Sampling strategy to use.
+- `output_path`: Output path for the checkpoint report.
 
 ### Check with Spark Decorator
 
 The `check_with_spark` decorator converts any Snowpark DataFrame arguments to a function, samples them, and converts them to PySpark DataFrames. It then executes a provided Spark function and compares the outputs between the two implementations.
 
 ```python
-from snowflake.snowpark_checkpoints import check_with_spark
+from snowflake.snowpark_checkpoints.spark_migration import check_with_spark
 
 @check_with_spark(
     job_context: Optional[SnowparkJobContext],
@@ -79,6 +81,7 @@ from snowflake.snowpark_checkpoints import check_with_spark
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
     check_dtypes: Optional[bool] = False,
     check_with_precision: Optional[bool] = False
+    output_path: Optional[str] = None,
 )
 def snowpark_fn(df: SnowparkDataFrame):
     ...
@@ -91,34 +94,37 @@ def snowpark_fn(df: SnowparkDataFrame):
 - `sampling_strategy`: Sampling strategy to use.
 - `check_dtypes`: Check data types.
 - `check_with_precision`: Check with precision.
+- `output_path`: Output path for the checkpoint report.
 
 ## Pandera Snowpark Decorators
 
-The decorators `@check_input_with` and `@check_output_with` allow
+The decorators `@check_input_schema` and `@check_output_schema` allow
 for sampled schema validation of snowpark dataframes in the input arguments or
 in the return value.
 
 ```python
-from snowflake.snowpark_checkpoints import check_input_with, check_output_with
+from snowflake.snowpark_checkpoints.checkpoint import check_input_schema, check_output_schema
 
-@check_input_with(
+@check_input_schema(
     pandera_schema: DataFrameSchema,
     checkpoint_name: Optional[str] = None,
     sample_frac: Optional[float] = 1.0,
     sample_number: Optional[int] = 100,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
     job_context: Optional[SnowparkJobContext] = None,
+    output_path: Optional[str] = None,
 )
 def snowpark_fn(df: SnowparkDataFrame):
     ...
 
-@check_output_with(
+@check_output_schema(
     pandera_schema: DataFrameSchema,
     checkpoint_name: Optional[str] = None,
     sample_frac: Optional[float] = 1.0,
     sample_number: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
     job_context: Optional[SnowparkJobContext] = None,
+    output_path: Optional[str] = None,
 )
 def snowpark_fn(df: SnowparkDataFrame):
     ...

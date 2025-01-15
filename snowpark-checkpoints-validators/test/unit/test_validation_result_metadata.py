@@ -1,8 +1,8 @@
-import json
 import os
 from unittest.mock import mock_open, patch
 from snowflake.snowpark_checkpoints.utils.constant import (
     PASS_STATUS,
+    SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
     VALIDATION_RESULTS_JSON_FILE_NAME,
 )
 from snowflake.snowpark_checkpoints.validation_result_metadata import (
@@ -15,23 +15,26 @@ from snowflake.snowpark_checkpoints.validation_results import (
 
 
 def test_load_with_valid_file():
-    path = os.path.dirname(os.path.abspath(__file__))
-    path = os.path.join(
-        path, "checkpoint_validation_results", VALIDATION_RESULTS_JSON_FILE_NAME
+    test_path = os.path.dirname(os.path.abspath(__file__))
+    result_path = os.path.join(
+        test_path,
+        SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
+        VALIDATION_RESULTS_JSON_FILE_NAME,
     )
-    with open(path) as file:
+    with open(result_path) as file:
         validation_result_json = file.read()
         mock_validation_results = ValidationResults.model_validate_json(
             validation_result_json
         )
 
-    metadata = ValidationResultsMetadata(path)
+    metadata = ValidationResultsMetadata(test_path)
 
     assert metadata.validation_results == mock_validation_results
 
 
 def test_load_with_no_file():
-    metadata = ValidationResultsMetadata()
+    path = "mock_path"
+    metadata = ValidationResultsMetadata(path)
 
     assert metadata.validation_results == ValidationResults(results=[])
 
@@ -62,18 +65,19 @@ def test_add_validation_result():
 
 
 def test_save_success():
-
-    path = os.path.dirname(os.path.abspath(__file__))
-    path = os.path.join(
-        path, "checkpoint_validation_results", VALIDATION_RESULTS_JSON_FILE_NAME
+    test_path = os.path.dirname(os.path.abspath(__file__))
+    result_path = os.path.join(
+        test_path,
+        SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
+        VALIDATION_RESULTS_JSON_FILE_NAME,
     )
-    with open(path) as file:
-        validation_results_json = file.read()
+    with open(result_path) as file:
+        validation_result_json = file.read()
         mock_validation_results = ValidationResults.model_validate_json(
-            validation_results_json
+            validation_result_json
         )
 
-    metadata = ValidationResultsMetadata(path)
+    metadata = ValidationResultsMetadata(test_path)
     with patch("builtins.open", mock_open()) as mock_open_file:
         metadata.save()
 

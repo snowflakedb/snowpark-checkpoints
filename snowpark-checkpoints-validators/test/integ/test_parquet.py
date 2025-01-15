@@ -257,7 +257,7 @@ def test_df_mode_dataframe(job_context, snowpark_schema, data):
             mode=CheckpointMode.DATAFRAME,
         )
 
-    mocked_update.assert_called_once_with(checkpoint_name, PASS_STATUS)
+    mocked_update.assert_called_once_with(checkpoint_name, PASS_STATUS, None)
     mocked_session.assert_called_once_with(checkpoint_name, DATAFRAME_EXECUTION_MODE)
 
 
@@ -285,7 +285,7 @@ def test_df_mode_dataframe_mismatch(job_context, snowpark_schema, data):
                 mode=CheckpointMode.DATAFRAME,
             )
 
-    mocked_update.assert_called_once_with(checkpoint_name, FAIL_STATUS)
+    mocked_update.assert_called_once_with(checkpoint_name, FAIL_STATUS, None)
 
 
 def test_df_mode_dataframe_job_none(job_context, snowpark_schema, data):

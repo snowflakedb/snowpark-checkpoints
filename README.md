@@ -2,11 +2,12 @@
 
 Snowpark Python / Spark Migration Testing Tools
 
-## TODO
+---
+**NOTE**
 
-- create a spark-pipeline side pandera schema collector
-- clearly distinguish between schema-validation mode and parallel execution mode
-- add the streamlit app
+This package is on Private Preview.
+
+---
 
 # Data Collection from Spark Pipelines
 

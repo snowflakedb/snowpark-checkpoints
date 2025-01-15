@@ -69,8 +69,12 @@ class StructColumnCollector(ColumnCollectorBase):
         rows_not_null_count = 0
         rows_null_count = 0
         for row in self.values:
-            row_clm_value = row[clm_name]
             rows_count += 1
+            if row is None:
+                rows_null_count += 1
+                continue
+
+            row_clm_value = row[clm_name]
             if row_clm_value is None:
                 rows_null_count += 1
             else:

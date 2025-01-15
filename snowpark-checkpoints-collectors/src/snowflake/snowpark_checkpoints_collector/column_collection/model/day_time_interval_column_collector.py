@@ -40,8 +40,9 @@ class DayTimeIntervalColumnCollector(ColumnCollectorBase):
         super().__init__(clm_name, struct_field, clm_values)
 
     def get_custom_data(self) -> dict[str, any]:
-        min_value = str(self.values.min())
-        max_value = str(self.values.max())
+        local_values = self.values.dropna()
+        min_value = str(local_values.min())
+        max_value = str(local_values.max())
 
         custom_data_dict = {COLUMN_MIN_KEY: min_value, COLUMN_MAX_KEY: max_value}
 

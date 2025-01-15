@@ -43,9 +43,10 @@ class DecimalColumnCollector(ColumnCollectorBase):
         super().__init__(clm_name, struct_field, clm_values)
 
     def get_custom_data(self) -> dict[str, any]:
-        min_value = str(self.values.min())
-        max_value = str(self.values.max())
-        mean_value = str(self.values.mean().item())
+        local_values = self.values.dropna()
+        min_value = str(local_values.min())
+        max_value = str(local_values.max())
+        mean_value = str(local_values.mean().item())
         decimal_precision = self._compute_decimal_precision()
 
         custom_data_dict = {

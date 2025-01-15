@@ -40,8 +40,9 @@ class BooleanColumnCollector(ColumnCollectorBase):
         super().__init__(clm_name, struct_field, clm_values)
 
     def get_custom_data(self) -> dict[str, any]:
-        rows_count = self.values.count().item()
-        true_count = self.values.where(self.values).count().item()
+        local_values = self.values.dropna()
+        rows_count = local_values.count().item()
+        true_count = local_values.where(local_values).count().item()
         false_count = rows_count - true_count
 
         custom_data_dict = {

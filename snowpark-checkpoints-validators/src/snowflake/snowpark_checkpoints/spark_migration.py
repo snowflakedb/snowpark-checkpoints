@@ -15,8 +15,10 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
     SamplingAdapter,
     SamplingStrategy,
 )
+from snowflake.snowpark_checkpoints.utils.constant import FAIL_STATUS, PASS_STATUS
 from snowflake.snowpark_checkpoints.utils.telemetry import STATUS_KEY, report_telemetry
 from snowflake.snowpark_checkpoints.utils.utils_checks import (
+    _update_validation_result,
     _validate_checkpoint_name,
 )
 
@@ -32,6 +34,7 @@ def check_with_spark(
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
     check_dtypes: Optional[bool] = True,
     check_with_precision: Optional[float] = True,
+    output_path: Optional[str] = None,
 ) -> Callable[[fn], fn]:
     """Validate function output with Spark instance.
 
@@ -51,6 +54,7 @@ def check_with_spark(
             Defaults to True.
         check_with_precision (Optional[float], optional): Precision value to control numerical comparison precision.
             Defaults to True.
+        output_path (Optional[str], optional): The path to store the validation results. Defaults to None.
 
     Returns:
         Callable[[fn], fn]: A decorator that wraps the original Snowpark function with validation logic.
@@ -61,7 +65,7 @@ def check_with_spark(
         _checkpoint_name = checkpoint_name
         if checkpoint_name is None:
             _checkpoint_name = snowpark_fn.__name__
-        _validate_checkpoint_name(checkpoint_name)
+        _validate_checkpoint_name(_checkpoint_name)
 
         def wrapper(*args, **kwargs):
             sampler = SamplingAdapter(
@@ -76,7 +80,11 @@ def check_with_spark(
             snowpark_test_results = snowpark_fn(*snowpark_sample_args, **kwargs)
             spark_test_results = spark_function(*pyspark_sample_args, **kwargs)
             result, exception = _assert_return(
-                snowpark_test_results, spark_test_results, job_context, checkpoint_name
+                snowpark_test_results,
+                spark_test_results,
+                job_context,
+                _checkpoint_name,
+                output_path,
             )
             if not result:
                 raise exception from None
@@ -94,7 +102,7 @@ def check_with_spark(
     multiple_return=True,
 )
 def _assert_return(
-    snowpark_results, spark_results, job_context, checkpoint_name
+    snowpark_results, spark_results, job_context, checkpoint_name, output_path=None
 ) -> tuple[bool, Optional[Exception]]:
     """Assert and validate the results from Snowpark and Spark transformations.
 
@@ -103,6 +111,7 @@ def _assert_return(
         spark_results (Any): Results from the Spark transformation to compare against.
         job_context (Any): Additional context about the job. Defaults to None.
         checkpoint_name (Any): Name of the checkpoint for logging. Defaults to None.
+        output_path (Optional[str], optional): The path to store the validation results. Defaults to None.
 
     Raises:
         AssertionError: If the Snowpark and Spark results do not match.
@@ -120,6 +129,7 @@ def _assert_return(
             )
             return False, exception_result
         job_context.mark_pass(checkpoint_name)
+        _update_validation_result(checkpoint_name, PASS_STATUS, output_path)
         return True, None
     else:
 
@@ -130,8 +140,10 @@ def _assert_return(
                 checkpoint_name,
                 f"{snowpark_results} != {spark_results}",
             )
+            _update_validation_result(checkpoint_name, FAIL_STATUS, output_path)
             return False, exception_result
         job_context.mark_pass(checkpoint_name)
+        _update_validation_result(checkpoint_name, PASS_STATUS, output_path)
         return True, None
 
 

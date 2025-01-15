@@ -286,7 +286,7 @@ def _generate_schema(
                          constraints of the DataFrame.
 
     """
-    current_directory_path = os.getcwd()
+    current_directory_path = output_path if output_path else os.getcwd()
 
     output_directory_path = os.path.join(
         current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME
@@ -426,6 +426,7 @@ def _compare_data(
     df: SnowparkDataFrame,
     job_context: Optional[SnowparkJobContext],
     checkpoint_name: str,
+    output_path: Optional[str] = None,
 ):
     """Compare the data in the provided Snowpark DataFrame with the data in a checkpoint table.
 
@@ -437,6 +438,7 @@ def _compare_data(
         df (SnowparkDataFrame): The Snowpark DataFrame to compare.
         job_context (SnowparkJobContext): The job context containing the Snowpark session and job state.
         checkpoint_name (str): The name of the checkpoint table to compare against.
+        output_path (str): The path to the output directory.
 
     Raises:
         SchemaValidationError: If there is a data mismatch between the DataFrame and the checkpoint table.
@@ -461,6 +463,7 @@ def _compare_data(
         _update_validation_result(
             checkpoint_name,
             FAIL_STATUS,
+            output_path,
         )
         raise SchemaValidationError(
             error_message,
@@ -469,7 +472,7 @@ def _compare_data(
             df,
         )
     else:
-        _update_validation_result(checkpoint_name, PASS_STATUS)
+        _update_validation_result(checkpoint_name, PASS_STATUS, output_path)
         job_context.mark_pass(checkpoint_name, DATAFRAME_EXECUTION_MODE)
 
 
@@ -495,7 +498,7 @@ def _find_frame_in(stack: list[inspect.FrameInfo]) -> tuple:
         r"(validate_dataframe_checkpoint|check_dataframe_schema)"
     )
 
-    first_frames = stack[:6]
+    first_frames = stack[:7]
     first_frames.reverse()
 
     for i, frame in enumerate(first_frames):
@@ -522,12 +525,15 @@ def _get_relative_path(file_path: str) -> str:
     return os.path.relpath(file_path, current_directory)
 
 
-def _update_validation_result(checkpoint_name: str, validation_status: str) -> None:
+def _update_validation_result(
+    checkpoint_name: str, validation_status: str, output_path: Optional[str] = None
+) -> None:
     """Update the validation result file with the status of a given checkpoint.
 
     Args:
         checkpoint_name (str): The name of the checkpoint to update.
         validation_status (str): The validation status to record for the checkpoint.
+        output_path (str): The path to the output directory.
 
     Returns:
         None
@@ -539,7 +545,7 @@ def _update_validation_result(checkpoint_name: str, validation_status: str) -> N
 
     _file_from_stack, _line_of_code = _find_frame_in(stack)
 
-    pipeline_result_metadata = ValidationResultsMetadata()
+    pipeline_result_metadata = ValidationResultsMetadata(output_path)
 
     pipeline_result_metadata.add_validation_result(
         ValidationResult(

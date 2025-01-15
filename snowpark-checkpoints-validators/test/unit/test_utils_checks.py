@@ -533,6 +533,7 @@ def test_compare_data_match():
 
     checkpoint_name = "test_checkpoint"
     validation_status = PASS_STATUS
+    output_path = "test_output_path/utils/"
 
     with (
         patch("os.getcwd", return_value="/mocked/path"),
@@ -544,11 +545,11 @@ def test_compare_data_match():
         ) as mock_update_validation_result,
     ):
         # Call the function
-        _compare_data(df, job_context, checkpoint_name)
+        _compare_data(df, job_context, checkpoint_name, output_path)
 
     # Assertions
     mock_update_validation_result.assert_called_once_with(
-        checkpoint_name, validation_status
+        checkpoint_name, validation_status, output_path
     )
     df.write.save_as_table.assert_called_once_with(
         table_name=new_checkpoint_name, mode=OVERWRITE_MODE
@@ -597,7 +598,9 @@ def test_compare_data_mismatch():
             _compare_data(df, job_context, checkpoint_name)
 
     # Assertions
-    mock_update_validation_result.assert_called_once_with(checkpoint_name, FAIL_STATUS)
+    mock_update_validation_result.assert_called_once_with(
+        checkpoint_name, FAIL_STATUS, None
+    )
     df.write.save_as_table.assert_called_once_with(
         table_name=new_checkpoint_name, mode=OVERWRITE_MODE
     )

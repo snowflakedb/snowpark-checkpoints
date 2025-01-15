@@ -48,7 +48,7 @@ schema = StructType(
         # LongType: Represents 8-byte signed integer numbers. The range of numbers is from -9223372036854775808 to 9223372036854775807.
         StructField("long", LongType(), True),
         # ! CORNER CASE
-        # floatType: Represents 4-byte single-precision floating point numbers.
+        # FloatType: Represents 4-byte single-precision floating point numbers.
         StructField("float", FloatType(), True),
         # DoubleType: Represents 8-byte double-precision floating point numbers.
         StructField("double", DoubleType(), True),

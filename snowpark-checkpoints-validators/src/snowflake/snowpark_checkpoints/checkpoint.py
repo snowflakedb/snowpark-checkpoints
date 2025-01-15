@@ -262,7 +262,7 @@ def _check_dataframe_schema(
 @report_telemetry(params_list=["pandera_schema"])
 def check_output_schema(
     pandera_schema: DataFrameSchema,
-    check_name: str,
+    checkpoint_name: str,
     sample_frac: Optional[float] = 1.0,
     sample_number: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
@@ -272,7 +272,7 @@ def check_output_schema(
 
     Args:
         pandera_schema (DataFrameSchema): The Pandera schema to validate against.
-        check_name (Optional[str], optional): The name of the checkpoint to retrieve the schema.
+        checkpoint_name (Optional[str], optional): The name of the checkpoint to retrieve the schema.
         sample_frac (Optional[float], optional): Fraction of data to sample.
             Defaults to 0.1.
         sample_number (Optional[int], optional): Number of rows to sample.
@@ -294,10 +294,10 @@ def check_output_schema(
             function: The decorated function.
 
         """
-        checkpoint_name = check_name
-        if check_name is None:
-            checkpoint_name = snowpark_fn.__name__
-        _validate_checkpoint_name(checkpoint_name)
+        _checkpoint_name = checkpoint_name
+        if checkpoint_name is None:
+            _checkpoint_name = snowpark_fn.__name__
+        _validate_checkpoint_name(_checkpoint_name)
 
         def wrapper(*args, **kwargs):
             """Wrapp a function to validate the schema of the output of a Snowpark function.
@@ -327,11 +327,11 @@ def check_output_schema(
                 )
 
                 if job_context is not None:
-                    job_context.mark_pass(checkpoint_name)
+                    job_context.mark_pass(_checkpoint_name)
 
                 logger = CheckpointLogger().get_logger()
                 logger.info(
-                    f"Checkpoint {checkpoint_name} validation result:\n{validation_result}"
+                    f"Checkpoint {_checkpoint_name} validation result:\n{validation_result}"
                 )
 
             except Exception as pandera_ex:
@@ -339,11 +339,11 @@ def check_output_schema(
                 raise SchemaValidationError(
                     "Snowpark output schema validation error",
                     job_context,
-                    checkpoint_name,
+                    _checkpoint_name,
                     pandera_ex,
                 ) from pandera_ex
             finally:
-                _update_validation_result(checkpoint_name, validation_result_status)
+                _update_validation_result(_checkpoint_name, validation_result_status)
             return snowpark_results
 
         return wrapper
@@ -424,7 +424,9 @@ def check_input_schema(
                         )
 
                         if job_context is not None:
-                            job_context.mark_pass(_checkpoint_name)
+                            job_context.mark_pass(
+                                _checkpoint_name,
+                            )
 
                         logger = CheckpointLogger().get_logger()
                         logger.info(

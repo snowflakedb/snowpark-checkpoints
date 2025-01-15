@@ -14,6 +14,7 @@ from snowflake.snowpark_checkpoints.utils.constant import (
     CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME,
     CHECKPOINT_TABLE_NAME_FORMAT,
     DATAFRAME_CUSTOM_DATA_KEY,
+    DATAFRAME_EXECUTION_MODE,
     DEFAULT_KEY,
     EXCEPT_HASH_AGG_QUERY,
     FAIL_STATUS,
@@ -22,8 +23,10 @@ from snowflake.snowpark_checkpoints.utils.constant import (
     OVERWRITE_MODE,
     PASS_STATUS,
     ROWS_COUNT_KEY,
+    SCHEMA_EXECUTION_MODE,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
     TYPE_KEY,
+    CheckpointMode,
 )
 from pandera import Column, Check, DataFrameSchema
 import pandas as pd
@@ -553,7 +556,9 @@ def test_compare_data_match():
         call().count(),
     ]
     session.sql.assert_has_calls(calls)
-    job_context.mark_pass.assert_called_once_with(checkpoint_name)
+    job_context.mark_pass.assert_called_once_with(
+        checkpoint_name, DATAFRAME_EXECUTION_MODE
+    )
     job_context.mark_fail.assert_not_called()
 
 

@@ -288,7 +288,9 @@ def original_spark_code_I_dont_understand(df):
 
 
 @check_with_spark(
-    job_context=job_context, spark_function=original_spark_code_I_dont_understand
+    job_context=job_context,
+    spark_function=original_spark_code_I_dont_understand,
+    checkpoint_name="snowpark_function",
 )
 def new_snowpark_code_I_do_understand(df):
     from snowflake.snowpark.functions import col, lit, when

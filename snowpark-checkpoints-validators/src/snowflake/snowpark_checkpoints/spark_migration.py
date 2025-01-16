@@ -128,7 +128,7 @@ def _assert_return(
                 "DataFrame difference:\n", job_context, checkpoint_name, cmp
             )
             return False, exception_result
-        job_context.mark_pass(checkpoint_name)
+        job_context._mark_pass(checkpoint_name)
         _update_validation_result(checkpoint_name, PASS_STATUS, output_path)
         return True, None
     else:
@@ -142,7 +142,7 @@ def _assert_return(
             )
             _update_validation_result(checkpoint_name, FAIL_STATUS, output_path)
             return False, exception_result
-        job_context.mark_pass(checkpoint_name)
+        job_context._mark_pass(checkpoint_name)
         _update_validation_result(checkpoint_name, PASS_STATUS, output_path)
         return True, None
 

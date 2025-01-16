@@ -14,7 +14,7 @@ from snowflake.snowpark_checkpoints_collector.collection_result.model.collection
     CollectionResult,
 )
 
-from snowflake.snowpark_checkpoints_collector import Singleton
+from snowflake.snowpark_checkpoints_collector.singleton import Singleton
 from snowflake.snowpark_checkpoints_collector.collection_result.model.collection_point_result_manager import (
     RESULTS_KEY,
 )

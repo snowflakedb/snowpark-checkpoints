@@ -247,7 +247,6 @@ def _check_dataframe_schema(
 
     # Raises SchemaError on validation issues
     validator = DataFrameValidator()
-    pandera_schema_upper.validate(sample_df)
     is_valid, validation_result = validator.validate(
         pandera_schema_upper, sample_df, validity_flag=True
     )

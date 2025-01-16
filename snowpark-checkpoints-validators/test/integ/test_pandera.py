@@ -231,8 +231,8 @@ def test_df_check_fail():
 
     schema = DataFrameSchema(
         {
-            "COLUMN1": Column(int8, Check(lambda x: 0 <= x <= 5)),
-            "COLUMN2": Column(float, Check(lambda x: x < -1.2)),
+            "COLUMN1": Column(int8, Check(lambda x: 0 <= x <= 5, element_wise=True)),
+            "COLUMN2": Column(float, Check(lambda x: x < -1.2, element_wise=True)),
         }
     )
 

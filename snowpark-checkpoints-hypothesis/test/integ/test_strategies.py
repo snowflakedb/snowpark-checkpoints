@@ -276,6 +276,9 @@ def test_dataframe_strategy_from_object_schema_missing_dtype(data: st.DataObject
         ),
     ):
         data.draw(strategy)
+    validate_telemetry_file_output(
+        "test_dataframe_strategy_from_object_schema_missing_dtype_telemetry.json"
+    )
 
 
 @given(data=st.data())
@@ -326,6 +329,9 @@ def test_dataframe_strategy_from_object_schema_generated_schema(
     )
 
     assert df.schema == expected_schema
+    validate_telemetry_file_output(
+        "test_dataframe_strategy_from_object_schema_generated_schema_telemetry.json"
+    )
 
 
 @given(data=st.data())
@@ -411,6 +417,9 @@ def test_dataframe_strategy_from_object_schema_generated_values(
     assert (
         out_of_range_timestamps_df.count() == 0
     ), f"TIMESTAMP_COLUMN values are out of range: {out_of_range_timestamps_df.collect()}"
+    validate_telemetry_file_output(
+        "test_dataframe_strategy_from_object_schema_generated_values_telemetry.json"
+    )
 
 
 def get_expected(file_name: str) -> str:

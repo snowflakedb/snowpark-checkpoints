@@ -8,7 +8,6 @@
       "device_id" : "0471186eb1a6ba58c82e97d19006a08b163bc0056c05e6f770090eade2c3a809",
       "os_version" : "darwin",
       "python_version" : "3.11.2",
-      "snowpark_checkpoints_version" : "0.0.0",
       "snowpark_version" : "1.25.0"
     },
     "source" : "snowpark-checkpoints",

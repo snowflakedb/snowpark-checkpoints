@@ -17,7 +17,6 @@ from sys import platform
 from typing import Any, Callable, Optional, TypeVar
 from uuid import getnode
 
-from __version__ import __version__ as snowpark_checkpoints_version
 from snowflake.connector import (
     SNOWFLAKE_CONNECTOR_VERSION,
     time_util,
@@ -322,7 +321,6 @@ def _get_metadata() -> dict:
         "python_version": python_version(),
         "snowpark_version": ".".join(str(x) for x in SNOWPARK_VERSION if x is not None),
         "device_id": _get_unique_id(),
-        "snowpark_checkpoints_version": snowpark_checkpoints_version,
     }
 
 

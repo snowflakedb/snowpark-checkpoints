@@ -23,15 +23,13 @@
           "name": "demo_initial_creation_checkpoint",
           "function": "df",
           "file": "Demos/pyspark/demo_pyspark_pipeline_schema.py",
-          "location": 0,
-          "sample": "0.5"
+          "location": 0
         },
         {
           "name": "demo_add_a_column",
           "function": "df1",
           "file": "Demos/pyspark/demo_pyspark_pipeline_schema.py",
-          "location": 0,
-          "sample": "0.5"
+          "location": 1
         }
       ]
     }

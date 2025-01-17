@@ -41,6 +41,7 @@ from snowflake.snowpark_checkpoints.utils.utils_checks import (
     _update_validation_result,
     _is_valid_checkpoint_name,
     _validate_checkpoint_name,
+    replace_special_characters,
 )
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from snowflake.snowpark_checkpoints.snowpark_sampler import SamplingStrategy
@@ -809,3 +810,23 @@ def test_add_null_checks_no_margin_error():
 
     # Validate the DataFrame against the schema
     schema.validate(df)
+
+
+def test_replace_special_characters_no_special_chars():
+    assert replace_special_characters("checkpoint1") == "checkpoint1"
+
+
+def test_replace_special_characters_with_spaces():
+    assert replace_special_characters("checkpoint 1") == "checkpoint_1"
+
+
+def test_replace_special_characters_with_hyphens():
+    assert replace_special_characters("checkpoint-1") == "checkpoint_1"
+
+
+def test_replace_special_characters_with_special_chars():
+    assert replace_special_characters("checkpoint@1!") == "checkpoint_1_"
+
+
+def test_replace_special_characters_with_mixed_chars():
+    assert replace_special_characters("check_point-1@!") == "check_point_1_"

@@ -91,8 +91,22 @@ def _is_valid_checkpoint_name(checkpoint_name: str) -> bool:
         bool: True if the checkpoint name is valid, False otherwise.
 
     """
+    normalized_checkpoint_name = replace_special_characters(checkpoint_name)
     regex = r"^[a-zA-Z_][a-zA-Z0-9_$]*$"
-    return bool(re.match(regex, checkpoint_name))
+    return bool(re.match(regex, normalized_checkpoint_name))
+
+
+def replace_special_characters(checkpoint_name: str) -> str:
+    """Replace special characters in the checkpoint name with underscores.
+
+    Args:
+        checkpoint_name (str): The checkpoint name to process.
+
+    Returns:
+        str: The checkpoint name with special characters replaced by underscores.
+
+    """
+    return re.sub(r"\W", "_", checkpoint_name)
 
 
 def _process_sampling(

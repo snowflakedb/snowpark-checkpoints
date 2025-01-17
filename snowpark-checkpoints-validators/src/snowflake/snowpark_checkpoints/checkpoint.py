@@ -70,31 +70,34 @@ def validate_dataframe_checkpoint(
         ValueError: If an invalid validation mode is provided or if job_context is None for PARQUET mode.
 
     """
+
     checkpoint_name = _replace_special_characters(checkpoint_name)
 
-    if mode == CheckpointMode.SCHEMA:
-        return _check_dataframe_schema_file(
-            df,
-            checkpoint_name,
-            job_context,
-            custom_checks,
-            skip_checks,
-            sample_frac,
-            sample_number,
-            sampling_strategy,
-            output_path,
-        )
-    elif mode == CheckpointMode.DATAFRAME:
-        if job_context is None:
-            raise ValueError(
-                "Connectionless mode is not supported for Parquet validation"
+    if is_checkpoint_enabled(checkpoint_name):
+
+        if mode == CheckpointMode.SCHEMA:
+            return _check_dataframe_schema_file(
+                df,
+                checkpoint_name,
+                job_context,
+                custom_checks,
+                skip_checks,
+                sample_frac,
+                sample_number,
+                sampling_strategy,
+                output_path,
             )
-        _compare_data(df, job_context, checkpoint_name, output_path)
-    else:
-        raise ValueError(
-            """Invalid validation mode.
-            Please use for schema validation use a 1 or for a full data validation use a 2 for schema validation."""
-        )
+        elif mode == CheckpointMode.DATAFRAME:
+            if job_context is None:
+                raise ValueError(
+                    "Connectionless mode is not supported for Parquet validation"
+                )
+            _compare_data(df, job_context, checkpoint_name, output_path)
+        else:
+            raise ValueError(
+                """Invalid validation mode.
+                Please use for schema validation use a 1 or for a full data validation use a 2 for schema validation."""
+            )
 
 
 def _check_dataframe_schema_file(

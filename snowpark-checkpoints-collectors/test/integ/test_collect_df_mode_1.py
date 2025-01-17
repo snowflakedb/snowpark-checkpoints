@@ -55,7 +55,7 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
     BOOLEAN_COLUMN_TYPE,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
 )
-from snowflake.snowpark_checkpoints_collector import Singleton
+from snowflake.snowpark_checkpoints_collector.singleton import Singleton
 
 import tempfile
 

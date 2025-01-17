@@ -9,5 +9,6 @@ It lets you collect information about PySpark dataframes using a collector mecha
    :maxdepth: 3
 
    snowpark-checkpoints-collectors/index
+   snowpark-checkpoints-configuration/index
    snowpark-checkpoints-hypothesis/index
    snowpark-checkpoints-validators/index

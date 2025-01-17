@@ -254,7 +254,7 @@ def _check_dataframe_schema(
     )
     if is_valid:
         if job_context is not None:
-            job_context.mark_pass(checkpoint_name)
+            job_context._mark_pass(checkpoint_name)
         _update_validation_result(checkpoint_name, PASS_STATUS, output_path)
     else:
         _update_validation_result(checkpoint_name, FAIL_STATUS, output_path)
@@ -341,7 +341,7 @@ def check_output_schema(
 
             if is_valid:
                 if job_context is not None:
-                    job_context.mark_pass(_checkpoint_name)
+                    job_context._mark_pass(_checkpoint_name)
 
                 _update_validation_result(_checkpoint_name, PASS_STATUS, output_path)
             else:
@@ -441,7 +441,7 @@ def check_input_schema(
 
                     if is_valid:
                         if job_context is not None:
-                            job_context.mark_pass(
+                            job_context._mark_pass(
                                 _checkpoint_name,
                             )
 

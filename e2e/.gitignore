@@ -1,4 +1,9 @@
 out
 node_modules
+extension
 .vscode-test/
+.wdio-vscode-service/
 *.vsix
+
+wdio.conf.js
+wdio.conf.js.map

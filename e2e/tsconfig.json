@@ -1,16 +1,12 @@
 {
-  "ts-node": {
-    "swc": true
-  },
   "compilerOptions": {
-    "module": "commonjs",
-    "target": "es2020",
-    "lib": ["es2020"],
+    "target": "ES2022",
     "outDir": "out",
+    "lib": ["ES2022"],
+    "moduleResolution": "node",
     "sourceMap": true,
-    "rootDir": "test",
-    "strict": true
-  },
-  "include": ["./**/*.ts", "./**/*.tsx"],
-  "exclude": ["node_modules", ".vscode-test"]
+    "rootDir": "./test",
+    "strict": true,
+    "types": ["node", "@wdio/mocha-framework", "expect-webdriverio", "wdio-vscode-service"]
+  }
 }

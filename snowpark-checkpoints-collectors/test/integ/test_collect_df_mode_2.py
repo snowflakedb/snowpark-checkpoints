@@ -25,8 +25,9 @@ from snowflake.snowpark.types import (
     StructType,
 )
 
+from snowflake.snowpark_checkpoints_collector.singleton import Singleton
+
 from snowflake.snowpark_checkpoints_collector import (
-    Singleton,
     collect_dataframe_checkpoint,
 )
 from snowflake.snowpark_checkpoints_collector.collection_common import (

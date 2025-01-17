@@ -70,31 +70,33 @@ def validate_dataframe_checkpoint(
         ValueError: If an invalid validation mode is provided or if job_context is None for PARQUET mode.
 
     """
-    _validate_checkpoint_name(checkpoint_name)
+    if is_checkpoint_enabled(checkpoint_name):
 
-    if mode == CheckpointMode.SCHEMA:
-        return _check_dataframe_schema_file(
-            df,
-            checkpoint_name,
-            job_context,
-            custom_checks,
-            skip_checks,
-            sample_frac,
-            sample_number,
-            sampling_strategy,
-            output_path,
-        )
-    elif mode == CheckpointMode.DATAFRAME:
-        if job_context is None:
-            raise ValueError(
-                "Connectionless mode is not supported for Parquet validation"
+        _validate_checkpoint_name(checkpoint_name)
+
+        if mode == CheckpointMode.SCHEMA:
+            return _check_dataframe_schema_file(
+                df,
+                checkpoint_name,
+                job_context,
+                custom_checks,
+                skip_checks,
+                sample_frac,
+                sample_number,
+                sampling_strategy,
+                output_path,
             )
-        _compare_data(df, job_context, checkpoint_name, output_path)
-    else:
-        raise ValueError(
-            """Invalid validation mode.
-            Please use for schema validation use a 1 or for a full data validation use a 2 for schema validation."""
-        )
+        elif mode == CheckpointMode.DATAFRAME:
+            if job_context is None:
+                raise ValueError(
+                    "Connectionless mode is not supported for Parquet validation"
+                )
+            _compare_data(df, job_context, checkpoint_name, output_path)
+        else:
+            raise ValueError(
+                """Invalid validation mode.
+                Please use for schema validation use a 1 or for a full data validation use a 2 for schema validation."""
+            )
 
 
 def _check_dataframe_schema_file(
@@ -246,29 +248,24 @@ def _check_dataframe_schema(
     )
 
     # Raises SchemaError on validation issues
-    validation_result_status = PASS_STATUS
-    try:
-        validator = DataFrameValidator()
-        validation_result = validator.validate(
-            pandera_schema_upper, sample_df, validity_flag=True
-        )
-
+    validator = DataFrameValidator()
+    is_valid, validation_result = validator.validate(
+        pandera_schema_upper, sample_df, validity_flag=True
+    )
+    if is_valid:
         if job_context is not None:
-            job_context.mark_pass(checkpoint_name)
-
-        return validation_result
-    except Exception as pandera_ex:
-        validation_result_status = FAIL_STATUS
+            job_context._mark_pass(checkpoint_name)
+        _update_validation_result(checkpoint_name, PASS_STATUS, output_path)
+    else:
+        _update_validation_result(checkpoint_name, FAIL_STATUS, output_path)
         raise SchemaValidationError(
-            "Snowpark output schema validation error",
+            "Snowpark DataFrame schema validation error",
             job_context,
             checkpoint_name,
-            pandera_ex,
-        ) from pandera_ex
-    finally:
-        _update_validation_result(
-            checkpoint_name, validation_result_status, output_path
+            validation_result,
         )
+
+    return (is_valid, validation_result)
 
 
 @report_telemetry(params_list=["pandera_schema"])
@@ -333,33 +330,29 @@ def check_output_schema(
             pandas_sample_args = sampler.get_sampled_pandas_args()
 
             # Raises SchemaError on validation issues
-            validation_result_status = PASS_STATUS
-            try:
-                validator = DataFrameValidator()
-                validation_result = validator.validate(
-                    pandera_schema, pandas_sample_args[0]
-                )
+            validator = DataFrameValidator()
+            is_valid, validation_result = validator.validate(
+                pandera_schema, pandas_sample_args[0], validity_flag=True
+            )
+            logger = CheckpointLogger().get_logger()
+            logger.info(
+                f"Checkpoint {_checkpoint_name} validation result:\n{validation_result}"
+            )
 
+            if is_valid:
                 if job_context is not None:
-                    job_context.mark_pass(_checkpoint_name)
+                    job_context._mark_pass(_checkpoint_name)
 
-                logger = CheckpointLogger().get_logger()
-                logger.info(
-                    f"Checkpoint {_checkpoint_name} validation result:\n{validation_result}"
-                )
-
-            except Exception as pandera_ex:
-                validation_result_status = FAIL_STATUS
+                _update_validation_result(_checkpoint_name, PASS_STATUS, output_path)
+            else:
+                _update_validation_result(_checkpoint_name, FAIL_STATUS, output_path)
                 raise SchemaValidationError(
                     "Snowpark output schema validation error",
                     job_context,
                     _checkpoint_name,
-                    pandera_ex,
-                ) from pandera_ex
-            finally:
-                _update_validation_result(
-                    _checkpoint_name, validation_result_status, output_path
+                    validation_result,
                 )
+
             return snowpark_results
 
         return wrapper
@@ -432,36 +425,42 @@ def check_input_schema(
 
             # Raises SchemaError on validation issues
             for arg in pandas_sample_args:
-                validation_result_status = PASS_STATUS
                 if isinstance(arg, PandasDataFrame):
-                    try:
-                        validator = DataFrameValidator()
-                        validation_result = validator.validate(
-                            pandera_schema,
-                            arg,
-                        )
 
+                    validator = DataFrameValidator()
+                    is_valid, validation_result = validator.validate(
+                        pandera_schema,
+                        arg,
+                        validity_flag=True,
+                    )
+
+                    logger = CheckpointLogger().get_logger()
+                    logger.info(
+                        f"Checkpoint {checkpoint_name} validation result:\n{validation_result}"
+                    )
+
+                    if is_valid:
                         if job_context is not None:
-                            job_context.mark_pass(
+                            job_context._mark_pass(
                                 _checkpoint_name,
                             )
 
-                        logger = CheckpointLogger().get_logger()
-                        logger.info(
-                            f"Checkpoint {checkpoint_name} validation result:\n{validation_result}"
+                        _update_validation_result(
+                            _checkpoint_name,
+                            PASS_STATUS,
+                            output_path,
                         )
-
-                    except Exception as pandera_ex:
-                        validation_result_status = FAIL_STATUS
+                    else:
+                        _update_validation_result(
+                            _checkpoint_name,
+                            FAIL_STATUS,
+                            output_path,
+                        )
                         raise SchemaValidationError(
-                            "Snowpark output schema validation error",
+                            "Snowpark input schema validation error",
                             job_context,
                             _checkpoint_name,
-                            pandera_ex,
-                        ) from pandera_ex
-                    finally:
-                        _update_validation_result(
-                            _checkpoint_name, validation_result_status, output_path
+                            validation_result,
                         )
             return snowpark_fn(*args, **kwargs)
 

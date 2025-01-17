@@ -454,7 +454,7 @@ def _compare_data(
 
     if expect_df.count() != 0:
         error_message = f"Data mismatch for checkpoint {checkpoint_name}"
-        job_context.mark_fail(
+        job_context._mark_fail(
             error_message,
             checkpoint_name,
             df,
@@ -473,7 +473,7 @@ def _compare_data(
         )
     else:
         _update_validation_result(checkpoint_name, PASS_STATUS, output_path)
-        job_context.mark_pass(checkpoint_name, DATAFRAME_EXECUTION_MODE)
+        job_context._mark_pass(checkpoint_name, DATAFRAME_EXECUTION_MODE)
 
 
 def _find_frame_in(stack: list[inspect.FrameInfo]) -> tuple:

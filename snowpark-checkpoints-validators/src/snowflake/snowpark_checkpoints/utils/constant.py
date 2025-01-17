@@ -8,8 +8,13 @@ from typing import Final
 
 
 class CheckpointMode(IntEnum):
+
+    """Enum class representing the validation mode."""
+
     SCHEMA = 1
+    """Validate against a schema file"""
     DATAFRAME = 2
+    """Validate against a dataframe"""
 
 
 # Execution mode

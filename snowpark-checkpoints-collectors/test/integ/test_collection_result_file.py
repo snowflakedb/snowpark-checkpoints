@@ -22,7 +22,7 @@ from snowflake.snowpark_checkpoints_collector.collection_result.model.collection
     RESULTS_KEY,
 )
 from snowflake.snowpark_checkpoints_collector.utils import file_utils
-from snowflake.snowpark_checkpoints_collector import Singleton
+from snowflake.snowpark_checkpoints_collector.singleton import Singleton
 import tempfile
 
 

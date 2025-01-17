@@ -39,7 +39,9 @@ collect_dataframe_schema(df:SparkDataFrame,
 The `validate_dataframe_checkpoint` function validates a Snowpark DataFrame against a checkpoint schema file or dataframe.
 
 ```python
-from snowflake.snowpark_checkpoints.checkpoint import check_dataframe_schema_file
+from snowflake.snowpark_checkpoints.checkpoint import (
+    validate_dataframe_checkpoint,
+)
 
 validate_dataframe_checkpoint(
     df: SnowparkDataFrame,

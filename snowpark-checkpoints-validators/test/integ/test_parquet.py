@@ -245,7 +245,7 @@ def test_df_mode_dataframe(job_context, snowpark_schema, data):
     df.write.save_as_table(checkpoint_name, mode="overwrite")
 
     mocked_session = MagicMock()
-    job_context.mark_pass = mocked_session
+    job_context._mark_pass = mocked_session
 
     with patch(
         "snowflake.snowpark_checkpoints.utils.utils_checks._update_validation_result"
@@ -310,7 +310,7 @@ def test_df_mode_dataframe_invalid_mode(job_context, snowpark_schema, data):
     with raises(
         ValueError,
         match="""Invalid validation mode.
-            Please use for schema validation use a 1 or for a full data validation use a 2 for schema validation.""",
+                Please use for schema validation use a 1 or for a full data validation use a 2 for schema validation.""",
     ):
         validate_dataframe_checkpoint(
             df_spark,

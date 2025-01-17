@@ -1,4 +1,4 @@
-name: Upload Python Package
+name: Upload Python Package External
 
 on:
   release:
@@ -135,6 +135,48 @@ jobs:
           echo "Current directory: $PWD" && ls -la dist
         working-directory: ./snowpark-checkpoints-collectors
 
+      - name: Get Workflow File Name
+        id: get_workflow_file
+        run: |
+          WORKFLOW_NAME="${{ github.workflow }}"
+          WORKFLOW_FILE=$(grep -rl "name: ${WORKFLOW_NAME}" .github/workflows/*.yml)
+          echo "Workflow file: ${WORKFLOW_FILE}"
+          echo "workflow_file=${WORKFLOW_FILE}" >> $GITHUB_ENV
+
+      - name: Sign and Verify Packages
+        run: |
+          echo "The workflow file is: ${{ env.workflow_file }}"
+          echo "Full URL: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/${{ env.workflow_file }}@${GITHUB_REF}"
+
+          for dist in $(find . -type f -name "*.whl" -o -name "*.tar.gz"); do
+            dist_base="$(basename "${dist}")"
+            echo "Processing: ${dist}"
+            echo "dist_base: ${dist_base}"
+
+            echo "Sign using sigstore"
+            python -m \
+              sigstore sign "${dist}" \
+              --output-signature "${dist_base}.sig" \
+              --output-certificate "${dist_base}.crt" \
+              --bundle "${dist_base}.sigstore"
+
+            echo "Verify using .sig and .crt pair"
+            python -m \
+              sigstore verify identity "${dist}" \
+              --signature "${dist_base}.sig" \
+              --cert "${dist_base}.crt" \
+              --cert-oidc-issuer https://token.actions.githubusercontent.com \
+              --cert-identity "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/${{ env.workflow_file }}@${GITHUB_REF}"
+
+            echo "Verify using .sigstore bundle"
+            python -m \
+              sigstore verify identity "${dist}" \
+              --bundle "${dist_base}.sigstore" \
+              --cert-oidc-issuer https://token.actions.githubusercontent.com \
+              --cert-identity "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/${{ env.workflow_file }}@${GITHUB_REF}"
+          done
+        working-directory: ${{ github.workspace }}
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -157,11 +199,17 @@ jobs:
           name: py-artifacts
           path: ./dist
 
+      - name: Get directory structure
+        run: |
+          echo "Current directory: $(pwd)" && ls -la dist
+          echo "Directory structure: $(find . -type f -name "*.whl" -o -name "*.tar.gz")"
+        working-directory: ${{ github.workspace }}
+
       - name: Upload Packages to Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          for file in dist/*; do
+          for file in $(find . -type f -name "*.whl" -o -name "*.tar.gz"); do
             echo "Uploading $file..."
             gh release upload "${GITHUB_REF#refs/tags/}" "$file"
           done
@@ -172,13 +220,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install twine
           pip list --verbose
-
-      - name: Get directory structure
-        run: |
-          echo "Current directory: $(pwd)" && ls -la
-          echo "Content recursive of dist directory:"
-          ls -laR dist/
-        working-directory: ${{ github.workspace }}
 
       - name: Publish to PyPI
         env:

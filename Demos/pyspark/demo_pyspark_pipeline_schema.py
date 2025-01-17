@@ -47,34 +47,32 @@ schema = StructType(
         StructField("interger", IntegerType(), True),
         # LongType: Represents 8-byte signed integer numbers. The range of numbers is from -9223372036854775808 to 9223372036854775807.
         StructField("long", LongType(), True),
-        # ! CORNER CASE
         # FloatType: Represents 4-byte single-precision floating point numbers.
         StructField("float", FloatType(), True),
         # DoubleType: Represents 8-byte double-precision floating point numbers.
         StructField("double", DoubleType(), True),
-        # ! CORNER CASE
         # DecimalType: Represents arbitrary-precision signed decimal numbers. Backed internally by
         StructField("decimal", DecimalType(10, 3), True),
         # StringType
         # StringType: Represents character string values.
         StructField("string", StringType(), True),
         # BinaryType
-        # ! CORNER CASE
         # BinaryType: Represents byte sequence values.
         StructField("binary", BinaryType(), True),
         # Boolean type
         # BooleanType: Represents boolean values.
         StructField("boolean", BooleanType(), True),
+        # ! CORNER CASE
         # Datetime type
         # DateType: Represents values comprising values of fields year, month and day, without a time-zone.
-        StructField("date", DateType(), True),
+        # StructField("date", DateType(), True),
         # ! CORNER CASE
         # TimestampType: Timestamp with local time zone(TIMESTAMP_LTZ). It represents values comprising values of fields year, month, day, hour, minute, and second, with the session local time-zone. The timestamp value represents an absolute point in time.
-        StructField("timestamp", TimestampType(), True),
+        # StructField("timestamp", TimestampType(), True),
         # ! CORNER CASE
         # TimestampNTZType: Timestamp without time zone(TIMESTAMP_NTZ). It represents values comprising values of fields year, month, day, hour, minute, and second. All operations are performed without taking any time zone into account.
         # Note: TIMESTAMP in Spark is a user-specified alias associated with one of the TIMESTAMP_LTZ and TIMESTAMP_NTZ variations. Users can set the default timestamp type as TIMESTAMP_LTZ(default value) or TIMESTAMP_NTZ via the configuration spark.sql.timestampType.
-        StructField("timestamp_ntz", TimestampNTZType(), True),
+        # StructField("timestamp_ntz", TimestampNTZType(), True),
     ]
 )
 
@@ -90,9 +88,9 @@ data = [
         string="red",
         binary=b"info",
         boolean=True,
-        date=datetime.strptime("2023-03-01", date_format),
-        timestamp=datetime.strptime("2023-03-01 12:00:00", timestamp_format),
-        timestamp_ntz=datetime.strptime("2023-03-01 12:00:00", timestamp_ntz_format),
+        # date=datetime.strptime("2023-03-01", date_format),
+        # timestamp=datetime.strptime("2023-03-01 12:00:00", timestamp_format),
+        # timestamp_ntz=datetime.strptime("2023-03-01 12:00:00", timestamp_ntz_format),
     ),
     Row(
         byte=4,
@@ -105,9 +103,9 @@ data = [
         string="red",
         binary=b"test",
         boolean=False,
-        date=datetime.strptime("2023-04-01", date_format),
-        timestamp=datetime.strptime("2023-04-01 12:00:00", timestamp_format),
-        timestamp_ntz=datetime.strptime("2023-04-01 12:00:00", timestamp_ntz_format),
+        # date=datetime.strptime("2023-04-01", date_format),
+        # timestamp=datetime.strptime("2023-04-01 12:00:00", timestamp_format),
+        # timestamp_ntz=datetime.strptime("2023-04-01 12:00:00", timestamp_ntz_format),
     ),
     Row(
         byte=5,
@@ -120,9 +118,9 @@ data = [
         string="red",
         binary=b"example2",
         boolean=True,
-        date=datetime.strptime("2023-05-01", date_format),
-        timestamp=datetime.strptime("2023-05-01 12:00:00", timestamp_format),
-        timestamp_ntz=datetime.strptime("2023-05-01 12:00:00", timestamp_ntz_format),
+        # date=datetime.strptime("2023-05-01", date_format),
+        # timestamp=datetime.strptime("2023-05-01 12:00:00", timestamp_format),
+        # timestamp_ntz=datetime.strptime("2023-05-01 12:00:00", timestamp_ntz_format),
     ),
     Row(
         byte=6,
@@ -135,9 +133,9 @@ data = [
         string="red",
         binary=b"sample2",
         boolean=False,
-        date=datetime.strptime("2023-06-01", date_format),
-        timestamp=datetime.strptime("2023-06-01 12:00:00", timestamp_format),
-        timestamp_ntz=datetime.strptime("2023-06-01 12:00:00", timestamp_ntz_format),
+        # date=datetime.strptime("2023-06-01", date_format),
+        # timestamp=datetime.strptime("2023-06-01 12:00:00", timestamp_format),
+        # timestamp_ntz=datetime.strptime("2023-06-01 12:00:00", timestamp_ntz_format),
     ),
     Row(
         byte=7,
@@ -150,9 +148,9 @@ data = [
         string="red",
         binary=b"data2",
         boolean=True,
-        date=datetime.strptime("2023-07-01", date_format),
-        timestamp=datetime.strptime("2023-07-01 12:00:00", timestamp_format),
-        timestamp_ntz=datetime.strptime("2023-07-01 12:00:00", timestamp_ntz_format),
+        # date=datetime.strptime("2023-07-01", date_format),
+        # timestamp=datetime.strptime("2023-07-01 12:00:00", timestamp_format),
+        # timestamp_ntz=datetime.strptime("2023-07-01 12:00:00", timestamp_ntz_format),
     ),
     Row(
         byte=8,
@@ -165,9 +163,9 @@ data = [
         string="blue",
         binary=b"test2",
         boolean=False,
-        date=datetime.strptime("2023-08-01", date_format),
-        timestamp=datetime.strptime("2023-08-01 12:00:00", timestamp_format),
-        timestamp_ntz=datetime.strptime("2023-08-01 12:00:00", timestamp_ntz_format),
+        # date=datetime.strptime("2023-08-01", date_format),
+        # timestamp=datetime.strptime("2023-08-01 12:00:00", timestamp_format),
+        # timestamp_ntz=datetime.strptime("2023-08-01 12:00:00", timestamp_ntz_format),
     ),
     Row(
         byte=9,
@@ -180,9 +178,9 @@ data = [
         string="blue",
         binary=b"example3",
         boolean=True,
-        date=datetime.strptime("2023-09-01", date_format),
-        timestamp=datetime.strptime("2023-09-01 12:00:00", timestamp_format),
-        timestamp_ntz=datetime.strptime("2023-09-01 12:00:00", timestamp_ntz_format),
+        # date=datetime.strptime("2023-09-01", date_format),
+        # timestamp=datetime.strptime("2023-09-01 12:00:00", timestamp_format),
+        # timestamp_ntz=datetime.strptime("2023-09-01 12:00:00", timestamp_ntz_format),
     ),
     Row(
         byte=10,
@@ -195,9 +193,9 @@ data = [
         string="blue",
         binary=b"sample3",
         boolean=False,
-        date=datetime.strptime("2023-10-01", date_format),
-        timestamp=datetime.strptime("2023-10-01 12:00:00", timestamp_format),
-        timestamp_ntz=datetime.strptime("2023-10-01 12:00:00", timestamp_ntz_format),
+        # date=datetime.strptime("2023-10-01", date_format),
+        # timestamp=datetime.strptime("2023-10-01 12:00:00", timestamp_format),
+        # timestamp_ntz=datetime.strptime("2023-10-01 12:00:00", timestamp_ntz_format),
     ),
     Row(
         byte=11,
@@ -210,9 +208,9 @@ data = [
         string="green",
         binary=b"data3",
         boolean=True,
-        date=datetime.strptime("2023-11-01", date_format),
-        timestamp=datetime.strptime("2023-11-01 12:00:00", timestamp_format),
-        timestamp_ntz=datetime.strptime("2023-11-01 12:00:00", timestamp_ntz_format),
+        # date=datetime.strptime("2023-11-01", date_format),
+        # timestamp=datetime.strptime("2023-11-01 12:00:00", timestamp_format),
+        # timestamp_ntz=datetime.strptime("2023-11-01 12:00:00", timestamp_ntz_format),
     ),
     Row(
         byte=12,
@@ -225,9 +223,9 @@ data = [
         string="green",
         binary=b"test3",
         boolean=False,
-        date=datetime.strptime("2023-12-01", date_format),
-        timestamp=datetime.strptime("2023-12-01 12:00:00", timestamp_format),
-        timestamp_ntz=datetime.strptime("2023-12-01 12:00:00", timestamp_ntz_format),
+        # date=datetime.strptime("2023-12-01", date_format),
+        # timestamp=datetime.strptime("2023-12-01 12:00:00", timestamp_format),
+        # timestamp_ntz=datetime.strptime("2023-12-01 12:00:00", timestamp_ntz_format),
     ),
     Row(
         byte=1,
@@ -240,9 +238,9 @@ data = [
         string="green",
         binary=b"binary",
         boolean=True,
-        date=datetime.strptime("2023-01-01", date_format),
-        timestamp=datetime.strptime("2023-01-01 12:00:00", timestamp_format),
-        timestamp_ntz=datetime.strptime("2023-01-01 12:00:00", timestamp_ntz_format),
+        # date=datetime.strptime("2023-01-01", date_format),
+        # timestamp=datetime.strptime("2023-01-01 12:00:00", timestamp_format),
+        # timestamp_ntz=datetime.strptime("2023-01-01 12:00:00", timestamp_ntz_format),
     ),
     Row(
         byte=2,
@@ -255,9 +253,9 @@ data = [
         string="blue",
         binary=b"data",
         boolean=False,
-        date=datetime.strptime("2023-02-01", date_format),
-        timestamp=datetime.strptime("2023-02-01 12:00:00", timestamp_format),
-        timestamp_ntz=datetime.strptime("2023-02-01 12:00:00", timestamp_ntz_format),
+        # date=datetime.strptime("2023-02-01", date_format),
+        # timestamp=datetime.strptime("2023-02-01 12:00:00", timestamp_format),
+        # timestamp_ntz=datetime.strptime("2023-02-01 12:00:00", timestamp_ntz_format),
     ),
 ]
 
@@ -265,7 +263,7 @@ df = spark.createDataFrame(data, schema)
 
 # Collect a schema/stats here!
 collect_dataframe_checkpoint(
-    df, "demo_initial_creation_checkpoint", sample=0.5, output_path="Demos/snowpark"
+    df, "demo_initial_creation_checkpoint", output_path="Demos/snowpark"
 )
 
 df1 = df.withColumn(
@@ -276,6 +274,4 @@ df1 = df.withColumn(
 )
 
 # Collect a schema/stats here!
-collect_dataframe_checkpoint(
-    df1, "demo_add_a_column", sample=0.5, output_path="Demos/snowpark"
-)
+collect_dataframe_checkpoint(df1, "demo_add_a_column", output_path="Demos/snowpark")

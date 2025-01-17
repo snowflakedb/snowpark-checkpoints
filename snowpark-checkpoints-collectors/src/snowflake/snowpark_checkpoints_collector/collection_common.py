@@ -8,8 +8,13 @@ from enum import IntEnum
 
 
 class CheckpointMode(IntEnum):
+
+    """Enum class representing the collection mode."""
+
     SCHEMA = 1
+    """Collect automatic schema inference"""
     DATAFRAME = 2
+    """Export DataFrame as Parquet file to Snowflake"""
 
 
 # CONSTANTS

@@ -73,14 +73,15 @@ def collect_dataframe_checkpoint(
         Exception: Invalid mode value.
 
     """
-    collection_point_file_path = file_utils.get_collection_point_source_file_path()
-    collection_point_line_of_code = file_utils.get_collection_point_line_of_code()
-    collection_point_result = CollectionPointResult(
-        collection_point_file_path, collection_point_line_of_code, checkpoint_name
-    )
+    if is_checkpoint_enabled(checkpoint_name):
 
-    try:
-        if is_checkpoint_enabled(checkpoint_name):
+        collection_point_file_path = file_utils.get_collection_point_source_file_path()
+        collection_point_line_of_code = file_utils.get_collection_point_line_of_code()
+        collection_point_result = CollectionPointResult(
+            collection_point_file_path, collection_point_line_of_code, checkpoint_name
+        )
+
+        try:
 
             _sample = get_checkpoint_sample(checkpoint_name, sample)
 
@@ -108,14 +109,14 @@ def collect_dataframe_checkpoint(
 
             collection_point_result.result = CollectionResult.PASS
 
-    except Exception as err:
-        collection_point_result.result = CollectionResult.FAIL
-        error_message = str(err)
-        raise Exception(error_message) from err
+        except Exception as err:
+            collection_point_result.result = CollectionResult.FAIL
+            error_message = str(err)
+            raise Exception(error_message) from err
 
-    finally:
-        collection_point_result_manager = CollectionPointResultManager(output_path)
-        collection_point_result_manager.add_result(collection_point_result)
+        finally:
+            collection_point_result_manager = CollectionPointResultManager(output_path)
+            collection_point_result_manager.add_result(collection_point_result)
 
 
 @report_telemetry(params_list=["column_type_dict"])

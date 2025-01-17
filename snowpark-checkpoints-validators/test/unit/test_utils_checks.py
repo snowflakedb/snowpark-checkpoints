@@ -782,11 +782,25 @@ def test_add_null_checks_no_margin_error():
     [
         param("checkpoint-1", "checkpoint_1"),
         param("Checkpoint 2", "Checkpoint_2"),
-        param("CHECKPOINT@3", "CHECKPOINT_3"),
-        param("checkpoint!", "checkpoint_"),
-        param("123checkpoint", "123checkpoint"),
-        param("checkpoint@1!", "checkpoint_1_"),
+        param("_checkpoint", "_checkpoint"),
+        param("checkpoint_name", "checkpoint_name"),
+        param("checkpoint$name", "checkpoint$name"),
     ],
 )
-def test_replace_special_characters_no_special_chars(name, expected):
+def test_replace_special_characters_valid(name, expected):
     assert _replace_special_characters(name) == expected
+
+
+@mark.parametrize(
+    "name",
+    [
+        param("checkpoint@name"),
+        param("checkpoint#name"),
+        param("checkpoint!name"),
+        param("checkpoint^name"),
+        param("checkpoint&name"),
+    ],
+)
+def test_replace_special_characters_invalid(name):
+    with raises(ValueError):
+        _replace_special_characters(name)

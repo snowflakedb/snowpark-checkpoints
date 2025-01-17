@@ -70,7 +70,6 @@ def validate_dataframe_checkpoint(
         ValueError: If an invalid validation mode is provided or if job_context is None for PARQUET mode.
 
     """
-
     checkpoint_name = _replace_special_characters(checkpoint_name)
 
     if is_checkpoint_enabled(checkpoint_name):

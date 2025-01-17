@@ -69,7 +69,13 @@ def _replace_special_characters(checkpoint_name: str) -> str:
         str: The checkpoint name with special characters replaced by underscores.
 
     """
-    return re.sub(r"\W", "_", checkpoint_name)
+    regex = r"^[a-zA-Z_\s-][a-zA-Z0-9_$\s-]*$"
+    if not bool(re.match(regex, checkpoint_name)):
+        raise ValueError(
+            f"Invalid checkpoint name: {checkpoint_name}",
+            "Checkpoint name must contain only alphanumeric characters, hyphens, and underscores.",
+        )
+    return re.sub(r"[\s-]", "_", checkpoint_name)
 
 
 def _process_sampling(

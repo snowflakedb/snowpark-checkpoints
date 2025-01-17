@@ -364,9 +364,7 @@ def test_dataframe_strategy_from_object_schema_generated_values(
             ),
             "STRING_COLUMN": pa.Column(
                 pa.String,
-                checks=pa.Check(
-                    lambda series: series.apply(lambda row: isinstance(row, str))
-                ),
+                checks=pa.Check.str_matches(r"^[a-zA-Z0-9_-]+$"),
             ),
             "BOOLEAN_COLUMN": pa.Column(pa.Bool, checks=pa.Check.isin([True, False])),
             "TIMESTAMP_COLUMN": pa.Column(

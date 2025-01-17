@@ -310,7 +310,7 @@ def test_df_mode_dataframe_invalid_mode(job_context, snowpark_schema, data):
     with raises(
         ValueError,
         match="""Invalid validation mode.
-            Please use for schema validation use a 1 or for a full data validation use a 2 for schema validation.""",
+                Please use for schema validation use a 1 or for a full data validation use a 2 for schema validation.""",
     ):
         validate_dataframe_checkpoint(
             df_spark,

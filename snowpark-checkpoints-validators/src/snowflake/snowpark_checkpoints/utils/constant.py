@@ -8,8 +8,18 @@ from typing import Final
 
 
 class CheckpointMode(IntEnum):
+
+    """Enum class representing the validation mode."""
+
     SCHEMA = 1
+    """Validate against a schema file"""
     DATAFRAME = 2
+    """Validate against a dataframe"""
+
+
+# Execution mode
+SCHEMA_EXECUTION_MODE: Final[str] = "Schema"
+DATAFRAME_EXECUTION_MODE: Final[str] = "Dataframe"
 
 
 # File position on stack
@@ -64,6 +74,7 @@ MAX_KEY: Final[str] = "max"
 MEAN_KEY: Final[str] = "mean"
 MIN_KEY: Final[str] = "min"
 NULL_COUNT_KEY: Final[str] = "rows_null_count"
+NULLABLE_KEY: Final[str] = "nullable"
 ROWS_NOT_NULL_COUNT_KEY: Final[str] = "rows_not_null_count"
 TRUE_COUNT_KEY: Final[str] = "true_count"
 TYPE_KEY: Final[str] = "type"
@@ -102,7 +113,7 @@ SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME: Final[str] = "snowpark-checkpoints-o
 CHECKPOINT_PARQUET_OUTPUT_FILE_FORMAT_NAME: Final[str] = "{}.parquet"
 VALIDATION_RESULTS_JSON_FILE_NAME: Final[str] = "checkpoint_validation_results.json"
 
-# Misc keys
-DOT_PARQUET_EXTENSION: Final[str] = ".parquet"
-BACKSLASH_TOKEN: Final[str] = "\\"
-SLASH_TOKEN: Final[str] = "/"
+# Environment variables
+SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH_ENV_VAR: Final[
+    str
+] = "SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH"

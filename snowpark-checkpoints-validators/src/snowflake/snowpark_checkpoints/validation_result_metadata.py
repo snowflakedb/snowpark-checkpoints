@@ -22,6 +22,7 @@ class ValidationResultsMetadata:
 
     Attributes:
         validation_results (list): A list to store validation results.
+        validation_results_file (str): The path to the validation results file.
 
     Methods:
         __init__(path: Optional[str] = None):
@@ -50,20 +51,18 @@ class ValidationResultsMetadata:
             Exception: If there is an error reading the validation results file.
 
         """
-        validation_results_file = (
-            path
-            if path is not None
-            else os.path.join(
-                os.getcwd(),
-                SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
-                VALIDATION_RESULTS_JSON_FILE_NAME,
-            )
+        dir_path = path if path else os.getcwd()
+
+        self.validation_results_file = os.path.join(
+            dir_path,
+            SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
+            VALIDATION_RESULTS_JSON_FILE_NAME,
         )
 
         self.validation_results = ValidationResults(results=[])
 
-        if os.path.exists(validation_results_file):
-            with open(validation_results_file) as file:
+        if os.path.exists(self.validation_results_file):
+            with open(self.validation_results_file) as file:
                 try:
                     validation_result_json = file.read()
                     self.validation_results = ValidationResults.model_validate_json(
@@ -71,7 +70,7 @@ class ValidationResultsMetadata:
                     )
                 except Exception as e:
                     raise Exception(
-                        f"Error reading validation results file: {validation_results_file} \n {e}"
+                        f"Error reading validation results file: {self.validation_results_file} \n {e}"
                     ) from None
 
     def add_validation_result(self, validation_result: ValidationResult):
@@ -95,11 +94,8 @@ class ValidationResultsMetadata:
             OSError: If the file cannot be opened or written to.
 
         """
-        validation_results_file = os.path.join(
-            os.getcwd(),
-            SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
-            VALIDATION_RESULTS_JSON_FILE_NAME,
-        )
+        if not os.path.exists(SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME):
+            os.makedirs(SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME)
 
-        with open(validation_results_file, "w") as output_file:
+        with open(self.validation_results_file, "w") as output_file:
             output_file.write(self.validation_results.model_dump_json())

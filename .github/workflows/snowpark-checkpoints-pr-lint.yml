@@ -1,0 +1,41 @@
+name: PR Lint
+on:
+  pull_request:
+    types: [edited, opened, reopened, synchronize, ready_for_review]
+    branches: [main]
+jobs:
+  pr-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - uses: morrisoncole/pr-lint-action@327d08270eeda69f390c2073935506556987b9a1
+        with:
+          title-regex: "^[a-zA-Z]+-[0-9]+"
+          on-failed-regex-fail-action: true
+          on-failed-regex-request-changes: false
+          on-failed-regex-create-review: false
+          on-failed-regex-comment: "Please prefix your PR title with a JIRA ticket number. e.g SNOW-123456: <Title>"
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Check PR Description
+        run: |
+          if [ -z "${{ github.event.pull_request.body }}" ]; then
+            echo "PR description is empty. Please provide a description."
+            exit 1
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check PR Size
+        run: |
+          CHANGED_PY_FILES=$(git diff --name-only --diff-filter=d ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} | grep '\.py$' | wc -l)
+          if [ "$CHANGED_PY_FILES" -gt 20 ]; then
+            echo "PR includes too many Python files (>$CHANGED_PY_FILES). Please split it into smaller PRs."
+            exit 1
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

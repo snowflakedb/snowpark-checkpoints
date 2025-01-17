@@ -20,7 +20,11 @@ class SnowparkCheckpointError(Exception):
             f"Job: {job_name} Checkpoint: {checkpoint_name}\n{message} \n {data}"
         )
         if job_context:
-            job_context.mark_fail(message, checkpoint_name, data)
+            job_context._mark_fail(
+                message,
+                checkpoint_name,
+                data,
+            )
 
 
 class SparkMigrationError(SnowparkCheckpointError):

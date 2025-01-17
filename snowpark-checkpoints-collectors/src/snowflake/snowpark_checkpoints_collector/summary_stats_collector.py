@@ -1,23 +1,29 @@
 #
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
+import glob
 import json
 import os
+import shutil
 
 from typing import Optional
 
 import pandera as pa
 
 from pyspark.sql import DataFrame as SparkDataFrame
+from pyspark.sql.functions import col
+from pyspark.sql.types import DoubleType as SparkDoubleType
+from pyspark.sql.types import StringType as SparkStringType
 from pyspark.sql.types import StructField
 
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT,
-    CHECKPOINT_PARQUET_OUTPUT_FILE_NAME_FORMAT,
     COLUMNS_KEY,
     DATAFRAME_CUSTOM_DATA_KEY,
     DATAFRAME_PANDERA_SCHEMA_KEY,
     DECIMAL_COLUMN_TYPE,
+    DOT_PARQUET_EXTENSION,
+    NULL_COLUMN_TYPE,
     PANDAS_OBJECT_TYPE_COLLECTION,
     CheckpointMode,
 )
@@ -46,9 +52,10 @@ from snowflake.snowpark_checkpoints_collector.utils.telemetry import report_tele
 
 def collect_dataframe_checkpoint(
     df: SparkDataFrame,
-    checkpoint_name,
+    checkpoint_name: str,
     sample: Optional[float] = None,
     mode: Optional[CheckpointMode] = None,
+    output_path: Optional[str] = None,
 ) -> None:
     """Collect a DataFrame checkpoint.
 
@@ -59,9 +66,10 @@ def collect_dataframe_checkpoint(
             Defaults to 1.0.
         mode (CheckpointMode): The mode to execution the collection.
             Defaults to CheckpointMode.Schema
+        output_path (str, optional): The output path to save the checkpoint.
+            Defaults to Current working Directory.
 
     Raises:
-        Exception: It is not possible to collect an empty DataFrame without schema.
         Exception: Invalid mode value.
 
     """
@@ -70,7 +78,6 @@ def collect_dataframe_checkpoint(
     collection_point_result = CollectionPointResult(
         collection_point_file_path, collection_point_line_of_code, checkpoint_name
     )
-    file_utils.create_output_directory()
 
     try:
         if is_checkpoint_enabled(checkpoint_name):
@@ -87,13 +94,13 @@ def collect_dataframe_checkpoint(
             if _mode == CheckpointMode.SCHEMA:
                 column_type_dict = _get_spark_column_types(df)
                 _collect_dataframe_checkpoint_mode_schema(
-                    checkpoint_name, df, _sample, column_type_dict
+                    checkpoint_name, df, _sample, column_type_dict, output_path
                 )
 
             elif _mode == CheckpointMode.DATAFRAME:
                 snow_connection = SnowConnection()
                 _collect_dataframe_checkpoint_mode_dataframe(
-                    checkpoint_name, df, snow_connection
+                    checkpoint_name, df, snow_connection, output_path
                 )
 
             else:
@@ -107,7 +114,7 @@ def collect_dataframe_checkpoint(
         raise Exception(error_message) from err
 
     finally:
-        collection_point_result_manager = CollectionPointResultManager()
+        collection_point_result_manager = CollectionPointResultManager(output_path)
         collection_point_result_manager.add_result(collection_point_result)
 
 
@@ -117,6 +124,7 @@ def _collect_dataframe_checkpoint_mode_schema(
     df: SparkDataFrame,
     sample: float,
     column_type_dict: dict[str, any],
+    output_path: Optional[str] = None,
 ) -> None:
     source_df = df.sample(sample)
     if source_df.isEmpty():
@@ -136,7 +144,10 @@ def _collect_dataframe_checkpoint_mode_schema(
     for column in column_name_collection:
         struct_field_column = column_type_dict[column]
         column_type = struct_field_column.dataType.typeName()
-        is_empty_column = len(pandas_df[column].dropna()) == 0
+
+        is_empty_column = (
+            len(pandas_df[column].dropna()) == 0 and column_type is not NULL_COLUMN_TYPE
+        )
         is_column_to_remove_from_pandera_schema = (
             _is_column_to_remove_from_pandera_schema(column_type)
         )
@@ -175,7 +186,9 @@ def _collect_dataframe_checkpoint_mode_schema(
     }
 
     dataframe_schema_contract_json = json.dumps(dataframe_schema_contract)
-    _generate_json_checkpoint_file(checkpoint_name, dataframe_schema_contract_json)
+    _generate_json_checkpoint_file(
+        checkpoint_name, dataframe_schema_contract_json, output_path
+    )
 
 
 def _get_spark_column_types(df: SparkDataFrame) -> dict[str, StructField]:
@@ -223,44 +236,71 @@ def _get_pandera_infer_schema_as_dict(
     return pandera_infer_schema_dict
 
 
-def _generate_json_checkpoint_file(checkpoint_name, dataframe_schema_contract) -> None:
+def _generate_json_checkpoint_file(
+    checkpoint_name, dataframe_schema_contract, output_path: Optional[str] = None
+) -> None:
+
     checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
         checkpoint_name
     )
-    output_directory_path = file_utils.get_output_directory_path()
+    output_directory_path = file_utils.get_output_directory_path(output_path)
     checkpoint_file_path = os.path.join(output_directory_path, checkpoint_file_name)
     with open(checkpoint_file_path, "w") as f:
         f.write(dataframe_schema_contract)
 
 
 def _collect_dataframe_checkpoint_mode_dataframe(
-    checkpoint_name, df: SparkDataFrame, snow_connection
+    checkpoint_name: str,
+    df: SparkDataFrame,
+    snow_connection: SnowConnection,
+    output_path: Optional[str] = None,
 ) -> None:
-    _generate_parquet_checkpoint_file(checkpoint_name, df)
-    _upload_to_snowflake(checkpoint_name, snow_connection)
-
-
-def _generate_parquet_checkpoint_file(checkpoint_name, df: SparkDataFrame) -> None:
-    output_directory_path = file_utils.get_output_directory_path()
-
-    checkpoint_file_name = CHECKPOINT_PARQUET_OUTPUT_FILE_NAME_FORMAT.format(
-        checkpoint_name
+    output_path = file_utils.get_output_directory_path(output_path)
+    parquet_directory = os.path.join(output_path, checkpoint_name)
+    generate_parquet_for_spark_df(df, parquet_directory)
+    _create_snowflake_table_from_parquet(
+        checkpoint_name, parquet_directory, snow_connection
     )
-    checkpoint_file_path = os.path.join(output_directory_path, checkpoint_file_name)
-    df.write.parquet(checkpoint_file_path, mode="overwrite")
 
 
-def _upload_to_snowflake(checkpoint_name, snow_connection) -> None:
-    try:
-        output_directory_path = file_utils.get_output_directory_path()
-        checkpoint_file_name = CHECKPOINT_PARQUET_OUTPUT_FILE_NAME_FORMAT.format(
-            checkpoint_name
+def generate_parquet_for_spark_df(spark_df: SparkDataFrame, output_path: str) -> None:
+    """Generate a parquet file from a Spark DataFrame.
+
+    This function will  convert Float to Double to avoid precision problems.
+    Spark parquet use IEEE 32-bit floating point values,
+    while Snowflake uses IEEE 64-bit floating point values.
+
+    Args:
+        spark_df: dataframe to be saved as parquet
+        output_path: path to save the parquet files.
+    returns: None
+
+    Raises:
+        Exception: No parquet files were generated.
+
+    """
+    new_cols = [
+        (
+            col(c).cast(SparkStringType()).cast(SparkDoubleType()).alias(c)
+            if t == "float"
+            else col(c)
         )
-        output_path = os.path.join(output_directory_path, checkpoint_file_name)
-        snow_connection.upload_to_snowflake(
-            checkpoint_name, checkpoint_file_name, output_path
-        )
+        for (c, t) in spark_df.dtypes
+    ]
+    converted_df = spark_df.select(new_cols)
 
-    except Exception as err:
-        error_message = str(err)
-        raise Exception(error_message) from err
+    if os.path.exists(output_path):
+        shutil.rmtree(output_path)
+
+    converted_df.write.parquet(output_path, mode="overwrite")
+
+    target_dir = os.path.join(output_path, "**", f"*{DOT_PARQUET_EXTENSION}")
+    files = glob.glob(target_dir, recursive=True)
+    if len(files) == 0:
+        raise Exception("No parquet files were generated.")
+
+
+def _create_snowflake_table_from_parquet(
+    table_name: str, input_path: str, snow_connection: SnowConnection
+) -> None:
+    snow_connection.create_snowflake_table_from_local_parquet(table_name, input_path)

@@ -62,6 +62,23 @@ def column_register(*args):
     return wrapper
 
 
+def _datetime_like_type_checks(
+    clm_name: str, pandas_df: PandasDataFrame, pandera_column: Column
+) -> None:
+    column_values = pandas_df[clm_name].dropna()
+    min_value = str(column_values.min())
+    max_value = str(column_values.max())
+    pandera_column.checks.append(
+        Check.between(
+            min_value=min_value,
+            max_value=max_value,
+            include_max=True,
+            include_min=True,
+            title=BETWEEN_CHECK_ERROR_MESSAGE_FORMAT.format(min_value, max_value),
+        )
+    )
+
+
 @collector_register
 class PanderaColumnChecksManager:
 
@@ -100,35 +117,13 @@ class PanderaColumnChecksManager:
     def _add_date_type_checks(
         self, clm_name: str, pandas_df: PandasDataFrame, pandera_column: Column
     ) -> None:
-        column_values = pandas_df[clm_name]
-        min_value = str(column_values.min())
-        max_value = str(column_values.max())
-        pandera_column.checks.append(
-            Check.between(
-                min_value=min_value,
-                max_value=max_value,
-                include_max=True,
-                include_min=True,
-                title=BETWEEN_CHECK_ERROR_MESSAGE_FORMAT.format(min_value, max_value),
-            )
-        )
+        _datetime_like_type_checks(clm_name, pandas_df, pandera_column)
 
     @column_register(DAYTIMEINTERVAL_COLUMN_TYPE)
     def _add_daytimeinterval_type_checks(
         self, clm_name: str, pandas_df: PandasDataFrame, pandera_column: Column
     ) -> None:
-        column_values = pandas_df[clm_name]
-        min_value = str(column_values.min())
-        max_value = str(column_values.max())
-        pandera_column.checks.append(
-            Check.between(
-                min_value=min_value,
-                max_value=max_value,
-                include_max=True,
-                include_min=True,
-                title=BETWEEN_CHECK_ERROR_MESSAGE_FORMAT.format(min_value, max_value),
-            )
-        )
+        _datetime_like_type_checks(clm_name, pandas_df, pandera_column)
 
     @column_register(
         BYTE_COLUMN_TYPE,
@@ -141,7 +136,7 @@ class PanderaColumnChecksManager:
     def _add_numeric_type_checks(
         self, clm_name: str, pandas_df: PandasDataFrame, pandera_column: Column
     ) -> None:
-        column_values = pandas_df[clm_name]
+        column_values = pandas_df[clm_name].dropna()
         min_value = column_values.min().item()
         max_value = column_values.max().item()
         pandera_column.checks.append(
@@ -164,32 +159,10 @@ class PanderaColumnChecksManager:
     def _add_timestamp_type_checks(
         self, clm_name: str, pandas_df: PandasDataFrame, pandera_column: Column
     ) -> None:
-        column_values = pandas_df[clm_name]
-        min_value = str(column_values.min())
-        max_value = str(column_values.max())
-        pandera_column.checks.append(
-            Check.between(
-                min_value=min_value,
-                max_value=max_value,
-                include_max=True,
-                include_min=True,
-                title=BETWEEN_CHECK_ERROR_MESSAGE_FORMAT.format(min_value, max_value),
-            )
-        )
+        _datetime_like_type_checks(clm_name, pandas_df, pandera_column)
 
     @column_register(TIMESTAMP_NTZ_COLUMN_TYPE)
     def _add_timestamp_ntz_type_checks(
         self, clm_name: str, pandas_df: PandasDataFrame, pandera_column: Column
     ) -> None:
-        column_values = pandas_df[clm_name]
-        min_value = str(column_values.min())
-        max_value = str(column_values.max())
-        pandera_column.checks.append(
-            Check.between(
-                min_value=min_value,
-                max_value=max_value,
-                include_max=True,
-                include_min=True,
-                title=BETWEEN_CHECK_ERROR_MESSAGE_FORMAT.format(min_value, max_value),
-            )
-        )
+        _datetime_like_type_checks(clm_name, pandas_df, pandera_column)

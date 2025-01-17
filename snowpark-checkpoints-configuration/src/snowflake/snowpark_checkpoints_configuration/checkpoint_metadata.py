@@ -14,7 +14,7 @@ class CheckpointMetadata(metaclass=Singleton):
 
     """CheckpointMetadata class.
 
-     This is a singleton class that reads the checkpoints.json file
+    This is a singleton class that reads the checkpoints.json file
     and provides an interface to get the checkpoint configuration.
 
     Args:

@@ -1,9 +1,19 @@
 #
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
+import os
+
 from typing import Optional
 
-from snowflake.snowpark_checkpoints_collector.collection_common import CheckpointMode
+from snowflake.snowpark_checkpoints_collector.collection_common import (
+    SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH_ENV_VAR,
+    CheckpointMode,
+)
+
+
+# noinspection DuplicatedCode
+def _get_checkpoint_contract_file_path() -> str:
+    return os.environ.get(SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH_ENV_VAR, os.getcwd())
 
 
 # noinspection DuplicatedCode
@@ -13,7 +23,8 @@ def _get_metadata():
             CheckpointMetadata,
         )
 
-        metadata = CheckpointMetadata()
+        path = _get_checkpoint_contract_file_path()
+        metadata = CheckpointMetadata(path)
         return True, metadata
 
     except ImportError:

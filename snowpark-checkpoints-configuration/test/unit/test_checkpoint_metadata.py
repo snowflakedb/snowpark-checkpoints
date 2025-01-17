@@ -27,7 +27,7 @@ def test_checkpoint_metadata_loading(singleton):
     path = os.path.join(path, "valid_checkpoint")
     metadata = CheckpointMetadata(path)
     expected_checkpoint_1 = Checkpoint(
-        name="demo-initial-creation-checkpoint",
+        name="demo_initial_creation_checkpoint",
         df="df",
         mode=1,
         function="",
@@ -74,9 +74,9 @@ def test_checkpoint_metadata_get_checkpoint_exist(singleton):
     path = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(path, "valid_checkpoint")
     metadata = CheckpointMetadata(path)
-    checkpoint = metadata.get_checkpoint("demo-initial-creation-checkpoint")
+    checkpoint = metadata.get_checkpoint("demo_initial_creation_checkpoint")
     expected_checkpoint = Checkpoint(
-        name="demo-initial-creation-checkpoint",
+        name="demo_initial_creation_checkpoint",
         df="df",
         mode=1,
         function="",

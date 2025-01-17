@@ -33,12 +33,12 @@ def test_get_output_directory_path():
     )
 
 
-def test_create_output_directory():
+def test_get_output_file_path_create():
     with mock.patch("os.makedirs") as os_make_dir_mock:
         os_make_dir_mock.side_effect = tempfile.mkdtemp()
         with mock.patch("os.path.exists") as path_exists_mock:
             path_exists_mock.return_value = False
-            file_utils.create_output_directory()
+            file_utils.get_output_file_path()
             os_make_dir_mock.assert_called()
 
 

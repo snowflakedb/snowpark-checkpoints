@@ -8,8 +8,13 @@ from enum import IntEnum
 
 
 class CheckpointMode(IntEnum):
+
+    """Enum class representing the collection mode."""
+
     SCHEMA = 1
+    """Collect automatic schema inference"""
     DATAFRAME = 2
+    """Export DataFrame as Parquet file to Snowflake"""
 
 
 # CONSTANTS
@@ -121,6 +126,11 @@ UNKNOWN_SOURCE_FILE = "unknown"
 UNKNOWN_LINE_OF_CODE = -1
 BACKSLASH_TOKEN = "\\"
 SLASH_TOKEN = "/"
+
+# ENVIRONMENT VARIABLES
+SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH_ENV_VAR = (
+    "SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH"
+)
 
 
 def get_decimal_token() -> str:

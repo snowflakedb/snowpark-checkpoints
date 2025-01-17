@@ -1,4 +1,5 @@
 from datetime import datetime
+import os
 from snowflake.snowpark import Session
 
 from pyspark.sql import SparkSession
@@ -22,7 +23,12 @@ from snowflake.snowpark_checkpoints.checkpoint import (
     validate_dataframe_checkpoint,
 )
 from snowflake.snowpark_checkpoints.spark_migration import check_with_spark
-from snowflake.snowpark_checkpoints.utils.constant import CheckpointMode
+from snowflake.snowpark_checkpoints.utils.constant import (
+    SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH_ENV_VAR,
+    CheckpointMode,
+)
+
+os.environ[SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH_ENV_VAR] = "Demos/snowpark"
 
 session = Session.builder.getOrCreate()
 job_context = SnowparkJobContext(
@@ -282,7 +288,9 @@ def original_spark_code_I_dont_understand(df):
 
 
 @check_with_spark(
-    job_context=job_context, spark_function=original_spark_code_I_dont_understand
+    job_context=job_context,
+    spark_function=original_spark_code_I_dont_understand,
+    checkpoint_name="snowpark_function",
 )
 def new_snowpark_code_I_do_understand(df):
     from snowflake.snowpark.functions import col, lit, when

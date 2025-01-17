@@ -2,11 +2,12 @@
 
 Snowpark Python / Spark Migration Testing Tools
 
-## TODO
+---
+**NOTE**
 
-- create a spark-pipeline side pandera schema collector
-- clearly distinguish between schema-validation mode and parallel execution mode
-- add the streamlit app
+This package is on Private Preview.
+
+---
 
 # Data Collection from Spark Pipelines
 
@@ -33,106 +34,102 @@ collect_dataframe_schema(df:SparkDataFrame,
   will have the name "snowpark-[checkpoint_name]-schema.json"
 - sample - sample size of the spark data frame to use to generate the schema
 
-## check_dataframe_schema_file
+### Validate DataFrame Schema from File
 
-The `check_dataframe_schema_file` function can be used to validate a Snowpark DataFrame against a checkpoint schema file.
-
-```python
-check_dataframe_schema_file(df: SnowparkDataFrame,
-                            checkpoint_name: str,
-                            custom_checks: Optional[dict[Any, Any]] = None,
-                            skip_checks: Optional[dict[Any, Any]] = None,
-                            job_context: Optional[SnowparkJobContext] = None,
-                            sample_frac: Optional[float] = 0.1,
-                            sample_number: Optional[int] = None,
-                            sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE)
-```
-
-- df - The DataFrame to be validated.
-- checkpoint_name - The name of the checkpoint to retrieve the schema.
-- skip_checks - Checks to be skipped.
-- job_context - Context for job-related operations.
-- sample_frac - Fraction of data to sample.
-- sample_number - Number of rows to sample.
-- sampling_strategy - Strategy for sampling data.
-
-## check_with_spark Decorator
-
-The `check_with_spark` decorator will convert any Snowpark DataFrame
-arguments to a function, sample, and convert them to PySpark DataFrames
-
-The check will then execute a provided spark function which mirrors the
-functionality of the new snowpark function and compare the outputs
-between the two implementations.
-
-Assuming the spark function and snowpark functions are semantically
-identical this allows for verification of those functions on real,
-sampled data.
+The `validate_dataframe_checkpoint` function validates a Snowpark DataFrame against a checkpoint schema file or dataframe.
 
 ```python
-check_with_spark(job_context: Optional[SnowparkJobContext],
-                 spark_function: Callable,
-                 check_name: Optional[str] = None,
-                 sample_number: Optional[int] = 100,
-                 sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
-                 check_dtypes: Optional[bool] = False,
-                 check_with_precision: Optional[bool] = False)
+from snowflake.snowpark_checkpoints.checkpoint import (
+    validate_dataframe_checkpoint,
+)
 
+validate_dataframe_checkpoint(
+    df: SnowparkDataFrame,
+    checkpoint_name: str,
+    job_context: Optional[SnowparkJobContext] = None,
+    mode: Optional[CheckpointMode] = CheckpointMode.SCHEMA,
+    custom_checks: Optional[dict[Any, Any]] = None,
+    skip_checks: Optional[dict[Any, Any]] = None,
+    sample_frac: Optional[float] = 1.0,
+    sample_number: Optional[int] = None,
+    sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
+    output_path: Optional[str] = None,
+)
 ```
 
-- job_context - The context for job-related operations.
-- spark_function - The function to be executed with PySpark.
-- check_name - The name of the checkpoint.
-- sample_number - Number of rows to sample from each Snowpark DataFrame.
-- sampling_strategy - Strategy for sampling data.
-- check_dtypes - Check data types.
-- check_with_precision - Check with precision.
+- `df`: Snowpark DataFrame to validate.
+- `checkpoint_name`: Name of the checkpoint schema file or DataFrame.
+- `job_context`: Snowpark job context.
+- `mode`: Checkpoint mode (schema or data).
+- `custom_checks`: Custom checks to perform.
+- `skip_checks`: Checks to skip.
+- `sample_frac`: Fraction of the DataFrame to sample.
+- `sample_number`: Number of rows to sample.
+- `sampling_strategy`: Sampling strategy to use.
+- `output_path`: Output path for the checkpoint report.
 
-### Usage
+### Check with Spark Decorator
 
-```
-session = Session.builder.getOrCreate()
-job_context = SnowparkJobContext(session)
+The `check_with_spark` decorator converts any Snowpark DataFrame arguments to a function, samples them, and converts them to PySpark DataFrames. It then executes a provided Spark function and compares the outputs between the two implementations.
 
-def mirrored_spark_fn(df:SnowparkDataFrame):
+```python
+from snowflake.snowpark_checkpoints.spark_migration import check_with_spark
+
+@check_with_spark(
+    job_context: Optional[SnowparkJobContext],
+    spark_function: Callable,
+    checkpoint_name: str,
+    sample_number: Optional[int] = 100,
+    sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
+    check_dtypes: Optional[bool] = False,
+    check_with_precision: Optional[bool] = False
+    output_path: Optional[str] = None,
+)
+def snowpark_fn(df: SnowparkDataFrame):
     ...
-
-@check_with_spark(job_context, spark_function=mirrored_spark_fn)
-def snowpark_fn(df:SnowparkDataFrame):
-    ...
 ```
+
+- `job_context`: Snowpark job context.
+- `spark_function`: PySpark function to execute.
+- `checkpoint_name`: Name of the check.
+- `sample_number`: Number of rows to sample.
+- `sampling_strategy`: Sampling strategy to use.
+- `check_dtypes`: Check data types.
+- `check_with_precision`: Check with precision.
+- `output_path`: Output path for the checkpoint report.
 
 ## Pandera Snowpark Decorators
 
-The decorators `@check_input_with` and `@check_output_with` allow
+The decorators `@check_input_schema` and `@check_output_schema` allow
 for sampled schema validation of snowpark dataframes in the input arguments or
 in the return value.
 
-### Example
+```python
+from snowflake.snowpark_checkpoints.checkpoint import check_input_schema, check_output_schema
 
-The following will result in a pandera SchemaError:
-`pandera.errors.SchemaError: expected series 'COLUMN1' to have type int8, got object`
+@check_input_schema(
+    pandera_schema: DataFrameSchema,
+    checkpoint_name: Optional[str] = None,
+    sample_frac: Optional[float] = 1.0,
+    sample_number: Optional[int] = 100,
+    sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
+    job_context: Optional[SnowparkJobContext] = None,
+    output_path: Optional[str] = None,
+)
+def snowpark_fn(df: SnowparkDataFrame):
+    ...
 
-```
-    df = pd.DataFrame({
-        "COLUMN1": [1, 4, 0, 10, 9],
-        "COLUMN2": [-1.3, -1.4, -2.9, -10.1, -20.4],
-    })
-
-    out_schema = DataFrameSchema({
-        "COLUMN1": Column(int8,
-                        Check(lambda x: 0 <= x <= 10, element_wise=True)),
-        "COLUMN2": Column(float, Check(lambda x: x < -1.2)),
-    })
-
-    @check_output_with(out_schema)
-    def preprocessor(dataframe:SnowparkDataFrame):
-        return dataframe.with_column("COLUMN1", lit('Some bad data yo'))
-
-    session = Session.builder.getOrCreate()
-    sp_dataframe = session.create_dataframe(df)
-
-    preprocessed_dataframe = preprocessor(sp_dataframe)
+@check_output_schema(
+    pandera_schema: DataFrameSchema,
+    checkpoint_name: Optional[str] = None,
+    sample_frac: Optional[float] = 1.0,
+    sample_number: Optional[int] = None,
+    sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
+    job_context: Optional[SnowparkJobContext] = None,
+    output_path: Optional[str] = None,
+)
+def snowpark_fn(df: SnowparkDataFrame):
+    ...
 ```
 
 ## Run Demos

@@ -10,9 +10,21 @@ import pandas as pd
 from pyspark.sql import SparkSession
 
 from snowflake.snowpark import Session
+from snowflake.snowpark_checkpoints.utils.constant import SCHEMA_EXECUTION_MODE
 
 
 class SnowparkJobContext:
+
+    """Class used to record migration results in Snowflake.
+
+    Args:
+        snowpark_session: A Snowpark session instance.
+        spark_session: A Spark session instance.
+        job_name: The name of the job.
+        log_results: Whether to log the migration results in Snowflake.
+
+    """
+
     def __init__(
         self,
         snowpark_session: Session,
@@ -25,7 +37,9 @@ class SnowparkJobContext:
         self.spark_session = spark_session or SparkSession.builder.getOrCreate()
         self.snowpark_session = snowpark_session
 
-    def mark_fail(self, message, checkpoint_name, data):
+    def _mark_fail(
+        self, message, checkpoint_name, data, execution_mode=SCHEMA_EXECUTION_MODE
+    ):
         if self.log_results:
             session = self.snowpark_session
             df = pd.DataFrame(
@@ -36,12 +50,13 @@ class SnowparkJobContext:
                     "CHECKPOINT": [checkpoint_name],
                     "MESSAGE": [message],
                     "DATA": [f"{data}"],
+                    "EXECUTION_MODE": [execution_mode],
                 }
             )
             report_df = session.createDataFrame(df)
             report_df.write.mode("append").save_as_table("SNOWPARK_CHECKPOINTS_REPORT")
 
-    def mark_pass(self, checkpoint_name):
+    def _mark_pass(self, checkpoint_name, execution_mode=SCHEMA_EXECUTION_MODE):
         if self.log_results:
             session = self.snowpark_session
             df = pd.DataFrame(
@@ -52,6 +67,7 @@ class SnowparkJobContext:
                     "CHECKPOINT": [checkpoint_name],
                     "MESSAGE": [""],
                     "DATA": [""],
+                    "EXECUTION_MODE": [execution_mode],
                 }
             )
             report_df = session.createDataFrame(df)

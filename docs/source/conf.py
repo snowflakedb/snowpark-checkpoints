@@ -8,11 +8,13 @@ import sys
 
 
 COLLECTORS_SRC_DIR = os.path.join("..", "..", "snowpark-checkpoints-collectors", "src")
+CONFIGURATION_SRC_DIR = os.path.join("..", "..", "snowpark-checkpoints-configuration", "src")
 HYPOTHESIS_SRC_DIR = os.path.join("..", "..", "snowpark-checkpoints-hypothesis", "src")
 VALIDATORS_SRC_DIR = os.path.join("..", "..", "snowpark-checkpoints-validators", "src")
 
 # Add each project to sys.path so Sphinx can find and import the modules during the build process.
 sys.path.insert(0, os.path.abspath(COLLECTORS_SRC_DIR))
+sys.path.insert(0, os.path.abspath(CONFIGURATION_SRC_DIR))
 sys.path.insert(0, os.path.abspath(HYPOTHESIS_SRC_DIR))
 sys.path.insert(0, os.path.abspath(VALIDATORS_SRC_DIR))
 
@@ -59,7 +61,7 @@ html_show_sphinx = False
 # -- Options for autodoc -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html#configuration
 
-autoclass_content = "both"
+autoclass_content = "class"
 autodoc_default_options = {
     "member-order": "alphabetical",
     "undoc-members": True,

@@ -47,11 +47,12 @@ class NumericColumnCollector(ColumnCollectorBase):
         self.is_integer = self.type in INTEGER_TYPE_COLLECTION
 
     def get_custom_data(self) -> dict[str, any]:
-        min_value = self.values.min().item()
-        max_value = self.values.max().item()
-        mean_value = self.values.mean().item()
+        local_values = self.values.dropna()
+        min_value = local_values.min().item()
+        max_value = local_values.max().item()
+        mean_value = local_values.mean().item()
         decimal_precision = self._compute_decimal_precision()
-        margin_error = self.values.std().item()
+        margin_error = local_values.std().item()
 
         custom_data_dict = {
             COLUMN_MIN_KEY: min_value,

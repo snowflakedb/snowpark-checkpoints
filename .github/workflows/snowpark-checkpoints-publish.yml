@@ -139,7 +139,7 @@ jobs:
 
 
   publish:
-    name: Publish Packages
+    name: Publish Packages Internally
     runs-on: ubuntu-latest
     needs: build
 

@@ -7,6 +7,7 @@ import os
 from datetime import date, datetime, timezone, timedelta
 from pathlib import Path
 
+from pandera import DataFrameSchema
 from pyspark.sql import SparkSession
 import pytest
 import pandas as pd
@@ -121,8 +122,8 @@ def test_collect_dataframe_all_column_types(spark_session, singleton, output_pat
     day_time_interval_data = timedelta(days=13)
     date_data = date(2000, 1, 1)
     decimal_data = decimal.Decimal("3.141516171819")
-    timestamp_data = datetime(2000, 1, 1, 12, 0, 0)
-    timestamp_ntz_data = datetime(2000, 1, 1, 12, 53, 0, tzinfo=timezone.utc)
+    timestamp_ntz_data = datetime(2000, 1, 1, 12, 0, 0)
+    timestamp_data = datetime(2000, 1, 1, 12, 53, 0, tzinfo=timezone.utc)
     inner_schema = StructType(
         [
             StructField("inner1", StringType(), False),
@@ -471,8 +472,8 @@ def test_collect_dataframe_all_column_types_with_null_values(
     day_time_interval_data = timedelta(days=13)
     date_data = date(2000, 1, 1)
     decimal_data = decimal.Decimal("3.141516171819")
-    timestamp_data = datetime(2000, 1, 1, 12, 0, 0)
-    timestamp_ntz_data = datetime(2000, 1, 1, 12, 53, 0, tzinfo=timezone.utc)
+    timestamp_ntz_data = datetime(2000, 1, 1, 12, 0, 0)
+    timestamp_data = datetime(2000, 1, 1, 12, 53, 0, tzinfo=timezone.utc)
     inner_schema = StructType(
         [
             StructField("inner1", StringType(), False),
@@ -597,6 +598,8 @@ def validate_checkpoint_file_output(output_path: str, checkpoint_name: str) -> N
 
     schema_contract_expected = get_expected(checkpoint_file_name)
     schema_contract_output = get_output(output_path, checkpoint_file_name)
+    validate_serializable_schema_contract_output(schema_contract_output)
+
     telemetry_expected = get_expected(telemetry_file_name)
     telemetry_output = get_output_telemetry(output_path)
     expected_obj = json.loads(schema_contract_expected)
@@ -658,3 +661,13 @@ def get_expected(file_name: str) -> str:
 
     with open(expected_file_path) as f:
         return f.read().strip()
+
+
+def validate_serializable_schema_contract_output(schema_contract_output: str) -> None:
+    schema_contract = json.loads(schema_contract_output)
+    schema_contract_pandera = schema_contract[DATAFRAME_PANDERA_SCHEMA_KEY]
+    assert schema_contract_pandera is not None
+
+    dataframe_schema_json = json.dumps(schema_contract_pandera)
+    dataframe_schema = DataFrameSchema.from_json(dataframe_schema_json)
+    assert dataframe_schema is not None

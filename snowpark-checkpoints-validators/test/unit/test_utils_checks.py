@@ -4,10 +4,10 @@
 
 import json
 import os
-from unittest.mock import ANY, call, patch, mock_open
+from unittest.mock import call, patch, mock_open
 from numpy import float64
 
-from pytest import mark, raises
+from pytest import mark, param, raises
 from snowflake.snowpark_checkpoints.errors import SchemaValidationError
 from snowflake.snowpark_checkpoints.utils.constant import (
     BOOLEAN_TYPE,
@@ -24,10 +24,8 @@ from snowflake.snowpark_checkpoints.utils.constant import (
     OVERWRITE_MODE,
     PASS_STATUS,
     ROWS_COUNT_KEY,
-    SCHEMA_EXECUTION_MODE,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
     TYPE_KEY,
-    CheckpointMode,
 )
 from pandera import Column, Check, DataFrameSchema
 import pandas as pd
@@ -39,9 +37,7 @@ from snowflake.snowpark_checkpoints.utils.utils_checks import (
     _compare_data,
     _process_sampling,
     _update_validation_result,
-    _is_valid_checkpoint_name,
-    _validate_checkpoint_name,
-    replace_special_characters,
+    _replace_special_characters,
 )
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from snowflake.snowpark_checkpoints.snowpark_sampler import SamplingStrategy
@@ -693,37 +689,6 @@ def test_update_validation_result_without_file():
         mock_pipeline_result_metadata.save.assert_called_once()
 
 
-@mark.parametrize("name", ["checkpoint1", "Checkpoint_2", "CHECKPOINT_3"])
-def test_is_valid_checkpoint_name_valid(name: str):
-    assert _is_valid_checkpoint_name(name)
-
-
-@mark.parametrize(
-    "name",
-    ["checkpoint-1", "Checkpoint 2", "CHECKPOINT@3", "checkpoint!", "123checkpoint"],
-)
-def test_is_valid_checkpoint_name_invalid(name: str):
-    assert _is_valid_checkpoint_name(name) is False
-
-
-@mark.parametrize(
-    "name",
-    [
-        "checkpoint-1",
-        "Checkpoint 2",
-        "CHECKPOINT@3",
-        "checkpoint!",
-        "123checkpoint",
-    ],
-)
-def test_validate_checkpoint_name_invalid(name: str):
-    with raises(
-        ValueError,
-        match=f"Invalid checkpoint name: {name}. Checkpoint names must only contain alphanumeric characters and underscores.",
-    ):
-        _validate_checkpoint_name(name)
-
-
 def test_add_null_checks():
     schema = DataFrameSchema(
         {
@@ -812,21 +777,16 @@ def test_add_null_checks_no_margin_error():
     schema.validate(df)
 
 
-def test_replace_special_characters_no_special_chars():
-    assert replace_special_characters("checkpoint1") == "checkpoint1"
-
-
-def test_replace_special_characters_with_spaces():
-    assert replace_special_characters("checkpoint 1") == "checkpoint_1"
-
-
-def test_replace_special_characters_with_hyphens():
-    assert replace_special_characters("checkpoint-1") == "checkpoint_1"
-
-
-def test_replace_special_characters_with_special_chars():
-    assert replace_special_characters("checkpoint@1!") == "checkpoint_1_"
-
-
-def test_replace_special_characters_with_mixed_chars():
-    assert replace_special_characters("check_point-1@!") == "check_point_1_"
+@mark.parametrize(
+    "name, expected",
+    [
+        param("checkpoint-1", "checkpoint_1"),
+        param("Checkpoint 2", "Checkpoint_2"),
+        param("CHECKPOINT@3", "CHECKPOINT_3"),
+        param("checkpoint!", "checkpoint_"),
+        param("123checkpoint", "123checkpoint"),
+        param("checkpoint@1!", "checkpoint_1_"),
+    ],
+)
+def test_replace_special_characters_no_special_chars(name, expected):
+    assert _replace_special_characters(name) == expected

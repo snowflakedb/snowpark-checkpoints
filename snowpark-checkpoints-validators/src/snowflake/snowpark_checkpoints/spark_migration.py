@@ -18,8 +18,8 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
 from snowflake.snowpark_checkpoints.utils.constant import FAIL_STATUS, PASS_STATUS
 from snowflake.snowpark_checkpoints.utils.telemetry import STATUS_KEY, report_telemetry
 from snowflake.snowpark_checkpoints.utils.utils_checks import (
+    _replace_special_characters,
     _update_validation_result,
-    _validate_checkpoint_name,
 )
 
 
@@ -65,7 +65,7 @@ def check_with_spark(
         _checkpoint_name = checkpoint_name
         if checkpoint_name is None:
             _checkpoint_name = snowpark_fn.__name__
-        _validate_checkpoint_name(_checkpoint_name)
+        _checkpoint_name = _replace_special_characters(_checkpoint_name)
 
         def wrapper(*args, **kwargs):
             sampler = SamplingAdapter(

@@ -59,44 +59,7 @@ from snowflake.snowpark_checkpoints.validation_result_metadata import (
 from snowflake.snowpark_checkpoints.validation_results import ValidationResult
 
 
-def _validate_checkpoint_name(checkpoint_name: str) -> None:
-    """Validate the given checkpoint name.
-
-    Args:
-        checkpoint_name (str): The name of the checkpoint to validate.
-
-    Raises:
-        ValueError: If the checkpoint name is invalid.
-        Checkpoint names must only contain alphanumeric characters and underscores.
-
-    """
-    if not _is_valid_checkpoint_name(checkpoint_name):
-        raise ValueError(
-            f"Invalid checkpoint name: {checkpoint_name}. "
-            "Checkpoint names must only contain alphanumeric characters and underscores."
-        )
-
-
-def _is_valid_checkpoint_name(checkpoint_name: str) -> bool:
-    """Check if the provided checkpoint name is valid.
-
-    A valid checkpoint name must:
-    - Start with a letter (a-z, A-Z) or an underscore (_)
-    - Be followed by any combination of letters, digits (0-9), underscores (_), or dollar signs ($)
-
-    Args:
-        checkpoint_name (str): The checkpoint name to validate.
-
-    Returns:
-        bool: True if the checkpoint name is valid, False otherwise.
-
-    """
-    normalized_checkpoint_name = replace_special_characters(checkpoint_name)
-    regex = r"^[a-zA-Z_][a-zA-Z0-9_$]*$"
-    return bool(re.match(regex, normalized_checkpoint_name))
-
-
-def replace_special_characters(checkpoint_name: str) -> str:
+def _replace_special_characters(checkpoint_name: str) -> str:
     """Replace special characters in the checkpoint name with underscores.
 
     Args:

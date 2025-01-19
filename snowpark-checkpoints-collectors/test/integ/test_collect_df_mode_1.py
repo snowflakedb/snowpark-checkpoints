@@ -123,7 +123,7 @@ def test_collect_dataframe_all_column_types(spark_session, singleton, output_pat
     date_data = date(2000, 1, 1)
     decimal_data = decimal.Decimal("3.141516171819")
     timestamp_ntz_data = datetime(2000, 1, 1, 12, 0, 0)
-    timestamp_data = datetime(2000, 1, 1, 12, 53, 0, tzinfo=timezone.utc)
+    timestamp_data = datetime(2000, 1, 1, 12, 53, 0)
     inner_schema = StructType(
         [
             StructField("inner1", StringType(), False),
@@ -473,7 +473,7 @@ def test_collect_dataframe_all_column_types_with_null_values(
     date_data = date(2000, 1, 1)
     decimal_data = decimal.Decimal("3.141516171819")
     timestamp_ntz_data = datetime(2000, 1, 1, 12, 0, 0)
-    timestamp_data = datetime(2000, 1, 1, 12, 53, 0, tzinfo=timezone.utc)
+    timestamp_data = datetime(2000, 1, 1, 12, 53, 0)
     inner_schema = StructType(
         [
             StructField("inner1", StringType(), False),

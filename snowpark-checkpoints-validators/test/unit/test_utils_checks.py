@@ -19,6 +19,7 @@ from snowflake.snowpark_checkpoints.utils.constants import (
     EXCEPT_HASH_AGG_QUERY,
     FAIL_STATUS,
     FLOAT_TYPE,
+    MEAN_KEY,
     NAME_KEY,
     NULL_COUNT_KEY,
     OVERWRITE_MODE,
@@ -26,6 +27,8 @@ from snowflake.snowpark_checkpoints.utils.constants import (
     ROWS_COUNT_KEY,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
     TYPE_KEY,
+    SKIP_ALL,
+    MARGIN_ERROR_KEY,
 )
 from pandera import Column, Check, DataFrameSchema
 import pandas as pd
@@ -38,264 +41,12 @@ from snowflake.snowpark_checkpoints.utils.utils_checks import (
     _process_sampling,
     _update_validation_result,
     _replace_special_characters,
+    _generate_schema,
 )
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from snowflake.snowpark_checkpoints.snowpark_sampler import SamplingStrategy
 from pandera import DataFrameSchema, Column, Check
-
-from snowflake.snowpark_checkpoints.utils.utils_checks import (
-    _generate_schema,
-    _add_numeric_checks,
-    MEAN_KEY,
-    DECIMAL_PRECISION_KEY,
-    _skip_checks_on_schema,
-    SKIP_ALL,
-    _add_boolean_checks,
-    TRUE_COUNT_KEY,
-    FALSE_COUNT_KEY,
-    MARGIN_ERROR_KEY,
-)
 from snowflake.snowpark_checkpoints.validation_results import ValidationResult
-
-
-def test_skip_specific_check():
-    schema = DataFrameSchema(
-        {
-            "col1": Column(int, checks=[Check.greater_than(0), Check.less_than(10)]),
-            "col2": Column(bool, checks=[Check.isin([True, False])]),
-        }
-    )
-
-    skip_checks = {"col1": ["greater_than"]}
-    _skip_checks_on_schema(schema, skip_checks)
-
-    assert len(schema.columns["col1"].checks) == 1
-    assert schema.columns["col1"].checks[0].name == "less_than"
-    assert len(schema.columns["col2"].checks) == 1
-
-
-def test_skip_checks_on_nonexistent_column():
-    schema = DataFrameSchema(
-        {
-            "col1": Column(int, checks=[Check.greater_than(0), Check.less_than(10)]),
-            "col2": Column(bool, checks=[Check.isin([True, False])]),
-        }
-    )
-
-    skip_checks = {"col3": [SKIP_ALL]}
-    _skip_checks_on_schema(schema, skip_checks)
-
-    assert len(schema.columns["col1"].checks) == 2
-    assert len(schema.columns["col2"].checks) == 1
-
-
-def test_skip_no_checks():
-    schema = DataFrameSchema(
-        {
-            "col1": Column(int, checks=[Check.greater_than(0), Check.less_than(10)]),
-            "col2": Column(bool, checks=[Check.isin([True, False])]),
-        }
-    )
-
-    skip_checks = {}
-    _skip_checks_on_schema(schema, skip_checks)
-
-    assert len(schema.columns["col1"].checks) == 2
-    assert len(schema.columns["col2"].checks) == 1
-
-
-def test_add_boolean_checks():
-    schema = DataFrameSchema(
-        {
-            "col1": Column(bool, checks=[Check.isin([True, False])]),
-        }
-    )
-
-    additional_check = {
-        TRUE_COUNT_KEY: 2,
-        FALSE_COUNT_KEY: 1,
-        MARGIN_ERROR_KEY: 0,
-        ROWS_COUNT_KEY: 3,
-    }
-
-    _add_boolean_checks(schema, "col1", additional_check)
-
-    assert len(schema.columns["col1"].checks) == 3  # initial check + 2 added checks
-
-    # Create a DataFrame to test the checks
-    df = pd.DataFrame({"col1": [True, True, False]})
-
-    # Validate the DataFrame against the schema
-    schema.validate(df)
-
-
-def test_add_boolean_checks_with_margin_error():
-    schema = DataFrameSchema(
-        {
-            "col1": Column(bool, checks=[Check.isin([True, False])]),
-        }
-    )
-
-    additional_check = {
-        TRUE_COUNT_KEY: 2,
-        FALSE_COUNT_KEY: 1,
-        MARGIN_ERROR_KEY: 1,
-        ROWS_COUNT_KEY: 3,
-    }
-
-    _add_boolean_checks(schema, "col1", additional_check)
-
-    assert len(schema.columns["col1"].checks) == 3  # initial check + 2 added checks
-
-    # Create a DataFrame to test the checks
-    df = pd.DataFrame({"col1": [True, True, False, False]})
-
-    # Validate the DataFrame against the schema
-    schema.validate(df)
-
-
-def test_add_boolean_checks_no_true_count():
-    schema = DataFrameSchema(
-        {
-            "col1": Column(bool, checks=[Check.isin([True, False])]),
-        }
-    )
-
-    additional_check = {FALSE_COUNT_KEY: 3, MARGIN_ERROR_KEY: 0, ROWS_COUNT_KEY: 3}
-
-    _add_boolean_checks(schema, "col1", additional_check)
-
-    assert len(schema.columns["col1"].checks) == 3  # initial check + 2 added check
-
-    # Create a DataFrame to test the checks
-    df = pd.DataFrame({"col1": [False, False, False]})
-
-    # Validate the DataFrame against the schema
-    schema.validate(df)
-
-
-def test_add_boolean_checks_no_false_count():
-    schema = DataFrameSchema(
-        {
-            "col1": Column(bool, checks=[Check.isin([True, False])]),
-        }
-    )
-
-    additional_check = {TRUE_COUNT_KEY: 3, MARGIN_ERROR_KEY: 0, ROWS_COUNT_KEY: 3}
-
-    _add_boolean_checks(schema, "col1", additional_check)
-
-    assert len(schema.columns["col1"].checks) == 3  # initial check + 2 added check
-
-    # Create a DataFrame to test the checks
-    df = pd.DataFrame({"col1": [True, True, True]})
-
-    # Validate the DataFrame against the schema
-    schema.validate(df)
-
-
-def test_add_numeric_checks():
-    schema = DataFrameSchema(
-        {
-            "col1": Column(float, checks=[Check.greater_than(0)]),
-        }
-    )
-
-    additional_check = {MEAN_KEY: 5.0, MARGIN_ERROR_KEY: 1.0}
-
-    _add_numeric_checks(schema, "col1", additional_check)
-
-    assert len(schema.columns["col1"].checks) == 2  # initial check + 1 added check
-
-    # Create a DataFrame to test the checks
-    df = pd.DataFrame({"col1": [4.5, 5.5, 5.0]})
-
-    # Validate the DataFrame against the schema
-    schema.validate(df)
-
-
-def test_add_numeric_checks_with_decimal_precision():
-    schema = DataFrameSchema(
-        {
-            "col1": Column(float, checks=[Check.greater_than(0)]),
-        }
-    )
-
-    additional_check = {
-        MEAN_KEY: 5.0,
-        MARGIN_ERROR_KEY: 1.0,
-        DECIMAL_PRECISION_KEY: 2,
-    }
-
-    _add_numeric_checks(schema, "col1", additional_check)
-
-    assert len(schema.columns["col1"].checks) == 3  # initial check + 2 added checks
-
-    # Create a DataFrame to test the checks
-    df = pd.DataFrame({"col1": [4.50, 5.55, 5.00]})
-
-    # Validate the DataFrame against the schema
-    schema.validate(df)
-
-
-def test_add_numeric_checks_no_mean():
-    schema = DataFrameSchema(
-        {
-            "col1": Column(float, checks=[Check.greater_than(0)]),
-        }
-    )
-
-    additional_check = {MARGIN_ERROR_KEY: 1.0}
-
-    _add_numeric_checks(schema, "col1", additional_check)
-
-    assert len(schema.columns["col1"].checks) == 2  # initial check + 1 added check
-
-    # Create a DataFrame to test the checks
-    df = pd.DataFrame({"col1": [0.5, 1.5, 1.0]})
-
-    # Validate the DataFrame against the schema
-    schema.validate(df)
-
-
-def test_add_numeric_checks_no_margin_error():
-    schema = DataFrameSchema(
-        {
-            "col1": Column(float, checks=[Check.greater_than(0)]),
-        }
-    )
-
-    additional_check = {MEAN_KEY: 5.0}
-
-    _add_numeric_checks(schema, "col1", additional_check)
-
-    assert len(schema.columns["col1"].checks) == 2  # initial check + 1 added check
-
-    # Create a DataFrame to test the checks
-    df = pd.DataFrame({"col1": [5.0, 5.0, 5.0]})
-
-    # Validate the DataFrame against the schema
-    schema.validate(df)
-
-
-def test_add_numeric_checks_no_decimal_precision():
-    schema = DataFrameSchema(
-        {
-            "col1": Column(float, checks=[Check.greater_than(0)]),
-        }
-    )
-
-    additional_check = {MEAN_KEY: 5.0, MARGIN_ERROR_KEY: 1.0}
-
-    _add_numeric_checks(schema, "col1", additional_check)
-
-    assert len(schema.columns["col1"].checks) == 2  # initial check + 1 added check
-
-    # Create a DataFrame to test the checks
-    df = pd.DataFrame({"col1": [4.5, 5.5, 5.0]})
-
-    # Validate the DataFrame against the schema
-    schema.validate(df)
 
 
 def test_generate_schema_with_custom_data():

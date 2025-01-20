@@ -14,7 +14,7 @@ from snowflake.snowpark_checkpoints_collector.column_collection.model.column_col
 )
 
 
-FORMAT = "%Y-%m-%dH:%M:%S"
+FORMAT = "%Y-%m-%dT%H:%M:%S%z"
 
 
 class TimestampColumnCollector(ColumnCollectorBase):

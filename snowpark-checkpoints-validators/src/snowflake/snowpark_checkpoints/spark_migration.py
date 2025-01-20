@@ -18,8 +18,8 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
 from snowflake.snowpark_checkpoints.utils.constant import FAIL_STATUS, PASS_STATUS
 from snowflake.snowpark_checkpoints.utils.telemetry import STATUS_KEY, report_telemetry
 from snowflake.snowpark_checkpoints.utils.utils_checks import (
+    _replace_special_characters,
     _update_validation_result,
-    _validate_checkpoint_name,
 )
 
 
@@ -32,8 +32,6 @@ def check_with_spark(
     checkpoint_name: str,
     sample_number: Optional[int] = 100,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
-    check_dtypes: Optional[bool] = True,
-    check_with_precision: Optional[float] = True,
     output_path: Optional[str] = None,
 ) -> Callable[[fn], fn]:
     """Validate function output with Spark instance.
@@ -50,10 +48,6 @@ def check_with_spark(
         sample_number (Optional[int], optional): The number of rows for validation. Defaults to 100.
         sampling_strategy (Optional[SamplingStrategy], optional): The strategy used for sampling data.
             Defaults to SamplingStrategy.RANDOM_SAMPLE.
-        check_dtypes (Optional[bool], optional): Enable data type consistency checks between Snowpark and PySpark.
-            Defaults to True.
-        check_with_precision (Optional[float], optional): Precision value to control numerical comparison precision.
-            Defaults to True.
         output_path (Optional[str], optional): The path to store the validation results. Defaults to None.
 
     Returns:
@@ -65,7 +59,7 @@ def check_with_spark(
         _checkpoint_name = checkpoint_name
         if checkpoint_name is None:
             _checkpoint_name = snowpark_fn.__name__
-        _validate_checkpoint_name(_checkpoint_name)
+        _checkpoint_name = _replace_special_characters(_checkpoint_name)
 
         def wrapper(*args, **kwargs):
             sampler = SamplingAdapter(

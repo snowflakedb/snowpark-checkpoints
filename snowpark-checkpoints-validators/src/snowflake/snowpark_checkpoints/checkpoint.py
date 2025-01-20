@@ -29,9 +29,9 @@ from snowflake.snowpark_checkpoints.utils.utils_checks import (
     _compare_data,
     _generate_schema,
     _process_sampling,
+    _replace_special_characters,
     _skip_checks_on_schema,
     _update_validation_result,
-    _validate_checkpoint_name,
 )
 
 
@@ -70,31 +70,33 @@ def validate_dataframe_checkpoint(
         ValueError: If an invalid validation mode is provided or if job_context is None for PARQUET mode.
 
     """
-    _validate_checkpoint_name(checkpoint_name)
+    checkpoint_name = _replace_special_characters(checkpoint_name)
 
-    if mode == CheckpointMode.SCHEMA:
-        return _check_dataframe_schema_file(
-            df,
-            checkpoint_name,
-            job_context,
-            custom_checks,
-            skip_checks,
-            sample_frac,
-            sample_number,
-            sampling_strategy,
-            output_path,
-        )
-    elif mode == CheckpointMode.DATAFRAME:
-        if job_context is None:
-            raise ValueError(
-                "Connectionless mode is not supported for Parquet validation"
+    if is_checkpoint_enabled(checkpoint_name):
+
+        if mode == CheckpointMode.SCHEMA:
+            return _check_dataframe_schema_file(
+                df,
+                checkpoint_name,
+                job_context,
+                custom_checks,
+                skip_checks,
+                sample_frac,
+                sample_number,
+                sampling_strategy,
+                output_path,
             )
-        _compare_data(df, job_context, checkpoint_name, output_path)
-    else:
-        raise ValueError(
-            """Invalid validation mode.
-            Please use for schema validation use a 1 or for a full data validation use a 2 for schema validation."""
-        )
+        elif mode == CheckpointMode.DATAFRAME:
+            if job_context is None:
+                raise ValueError(
+                    "Connectionless mode is not supported for Parquet validation"
+                )
+            _compare_data(df, job_context, checkpoint_name, output_path)
+        else:
+            raise ValueError(
+                """Invalid validation mode.
+                Please use for schema validation use a 1 or for a full data validation use a 2 for schema validation."""
+            )
 
 
 def _check_dataframe_schema_file(
@@ -197,7 +199,7 @@ def check_dataframe_schema(
         If the validation for that checkpoint is disabled it returns None.
 
     """
-    _validate_checkpoint_name(checkpoint_name)
+    checkpoint_name = _replace_special_characters(checkpoint_name)
 
     if df is None:
         raise ValueError("DataFrame is required")
@@ -306,7 +308,7 @@ def check_output_schema(
         _checkpoint_name = checkpoint_name
         if checkpoint_name is None:
             _checkpoint_name = snowpark_fn.__name__
-        _validate_checkpoint_name(_checkpoint_name)
+        _checkpoint_name = _replace_special_characters(_checkpoint_name)
 
         def wrapper(*args, **kwargs):
             """Wrapp a function to validate the schema of the output of a Snowpark function.
@@ -402,7 +404,7 @@ def check_input_schema(
         _checkpoint_name = checkpoint_name
         if checkpoint_name is None:
             _checkpoint_name = snowpark_fn.__name__
-        _validate_checkpoint_name(_checkpoint_name)
+        _checkpoint_name = _replace_special_characters(_checkpoint_name)
 
         def wrapper(*args, **kwargs):
             """Wrapp a function to validate the schema of the input of a Snowpark function.

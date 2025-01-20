@@ -10,7 +10,7 @@ import pandas as pd
 from pyspark.sql import SparkSession
 
 from snowflake.snowpark import Session
-from snowflake.snowpark_checkpoints.utils.constant import SCHEMA_EXECUTION_MODE
+from snowflake.snowpark_checkpoints.utils.constants import SCHEMA_EXECUTION_MODE
 
 
 class SnowparkJobContext:

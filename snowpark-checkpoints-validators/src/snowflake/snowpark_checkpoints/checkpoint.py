@@ -17,7 +17,7 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
     SamplingStrategy,
 )
 from snowflake.snowpark_checkpoints.utils.checkpoint_logger import CheckpointLogger
-from snowflake.snowpark_checkpoints.utils.constant import (
+from snowflake.snowpark_checkpoints.utils.constants import (
     FAIL_STATUS,
     PASS_STATUS,
     CheckpointMode,

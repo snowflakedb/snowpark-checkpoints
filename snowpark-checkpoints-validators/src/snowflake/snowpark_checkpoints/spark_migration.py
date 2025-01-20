@@ -15,7 +15,7 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
     SamplingAdapter,
     SamplingStrategy,
 )
-from snowflake.snowpark_checkpoints.utils.constant import FAIL_STATUS, PASS_STATUS
+from snowflake.snowpark_checkpoints.utils.constants import FAIL_STATUS, PASS_STATUS
 from snowflake.snowpark_checkpoints.utils.telemetry import STATUS_KEY, report_telemetry
 from snowflake.snowpark_checkpoints.utils.utils_checks import (
     _replace_special_characters,

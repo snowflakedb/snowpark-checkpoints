@@ -9,7 +9,7 @@ from numpy import float64
 
 from pytest import mark, param, raises
 from snowflake.snowpark_checkpoints.errors import SchemaValidationError
-from snowflake.snowpark_checkpoints.utils.constant import (
+from snowflake.snowpark_checkpoints.utils.constants import (
     BOOLEAN_TYPE,
     CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME,
     CHECKPOINT_TABLE_NAME_FORMAT,

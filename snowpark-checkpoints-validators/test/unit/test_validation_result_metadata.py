@@ -1,5 +1,6 @@
 import os
 from unittest.mock import mock_open, patch
+from unittest.mock import mock_open, patch, MagicMock
 from snowflake.snowpark_checkpoints.utils.constant import (
     PASS_STATUS,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
@@ -84,3 +85,39 @@ def test_save_success():
     mock_open_file().write.assert_called_once_with(
         mock_validation_results.model_dump_json()
     )
+
+
+def test_save_success():
+    test_path = os.path.dirname(os.path.abspath(__file__))
+    result_path = os.path.join(
+        test_path,
+        SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
+        VALIDATION_RESULTS_JSON_FILE_NAME,
+    )
+    with open(result_path) as file:
+        validation_result_json = file.read()
+        mock_validation_results = ValidationResults.model_validate_json(
+            validation_result_json
+        )
+
+    metadata = ValidationResultsMetadata(test_path)
+    with patch("builtins.open", mock_open()) as mock_open_file:
+        metadata.save()
+
+    mock_open_file().write.assert_called_once_with(
+        mock_validation_results.model_dump_json()
+    )
+
+
+def test_save_creates_directory():
+    test_path = os.path.dirname(os.path.abspath(__file__))
+    metadata = ValidationResultsMetadata(test_path)
+
+    with (
+        patch("os.path.exists", return_value=False),
+        patch("os.makedirs") as mock_makedirs,
+        patch("builtins.open", mock_open()),
+    ):
+        metadata.save()
+
+    mock_makedirs.assert_called_once_with(metadata.validation_results_directory)

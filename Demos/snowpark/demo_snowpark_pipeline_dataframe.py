@@ -272,6 +272,7 @@ validate_dataframe_checkpoint(
     "demo_initial_creation_checkpoint_dataframe",
     job_context=job_context,
     mode=CheckpointMode.DATAFRAME,
+    output_path="Demos/snowpark",
 )
 
 
@@ -312,4 +313,5 @@ validate_dataframe_checkpoint(
     "demo_add_a_column_dataframe",
     job_context=job_context,
     mode=CheckpointMode.DATAFRAME,
+    output_path="Demos/snowpark",
 )

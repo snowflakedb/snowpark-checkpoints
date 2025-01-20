@@ -8,7 +8,16 @@ Snowpark Python / Spark Migration Testing Tools
 This package is on Private Preview.
 
 ---
-# snowpark-checkpoints-collectors
+
+The **snowpark-checkpoints**  package is a testing library that will help you validate your migrated Snowpark code and discover any behavioral differences with the original Apache PySpark code.
+
+This bundle includes:
+- **snowpark-checkpoints-collectors**: Extracts information from PySpark dataframes for validation against Snowpark dataframes.
+- **snowpark-checkpoints-validators**: Validates Snowpark dataframes against predefined schemas and checkpoints.
+- **snowpark-checkpoints-hypothesis**: Generates Snowpark dataframes using the Hypothesis library for testing and data generation.
+- **snowpark-checkpoints-configuration**: Loads `checkpoint.json` and provides a model, working automatically with collectors and validators.
+---
+## snowpark-checkpoints-collectors
 
 
 **snowpark-checkpoints-collector** package offers a function for extracting information from PySpark dataframes. We can then use that data to validate against the converted Snowpark dataframes to ensure that behavioral equivalence has been achieved.

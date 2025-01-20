@@ -51,11 +51,14 @@ class ValidationResultsMetadata:
             Exception: If there is an error reading the validation results file.
 
         """
-        dir_path = path if path else os.getcwd()
+        self.validation_results_directory = path if path else os.getcwd()
+        self.validation_results_directory = os.path.join(
+            self.validation_results_directory,
+            SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
+        )
 
         self.validation_results_file = os.path.join(
-            dir_path,
-            SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
+            self.validation_results_directory,
             VALIDATION_RESULTS_JSON_FILE_NAME,
         )
 
@@ -84,18 +87,18 @@ class ValidationResultsMetadata:
         self.validation_results.results.append(validation_result)
 
     def save(self):
-        """Save the validation results to a JSON file.
+        """Save the validation results to a file.
 
-        The file is saved in the current working directory with a predefined
-        file name. The validation results are serialized using the
-        ValidationResultEncoder.
+        This method checks if the directory specified by validation results directory
+        exists, and if not, it creates the directory. Then, it writes the validation results
+        to a file specified by validation results file in JSON format.
 
         Raises:
-            OSError: If the file cannot be opened or written to.
+            OSError: If the directory cannot be created or the file cannot be written.
 
         """
-        if not os.path.exists(SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME):
-            os.makedirs(SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME)
+        if not os.path.exists(self.validation_results_directory):
+            os.makedirs(self.validation_results_directory)
 
         with open(self.validation_results_file, "w") as output_file:
             output_file.write(self.validation_results.model_dump_json())

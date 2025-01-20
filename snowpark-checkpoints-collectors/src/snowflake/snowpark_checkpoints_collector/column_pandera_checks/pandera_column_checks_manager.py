@@ -148,7 +148,11 @@ class PanderaColumnChecksManager:
     def _add_string_type_checks(
         self, clm_name: str, pandas_df: PandasDataFrame, pandera_column: Column
     ) -> None:
-        pass
+        column_values = pandas_df[clm_name].dropna()
+        colum_str_length = column_values.str.len()
+        min_length = colum_str_length.min().item()
+        max_length = colum_str_length.max().item()
+        pandera_column.checks.append(Check.str_length(min_length, max_length))
 
     @column_register(TIMESTAMP_COLUMN_TYPE)
     def _add_timestamp_type_checks(

@@ -1,4 +1,4 @@
-# Snowpark Checkpoints Validators
+# snowpark-checkpoints-validators
 
 ---
 **NOTE**
@@ -24,9 +24,16 @@ This package is on Private Preview.
 The `validate_dataframe_checkpoint` function validates a Snowpark DataFrame against a checkpoint schema file or dataframe.
 
 ```python
-from snowflake.snowpark_checkpoints.checkpoint import validate_dataframe_checkpoint
+from snowflake.snowpark import DataFrame as SnowparkDataFrame
+from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
+from snowflake.snowpark_checkpoints.utils.constant import (
+    CheckpointMode,
+)
+from snowflake.snowpark_checkpoints.spark_migration import SamplingStrategy
+from typing import Any, Optional
 
-validate_dataframe_checkpoint(
+# Signature of the function
+def validate_dataframe_checkpoint(
     df: SnowparkDataFrame,
     checkpoint_name: str,
     job_context: Optional[SnowparkJobContext] = None,
@@ -37,16 +44,17 @@ validate_dataframe_checkpoint(
     sample_number: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
     output_path: Optional[str] = None,
-)
+):
+...
 ```
 
-- `df`: Snowpark DataFrame to validate.
-- `checkpoint_name`: Name of the checkpoint schema file or DataFrame.
+- `df`: Snowpark dataframe to validate.
+- `checkpoint_name`: Name of the checkpoint schema file or dataframe.
 - `job_context`: Snowpark job context.
 - `mode`: Checkpoint mode (schema or data).
 - `custom_checks`: Custom checks to perform.
 - `skip_checks`: Checks to skip.
-- `sample_frac`: Fraction of the DataFrame to sample.
+- `sample_frac`: Fraction of the dataframe to sample.
 - `sample_number`: Number of rows to sample.
 - `sampling_strategy`: Sampling strategy to use.
 - `output_path`: Output path for the checkpoint report.
@@ -55,16 +63,24 @@ validate_dataframe_checkpoint(
 
 ```python
 from snowflake.snowpark import Session
-from snowflake.snowpark import DataFrame as SnowparkDataFrame
+from snowflake.snowpark_checkpoints.utils.constant import (
+    CheckpointMode,
+)
 from snowflake.snowpark_checkpoints.checkpoint import validate_dataframe_checkpoint
+from snowflake.snowpark_checkpoints.spark_migration import SamplingStrategy
+from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
+from pyspark.sql import SparkSession
 
 session = Session.builder.getOrCreate()
+job_context = SnowparkJobContext(
+    session, SparkSession.builder.getOrCreate(), "job_context", True
+)
 df = session.read.format("csv").load("data.csv")
 
 validate_dataframe_checkpoint(
     df,
     "schema_checkpoint",
-    job_context=session,
+    job_context=job_context,
     mode=CheckpointMode.SCHEMA,
     sample_frac=0.1,
     sampling_strategy=SamplingStrategy.RANDOM_SAMPLE
@@ -73,22 +89,24 @@ validate_dataframe_checkpoint(
 
 ### Check with Spark Decorator
 
-The `check_with_spark` decorator converts any Snowpark DataFrame arguments to a function, samples them, and converts them to PySpark DataFrames. It then executes a provided Spark function and compares the outputs between the two implementations.
+The `check_with_spark` decorator converts any Snowpark dataframe arguments to a function, samples them, and converts them to PySpark dataframe. It then executes a provided Spark function and compares the outputs between the two implementations.
 
 ```python
-from snowflake.snowpark_checkpoints.spark_migration import check_with_spark
+from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
+from snowflake.snowpark_checkpoints.spark_migration import SamplingStrategy
+from typing import Callable, Optional, TypeVar
 
-@check_with_spark(
+fn = TypeVar("F", bound=Callable)
+
+# Signature of the decorator
+def check_with_spark(
     job_context: Optional[SnowparkJobContext],
-    spark_function: Callable,
+    spark_function: fn,
     checkpoint_name: str,
     sample_number: Optional[int] = 100,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
-    check_dtypes: Optional[bool] = False,
-    check_with_precision: Optional[bool] = False,
     output_path: Optional[str] = None,
-)
-def snowpark_fn(df: SnowparkDataFrame):
+) -> Callable[[fn], fn]:
     ...
 ```
 
@@ -97,8 +115,6 @@ def snowpark_fn(df: SnowparkDataFrame):
 - `checkpoint_name`: Name of the check.
 - `sample_number`: Number of rows to sample.
 - `sampling_strategy`: Sampling strategy to use.
-- `check_dtypes`: Check data types.
-- `check_with_precision`: Check with precision.
 - `output_path`: Output path for the checkpoint report.
 
 ### Usage Example
@@ -107,52 +123,63 @@ def snowpark_fn(df: SnowparkDataFrame):
 from snowflake.snowpark import Session
 from snowflake.snowpark import DataFrame as SnowparkDataFrame
 from snowflake.snowpark_checkpoints.spark_migration import check_with_spark
+from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
+from pyspark.sql import DataFrame as SparkDataFrame, SparkSession
 
 session = Session.builder.getOrCreate()
-df = session.read.format("csv").load("data.csv")
+job_context = SnowparkJobContext(
+    session, SparkSession.builder.getOrCreate(), "job_context", True
+)
+
+def my_spark_scalar_fn(df: SparkDataFrame):
+    return df.count()
 
 @check_with_spark(
-    job_context=session,
-    spark_function=lambda df: df.withColumn("COLUMN1", df["COLUMN1"] + 1),
-    checkpoint_name="Check_Column1_Increment",
-    sample_number=100,
-    sampling_strategy=SamplingStrategy.RANDOM_SAMPLE,
+    job_context=job_context,
+    spark_function=my_spark_scalar_fn,
+    checkpoint_name="count_checkpoint",
 )
-def increment_column1(df: SnowparkDataFrame):
-    return df.with_column("COLUMN1", df["COLUMN1"] + 1)
+def my_snowpark_scalar_fn(df: SnowparkDataFrame):
+    return df.count()
 
-increment_column1(df)
+df = job_context.snowpark_session.create_dataframe(
+    [[1, 2], [3, 4]], schema=["a", "b"]
+)
+count = my_snowpark_scalar_fn(df)
 ```
 
 ### Pandera Snowpark Decorators
 
-The decorators `@check_input_schema` and `@check_output_schema` allow for sampled schema validation of Snowpark DataFrames in the input arguments or in the return value.
+The decorators `@check_input_schema` and `@check_output_schema` allow for sampled schema validation of Snowpark dataframes in the input arguments or in the return value.
 
 ```python
-from snowflake.snowpark_checkpoints.checkpoint import check_input_schema, check_output_schema
+from snowflake.snowpark_checkpoints.spark_migration import SamplingStrategy
+from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
+from pandera import DataFrameSchema
+from typing import Optional
 
-@check_input_schema(
+# Signature of the decorator
+def check_input_schema(
     pandera_schema: DataFrameSchema,
     checkpoint_name: str,
     sample_frac: Optional[float] = 1.0,
     sample_number: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
-    job_context: Optional[SnowparkJobContext],
+    job_context: Optional[SnowparkJobContext] = None,
     output_path: Optional[str] = None,
-)
-def snowpark_fn(df: SnowparkDataFrame):
+):
     ...
 
-@check_output_schema(
+# Signature of the decorator
+def check_output_schema(
     pandera_schema: DataFrameSchema,
     checkpoint_name: str,
     sample_frac: Optional[float] = 1.0,
     sample_number: Optional[int] = None,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
-    job_context: Optional[SnowparkJobContext],
+    job_context: Optional[SnowparkJobContext] = None,
     output_path: Optional[str] = None,
-)
-def snowpark_fn(df: SnowparkDataFrame):
+):
     ...
 ```
 
@@ -166,28 +193,35 @@ def snowpark_fn(df: SnowparkDataFrame):
 
 ### Usage Example
 
-The following will result in a Pandera `SchemaError`:
-
+#### Check Input Schema Example
 ```python
 from pandas import DataFrame as PandasDataFrame
 from pandera import DataFrameSchema, Column, Check
 from snowflake.snowpark import Session
 from snowflake.snowpark import DataFrame as SnowparkDataFrame
-from snowflake.snowpark_checkpoints.checkpoint import check_output_schema
+from snowflake.snowpark_checkpoints.checkpoint import check_input_schema
+from numpy import int8
 
-df = PandasDataFrame({
-    "COLUMN1": [1, 4, 0, 10, 9],
-    "COLUMN2": [-1.3, -1.4, -2.9, -10.1, -20.4],
-})
+df = PandasDataFrame(
+    {
+        "COLUMN1": [1, 4, 0, 10, 9],
+        "COLUMN2": [-1.3, -1.4, -2.9, -10.1, -20.4],
+    }
+)
 
-out_schema = DataFrameSchema({
-    "COLUMN1": Column(int8, Check(lambda x: 0 <= x <= 10, element_wise=True)),
-    "COLUMN2": Column(float, Check(lambda x: x < -1.2)),
-})
+in_schema = DataFrameSchema(
+    {
+        "COLUMN1": Column(int8, Check(lambda x: 0 <= x <= 10, element_wise=True)),
+        "COLUMN2": Column(float, Check(lambda x: x < -1.2, element_wise=True)),
+    }
+)
 
-@check_output_schema(out_schema, "output_schema_checkpoint")
+@check_input_schema(in_schema, "input_schema_checkpoint")
 def preprocessor(dataframe: SnowparkDataFrame):
-    return dataframe.with_column("COLUMN1", lit('Some bad data yo'))
+    dataframe = dataframe.withColumn(
+        "COLUMN3", dataframe["COLUMN1"] + dataframe["COLUMN2"]
+    )
+    return dataframe
 
 session = Session.builder.getOrCreate()
 sp_dataframe = session.create_dataframe(df)
@@ -195,6 +229,40 @@ sp_dataframe = session.create_dataframe(df)
 preprocessed_dataframe = preprocessor(sp_dataframe)
 ```
 
-## License
+#### Check Input Schema Example
+```python
+from pandas import DataFrame as PandasDataFrame
+from pandera import DataFrameSchema, Column, Check
+from snowflake.snowpark import Session
+from snowflake.snowpark import DataFrame as SnowparkDataFrame
+from snowflake.snowpark_checkpoints.checkpoint import check_output_schema
+from numpy import int8
 
-This project is licensed under the  Apache License Version 2.0. See the [LICENSE](LICENSE) file for more details.
+df = PandasDataFrame(
+    {
+        "COLUMN1": [1, 4, 0, 10, 9],
+        "COLUMN2": [-1.3, -1.4, -2.9, -10.1, -20.4],
+    }
+)
+
+out_schema = DataFrameSchema(
+    {
+        "COLUMN1": Column(int8, Check.between(0, 10, include_max=True, include_min=True)),
+        "COLUMN2": Column(float, Check.less_than_or_equal_to(-1.2)),
+        "COLUMN3": Column(float, Check.less_than(10)),
+    }
+)
+
+@check_output_schema(out_schema, "output_schema_checkpoint")
+def preprocessor(dataframe: SnowparkDataFrame):
+    return dataframe.with_column(
+        "COLUMN3", dataframe["COLUMN1"] + dataframe["COLUMN2"]
+    )
+
+session = Session.builder.getOrCreate()
+sp_dataframe = session.create_dataframe(df)
+
+preprocessed_dataframe = preprocessor(sp_dataframe)
+```
+
+------

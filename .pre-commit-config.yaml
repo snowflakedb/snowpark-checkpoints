@@ -93,4 +93,19 @@ repos:
     rev: v0.8.0
     hooks:
       - id: ruff
-        args: [--config=ruff.toml] 
+        args: [--config=ruff.toml]
+
+  - repo: local
+    hooks:
+      - id: set-permissions
+        name: Set script permissions
+        entry: chmod +x ./.github/scripts/py_check_readme.py
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: check-readme
+        name: Check README
+        entry: ./.github/scripts/py_check_readme.py
+        language: python
+        files: \.md$
+        always_run: true

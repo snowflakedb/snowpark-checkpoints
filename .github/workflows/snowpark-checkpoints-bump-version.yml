@@ -1,0 +1,134 @@
+name: Bump Version
+
+on:
+  workflow_run:
+    workflows: ["Release Snowpark Checkpoints"]
+    types:
+      - completed
+
+permissions:
+  contents: write
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get Version
+        id: get_version
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+              VERSION=${GITHUB_REF#refs/tags/}
+              VERSION=${VERSION#v}
+              echo "version=$VERSION"
+          else
+              echo "GIT REF is not a tag"
+              VERSION=$(git describe --tags $(git rev-list --tags --max-count=1))
+              VERSION=${VERSION#v}
+              echo "version=$VERSION"
+          fi
+
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(rc[0-9]+)?$ ]]; then
+              echo "version=$VERSION"
+              echo "Error: No version found"
+              exit 1
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Repository Setup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin https://__token__:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git config --get remote.origin.url
+
+      - name: Update Version files
+        shell: bash
+        run: |
+          set -e
+          echo "Current directory: $(pwd)"
+          echo "Listing files in the workspace:"
+          ls -la
+
+          echo "Searching for files to update..."
+          find . -name "$META_FILE" -o -name "$FILE_NAME"
+
+          echo "Updating $META_FILE files..."
+          find . -name "$META_FILE" -exec sed -i "s/{% set version = \".*\" %}/{% set version = \"${NEW_VERSION}\" %}/" {} \;
+
+          echo "Updating $FILE_NAME files..."
+          find . -name "$FILE_NAME" -exec sed -i "s/^__version__ = \".*\"/__version__ = \"${NEW_VERSION}\"/" {} \;
+
+          echo "Updated files:"
+          find . -name "$META_FILE" -exec sh -c 'echo "File: $1" && grep "{% set version = \"" $1' _ {} \;
+          find . -name "$FILE_NAME" -exec sh -c 'echo "File: $1" && grep "__version__" $1' _ {} \;
+        env:
+          NEW_VERSION: ${{ steps.get_version.outputs.version }}
+          META_FILE: meta.yaml
+          FILE_NAME: __version__.py
+
+      - name: Create temporary branch
+        id: git_branch
+        run: |
+          set -e
+          set -o pipefail
+
+          TEMP_BRANCH="bump-version-${{ steps.get_version.outputs.version }}"
+          TEMP_TAG="v${{ steps.get_version.outputs.version }}"
+
+          echo "Checking if branch $TEMP_BRANCH exists..."
+          if git ls-remote --heads origin "$TEMP_BRANCH" | grep -q "$TEMP_BRANCH"; then
+            echo "Branch $TEMP_BRANCH exists remotely. Deleting..."
+            git push origin --delete "$TEMP_BRANCH"
+          fi
+
+          if git branch --list | grep -q "$TEMP_BRANCH"; then
+            echo "Branch $TEMP_BRANCH exists locally. Deleting..."
+            git branch -D "$TEMP_BRANCH" || echo "Branch $TEMP_BRANCH not found locally. Skipping deletion."
+          fi
+
+          echo "Checking if tag $TEMP_TAG exists..."
+          if git ls-remote --tags origin "$TEMP_TAG" | grep -q "$TEMP_TAG"; then
+            echo "Tag $TEMP_TAG exists remotely. Deleting..."
+            git push origin --delete "$TEMP_TAG"
+          fi
+
+          if git tag --list | grep -q "$TEMP_TAG"; then
+            echo "Tag $TEMP_TAG exists locally. Deleting..."
+            git tag -d "$TEMP_TAG"
+          fi
+
+          echo "Creating new branch: $TEMP_BRANCH"
+          git checkout -b "$TEMP_BRANCH"
+          git status
+          echo "TEMP_BRANCH=$TEMP_BRANCH" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_REF: ${{ github.ref }}
+
+      - name: Commit and push changes
+        shell: bash
+        run: |
+          set -e
+          set -o pipefail
+
+          git add . --verbose
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            git status
+          else
+            git commit -m "Bump version to ${{ steps.get_version.outputs.version }}"
+            git push origin "$TEMP_BRANCH"
+            echo "Changes pushed to $TEMP_BRANCH."
+            git status
+            git log --oneline -1
+          fi
+        env:
+          TEMP_BRANCH: ${{ steps.git_branch.outputs.TEMP_BRANCH }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REF: ${{ github.ref }}

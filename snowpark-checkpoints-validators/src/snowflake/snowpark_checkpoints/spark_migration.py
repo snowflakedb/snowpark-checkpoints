@@ -32,8 +32,6 @@ def check_with_spark(
     checkpoint_name: str,
     sample_number: Optional[int] = 100,
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
-    check_dtypes: Optional[bool] = True,
-    check_with_precision: Optional[float] = True,
     output_path: Optional[str] = None,
 ) -> Callable[[fn], fn]:
     """Validate function output with Spark instance.
@@ -50,10 +48,6 @@ def check_with_spark(
         sample_number (Optional[int], optional): The number of rows for validation. Defaults to 100.
         sampling_strategy (Optional[SamplingStrategy], optional): The strategy used for sampling data.
             Defaults to SamplingStrategy.RANDOM_SAMPLE.
-        check_dtypes (Optional[bool], optional): Enable data type consistency checks between Snowpark and PySpark.
-            Defaults to True.
-        check_with_precision (Optional[float], optional): Precision value to control numerical comparison precision.
-            Defaults to True.
         output_path (Optional[str], optional): The path to store the validation results. Defaults to None.
 
     Returns:

@@ -44,7 +44,7 @@ jobs:
           git remote set-url origin https://__token__:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
           git config --get remote.origin.url
 
-      - name: Repository Tag
+      - name: Repository Tag [Disabled]
         run: |
           git status
           if git tag -d ${{ env.NEW_VERSION }} 2>/dev/null; then
@@ -53,8 +53,8 @@ jobs:
             echo "Tag ${{ env.NEW_VERSION }} does not exist. Skipping deletion."
           fi
           git tag ${{ env.NEW_VERSION }}
-          git push origin ${{ env.NEW_VERSION }} -f --tags -v --progress
-          git for-each-ref refs/tags --sort=-authordate --format='%(refname)' --count=5
+          # git push origin ${{ env.NEW_VERSION }} -f --tags -v --progress
+          # git for-each-ref refs/tags --sort=-authordate --format='%(refname)' --count=5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEW_VERSION: ${{ steps.gitversion.outputs.version }}

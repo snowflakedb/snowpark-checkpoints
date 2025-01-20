@@ -129,14 +129,14 @@ STRUCT_DATA_COLLECT_EXPECTED = (
 
 TIMESTAMP_DATA_COLLECT_EXPECTED = (
     '{"name": "clmTest", "type": "timestamp", "nullable": true, "rows_count": 4, '
-    '"rows_not_null_count": 4, "rows_null_count": 0, "min": "YYYY-mm-dd HH:MM:SS", '
-    '"max": "YYYY-mm-dd HH:MM:SS", "format": "%Y-%m-%dH:%M:%S"}'
+    '"rows_not_null_count": 4, "rows_null_count": 0, "min": "YYYY-mm-dd HH:MM:SS z", '
+    '"max": "YYYY-mm-dd HH:MM:SS z", "format": "%Y-%m-%dT%H:%M:%S%z"}'
 )
 
 TIMESTAMP_NTZ_DATA_COLLECT_EXPECTED = (
     '{"name": "clmTest", "type": "timestamp_ntz", "nullable": true, "rows_count": '
     '4, "rows_not_null_count": 4, "rows_null_count": 0, "min": "YYYY-mm-dd '
-    'HH:MM:SS z", "max": "YYYY-mm-dd HH:MM:SS z", "format": "%Y-%m-%dT%H:%M:%S%z"}'
+    'HH:MM:SS", "max": "YYYY-mm-dd HH:MM:SS", "format": "%Y-%m-%dH:%M:%S"}'
 )
 
 
@@ -623,7 +623,7 @@ def test_timestamp_column_collection():
     series_without_na.count.return_value = numpy_mock
     numpy_mock.item.return_value = 4
 
-    date_str = "YYYY-mm-dd HH:MM:SS"
+    date_str = "YYYY-mm-dd HH:MM:SS z"
     series_without_na.min.return_value = numpy_mock
     series_without_na.max.return_value = numpy_mock
     numpy_mock.__str__.return_value = date_str
@@ -657,7 +657,7 @@ def test_timestamp_ntz_column_collection():
     series_without_na.count.return_value = numpy_mock
     numpy_mock.item.return_value = 4
 
-    date_str = "YYYY-mm-dd HH:MM:SS z"
+    date_str = "YYYY-mm-dd HH:MM:SS"
     series_without_na.min.return_value = numpy_mock
     series_without_na.max.return_value = numpy_mock
     numpy_mock.__str__.return_value = date_str

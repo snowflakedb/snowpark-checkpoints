@@ -36,7 +36,6 @@ from unittest.mock import MagicMock
 import numpy as np
 from snowflake.snowpark import DataFrame as SnowparkDataFrame
 from snowflake.snowpark_checkpoints.utils.utils_checks import (
-    _add_null_checks,
     _compare_data,
     _process_sampling,
     _update_validation_result,
@@ -438,94 +437,6 @@ def test_update_validation_result_without_file():
             )
         )
         mock_pipeline_result_metadata.save.assert_called_once()
-
-
-def test_add_null_checks():
-    schema = DataFrameSchema(
-        {
-            "col1": Column(float, checks=[Check.greater_than(0)], nullable=True),
-        }
-    )
-
-    additional_check = {
-        NULL_COUNT_KEY: 2,
-        ROWS_COUNT_KEY: 5,
-        MARGIN_ERROR_KEY: 0,
-    }
-
-    _add_null_checks(schema, "col1", additional_check)
-
-    assert len(schema.columns["col1"].checks) == 2  # initial check + 1 added check
-
-    # Create a DataFrame to test the checks
-    df = pd.DataFrame({"col1": [1.0, None, 2.0, None, 3.0]})
-
-    # Validate the DataFrame against the schema
-    schema.validate(df)
-
-
-def test_add_null_checks_with_margin_error():
-    schema = DataFrameSchema(
-        {
-            "col1": Column(float, checks=[Check.greater_than(0)], nullable=True),
-        }
-    )
-
-    additional_check = {
-        NULL_COUNT_KEY: 2,
-        ROWS_COUNT_KEY: 5,
-        MARGIN_ERROR_KEY: 1,
-    }
-
-    _add_null_checks(schema, "col1", additional_check)
-
-    assert len(schema.columns["col1"].checks) == 2  # initial check + 1 added check
-
-    # Create a DataFrame to test the checks
-    df = pd.DataFrame({"col1": [1.0, None, 2.0, None, None]})
-
-    # Validate the DataFrame against the schema
-    schema.validate(df)
-
-
-def test_add_null_checks_no_null_count():
-    schema = DataFrameSchema(
-        {
-            "col1": Column(float, checks=[Check.greater_than(0)]),
-        }
-    )
-
-    additional_check = {ROWS_COUNT_KEY: 5, MARGIN_ERROR_KEY: 0}
-
-    _add_null_checks(schema, "col1", additional_check)
-
-    assert len(schema.columns["col1"].checks) == 2  # initial check + 1 added check
-
-    # Create a DataFrame to test the checks
-    df = pd.DataFrame({"col1": [1.0, 2.0, 3.0, 4.0, 5.0]})
-
-    # Validate the DataFrame against the schema
-    schema.validate(df)
-
-
-def test_add_null_checks_no_margin_error():
-    schema = DataFrameSchema(
-        {
-            "col1": Column(float, checks=[Check.greater_than(0)], nullable=True),
-        }
-    )
-
-    additional_check = {NULL_COUNT_KEY: 2, ROWS_COUNT_KEY: 5}
-
-    _add_null_checks(schema, "col1", additional_check)
-
-    assert len(schema.columns["col1"].checks) == 2  # initial check + 1 added check
-
-    # Create a DataFrame to test the checks
-    df = pd.DataFrame({"col1": [1.0, None, 2.0, None, 3.0]})
-
-    # Validate the DataFrame against the schema
-    schema.validate(df)
 
 
 @mark.parametrize(

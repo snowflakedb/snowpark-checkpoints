@@ -15,6 +15,7 @@ from snowflake.snowpark_checkpoints.utils.constants import (
     MIN_KEY,
     MAX_KEY,
     DEFAULT_DATE_FORMAT,
+    NULL_COUNT_KEY,
     ROWS_COUNT_KEY,
     SKIP_ALL,
     TRUE_COUNT_KEY,
@@ -476,4 +477,80 @@ def test_add_date_checks_default_format():
             ]
         }
     )
+    schema.validate(df)
+
+
+def test_add_null_checks():
+    schema = DataFrameSchema(
+        {
+            "col1": Column(float, checks=[Check.greater_than(0)], nullable=True),
+        }
+    )
+    manager = PanderaCheckManager("test_checkpoint", schema)
+    additional_check = {
+        NULL_COUNT_KEY: 2,
+        ROWS_COUNT_KEY: 5,
+        MARGIN_ERROR_KEY: 0,
+    }
+
+    manager._add_null_checks("col1", additional_check)
+
+    assert len(schema.columns["col1"].checks) == 2
+
+    df = pd.DataFrame({"col1": [1.0, None, 2.0, None, 3.0]})
+    schema.validate(df)
+
+
+def test_add_null_checks_with_margin_error():
+    schema = DataFrameSchema(
+        {
+            "col1": Column(float, checks=[Check.greater_than(0)], nullable=True),
+        }
+    )
+    manager = PanderaCheckManager("test_checkpoint", schema)
+    additional_check = {
+        NULL_COUNT_KEY: 2,
+        ROWS_COUNT_KEY: 5,
+        MARGIN_ERROR_KEY: 1,
+    }
+
+    manager._add_null_checks("col1", additional_check)
+
+    assert len(schema.columns["col1"].checks) == 2
+
+    df = pd.DataFrame({"col1": [1.0, None, 2.0, None, None]})
+    schema.validate(df)
+
+
+def test_add_null_checks_no_null_count():
+    schema = DataFrameSchema(
+        {
+            "col1": Column(float, checks=[Check.greater_than(0)]),
+        }
+    )
+    manager = PanderaCheckManager("test_checkpoint", schema)
+    additional_check = {ROWS_COUNT_KEY: 5, MARGIN_ERROR_KEY: 0}
+
+    manager._add_null_checks("col1", additional_check)
+
+    assert len(schema.columns["col1"].checks) == 2
+
+    df = pd.DataFrame({"col1": [1.0, 2.0, 3.0, 4.0, 5.0]})
+    schema.validate(df)
+
+
+def test_add_null_checks_no_margin_error():
+    schema = DataFrameSchema(
+        {
+            "col1": Column(float, checks=[Check.greater_than(0)], nullable=True),
+        }
+    )
+    manager = PanderaCheckManager("test_checkpoint", schema)
+    additional_check = {NULL_COUNT_KEY: 2, ROWS_COUNT_KEY: 5}
+
+    manager._add_null_checks("col1", additional_check)
+
+    assert len(schema.columns["col1"].checks) == 2
+
+    df = pd.DataFrame({"col1": [1.0, None, 2.0, None, 3.0]})
     schema.validate(df)

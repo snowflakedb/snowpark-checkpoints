@@ -392,6 +392,19 @@ def get_snowflake_schema_types(df: snowpark_dataframe.DataFrame) -> list[str]:
     return [str(schema_type.datatype) for schema_type in df.schema.fields]
 
 
+def _is_snowpark_dataframe(df: Any) -> bool:
+    """Check if the given dataframe is a Snowpark dataframe.
+
+    Args:
+        df: The dataframe to check.
+
+    Returns:
+        bool: True if the dataframe is a Snowpark dataframe, False otherwise.
+
+    """
+    return isinstance(df, snowpark_dataframe.DataFrame)
+
+
 def get_load_json(json_schema: str) -> dict:
     """Load and parse a JSON schema file.
 
@@ -440,51 +453,83 @@ def extract_parameters(
     return param_data
 
 
-def handle_result(
-    func_name: str,
-    result: Any,
-    param_data: dict,
-    return_indexes: Optional[list[tuple[str, int]]],
-    multiple_return: bool,
-    telemetry_m: TelemetryManager,
+def check_dataframe_schema_event(
+    telemetry_data: dict, param_data: dict
 ) -> tuple[Optional[str], Optional[dict]]:
-    """Handle the result of the function and log telemetry data.
+    """Handle telemetry event for checking dataframe schema.
 
     Args:
-        func_name (str): The name of the function.
-        result: The result of the function.
-        param_data (dict): The extracted parameters.
-        return_indexes (list[tuple[str, int]]): The list of return values to report.
-        multiple_return (bool): Whether the function returns multiple values.
-        telemetry_m (TelemetryManager): The telemetry manager.
+        telemetry_data (dict): The telemetry data dictionary.
+        param_data (dict): The parameter data dictionary.
 
     Returns:
-        tuple: A tuple containing the event name (str) and telemetry data (dict).
+        tuple: A tuple containing the event name and telemetry data.
 
     """
-    if result and return_indexes:
-        if multiple_return:
-            for name, index in return_indexes:
-                param_data[name] = result[index]
-        else:
-            param_data[return_indexes[0][0]] = result[return_indexes[0][1]]
-
-    telemetry_data = {
-        FUNCTION_KEY: func_name,
-    }
-
-    if func_name == "_check_dataframe_schema":
-        telemetry_data[STATUS_KEY] = param_data[STATUS_KEY]
-        telemetry_data[SCHEMA_TYPES_KEY] = list(
-            param_data.get("pandera_schema").columns.keys()
-        )
+    try:
+        telemetry_data[STATUS_KEY] = param_data.get(STATUS_KEY)
+        pandera_schema = param_data.get("pandera_schema")
+        telemetry_data[SCHEMA_TYPES_KEY] = [
+            str(schema_type.dtype)
+            if schema_type.dtype is not None
+            else schema_type.dtype
+            for schema_type in pandera_schema.columns.values()
+        ]
         return DATAFRAME_VALIDATOR_SCHEMA, telemetry_data
-    elif func_name in ["check_output_schema", "check_input_schema"]:
-        telemetry_data[SCHEMA_TYPES_KEY] = list(
-            param_data.get("pandera_schema").columns.keys()
-        )
+    except Exception:
+        if param_data.get(STATUS_KEY):
+            telemetry_data[STATUS_KEY] = param_data.get(STATUS_KEY)
+        pandera_schema = param_data.get("pandera_schema")
+        if pandera_schema:
+            telemetry_data[SCHEMA_TYPES_KEY] = [
+                str(schema_type.dtype)
+                if schema_type.dtype is not None
+                else schema_type.dtype
+                for schema_type in pandera_schema.columns.values()
+            ]
+        return DATAFRAME_VALIDATOR_ERROR, telemetry_data
+
+
+def check_output_or_input_schema_event(
+    telemetry_data: dict, param_data: dict
+) -> tuple[Optional[str], Optional[dict]]:
+    """Handle telemetry event for checking output or input schema.
+
+    Args:
+        telemetry_data (dict): The telemetry data dictionary.
+        param_data (dict): The parameter data dictionary.
+
+    Returns:
+        tuple: A tuple containing the event name and telemetry data.
+
+    """
+    try:
+        pandera_schema = param_data.get("pandera_schema")
+        telemetry_data[SCHEMA_TYPES_KEY] = [
+            str(schema_type.dtype)
+            if schema_type.dtype is not None
+            else schema_type.dtype
+            for schema_type in pandera_schema.columns.values()
+        ]
         return DATAFRAME_VALIDATOR_SCHEMA, telemetry_data
-    elif func_name == "_collect_dataframe_checkpoint_mode_schema":
+    except Exception:
+        return DATAFRAME_VALIDATOR_ERROR, telemetry_data
+
+
+def collect_dataframe_checkpoint_mode_schema(
+    telemetry_data: dict, param_data: dict
+) -> tuple[Optional[str], Optional[dict]]:
+    """Handle telemetry event for collecting dataframe checkpoint mode schema.
+
+    Args:
+        telemetry_data (dict): The telemetry data dictionary.
+        param_data (dict): The parameter data dictionary.
+
+    Returns:
+        tuple: A tuple containing the event name and telemetry data.
+
+    """
+    try:
         telemetry_data[MODE_KEY] = CheckpointMode.SCHEMA.value
         schema_types = param_data.get("column_type_dict")
         telemetry_data[SCHEMA_TYPES_KEY] = [
@@ -492,11 +537,30 @@ def handle_result(
             for schema_type in schema_types
         ]
         return DATAFRAME_COLLECTION, telemetry_data
-    elif func_name == "_assert_return":
-        telemetry_data[STATUS_KEY] = param_data[STATUS_KEY]
-        if isinstance(
-            param_data.get("snowpark_results"), snowpark_dataframe.DataFrame
-        ) and _is_spark_dataframe(param_data.get("spark_results")):
+    except Exception:
+        telemetry_data[MODE_KEY] = CheckpointMode.SCHEMA.value
+        return DATAFRAME_COLLECTION_ERROR, telemetry_data
+
+
+def assert_return_event(
+    telemetry_data: dict, param_data: dict
+) -> tuple[Optional[str], Optional[dict]]:
+    """Handle telemetry event for asserting return values.
+
+    Args:
+        telemetry_data (dict): The telemetry data dictionary.
+        param_data (dict): The parameter data dictionary.
+
+    Returns:
+        tuple: A tuple containing the event name and telemetry data.
+
+    """
+    try:
+        telemetry_data[STATUS_KEY] = param_data.get(STATUS_KEY)
+        if _is_snowpark_dataframe(
+            param_data.get("snowpark_results")
+            and _is_spark_dataframe(param_data.get("spark_results"))
+        ):
             telemetry_data[SNOWFLAKE_SCHEMA_TYPES_KEY] = get_snowflake_schema_types(
                 param_data.get("snowpark_results")
             )
@@ -506,7 +570,35 @@ def handle_result(
             return DATAFRAME_VALIDATOR_MIRROR, telemetry_data
         else:
             return VALUE_VALIDATOR_MIRROR, telemetry_data
-    elif func_name == "dataframe_strategy":
+    except Exception:
+        if param_data.get(STATUS_KEY) is not None:
+            telemetry_data[STATUS_KEY] = param_data.get(STATUS_KEY)
+        if _is_snowpark_dataframe(param_data.get("snowpark_results")):
+            telemetry_data[SNOWFLAKE_SCHEMA_TYPES_KEY] = get_snowflake_schema_types(
+                param_data.get("snowpark_results")
+            )
+        if _is_spark_dataframe(param_data.get("spark_results")):
+            telemetry_data[SPARK_SCHEMA_TYPES_KEY] = _get_spark_schema_types(
+                param_data.get("spark_results")
+            )
+        return DATAFRAME_VALIDATOR_ERROR, telemetry_data
+
+
+def dataframe_strategy_event(
+    telemetry_data: dict, param_data: dict, telemetry_m: TelemetryManager
+):
+    """Handle telemetry event for dataframe strategy.
+
+    Args:
+        telemetry_data (dict): The telemetry data dictionary.
+        param_data (dict): The parameter data dictionary.
+        telemetry_m (TelemetryManager): The telemetry manager.
+
+    Returns:
+        tuple: A tuple containing the event name and telemetry data.
+
+    """
+    try:
         test_function_name = inspect.stack()[2].function
         is_logged = telemetry_m.sc_is_hypothesis_event_logged((test_function_name, 0))
         if not is_logged:
@@ -523,92 +615,75 @@ def handle_result(
                     else schema_type.dtype
                     for schema_type in schema_param.columns.values()
                 ]
-            telemetry_m.sc_hypothesis_input_events.append((schema_param, 0))
+            telemetry_m.sc_hypothesis_input_events.append((test_function_name, 0))
             if None in telemetry_data[SCHEMA_TYPES_KEY]:
                 telemetry_m.sc_log_error(HYPOTHESIS_INPUT_SCHEMA_ERROR, telemetry_data)
             else:
                 telemetry_m.sc_log_info(HYPOTHESIS_INPUT_SCHEMA, telemetry_data)
             telemetry_m._sc_send_batch(telemetry_m.sc_log_batch)
         return None, None
+    except Exception:
+        test_function_name = inspect.stack()[2].function
+        is_logged = telemetry_m.sc_is_hypothesis_event_logged((test_function_name, 1))
+        if not is_logged:
+            telemetry_m.sc_hypothesis_input_events.append((test_function_name, 0))
+            telemetry_m.sc_log_error(HYPOTHESIS_INPUT_SCHEMA_ERROR, telemetry_data)
+            telemetry_m._sc_send_batch(telemetry_m.sc_log_batch)
+        return None, None
 
 
-def handle_exception(
-    func_name: str, param_data: dict, err: Exception
+def handle_result(
+    func_name: str,
+    result: Any,
+    param_data: dict,
+    return_indexes: Optional[list[tuple[str, int]]],
+    multiple_return: bool,
+    telemetry_m: TelemetryManager,
 ) -> tuple[Optional[str], Optional[dict]]:
-    """Handle exceptions raised by the function and log telemetry data.
+    """Handle the result of the function and collect telemetry data.
 
     Args:
         func_name (str): The name of the function.
+        result: The result of the function.
         param_data (dict): The extracted parameters.
-        err (Exception): The exception raised by the function.
+        return_indexes (list[tuple[str, int]]): The list of return values to report.
+        multiple_return (bool): Whether the function returns multiple values.
+        telemetry_m (TelemetryManager): The telemetry manager.
 
     Returns:
         tuple: A tuple containing the event name (str) and telemetry data (dict).
 
     """
-    try:
-        telemetry_m = get_telemetry_manager()
-        telemetry_data = {
-            FUNCTION_KEY: func_name,
-            ERROR_KEY: type(err).__name__,
-        }
-        if func_name == "_collect_dataframe_checkpoint_mode_schema":
-            schema_types = param_data.get("column_type_dict")
-            if schema_types:
-                telemetry_data[SCHEMA_TYPES_KEY] = [
-                    schema_types[schema_type].dataType.typeName()
-                    for schema_type in schema_types
-                ]
-            return DATAFRAME_COLLECTION_ERROR, telemetry_data
-        elif func_name in [
-            "_check_dataframe_schema",
-            "check_output_schema",
-            "check_input_schema",
-        ]:
-            pandera_schema = param_data.get("pandera_schema")
-            if pandera_schema:
-                schema_types = pandera_schema.columns.keys()
-                telemetry_data[SCHEMA_TYPES_KEY] = list(schema_types)
-            return DATAFRAME_VALIDATOR_ERROR, telemetry_data
-        elif func_name == "_assert_return":
-            if isinstance(
-                param_data.get("snowpark_results"), snowpark_dataframe.DataFrame
-            ):
-                telemetry_data[SNOWFLAKE_SCHEMA_TYPES_KEY] = get_snowflake_schema_types(
-                    param_data.get("snowpark_results")
-                )
-            if _is_spark_dataframe(param_data.get("spark_results")):
-                telemetry_data[SPARK_SCHEMA_TYPES_KEY] = _get_spark_schema_types(
-                    param_data.get("spark_results")
-                )
-            return DATAFRAME_VALIDATOR_ERROR, telemetry_data
-        elif func_name == "dataframe_strategy":
-            test_function_name = inspect.stack()[2].function
-            is_logged = telemetry_m.sc_is_hypothesis_event_logged(
-                (test_function_name, 1)
-            )
-            if not is_logged:
-                schema_param = param_data.get(DATAFRAME_STRATEGY_SCHEMA_PARAM_NAME)
-                if schema_param:
-                    if isinstance(schema_param, str):
-                        telemetry_m.sc_hypothesis_input_events.append(
-                            (param_data.get(DATAFRAME_STRATEGY_SCHEMA_PARAM_NAME), 1)
-                        )
-                    else:
-                        telemetry_data[SCHEMA_TYPES_KEY] = [
-                            str(schema_type.dtype)
-                            if schema_type.dtype is not None
-                            else schema_type.dtype
-                            for schema_type in schema_param.columns.values()
-                        ]
-                    telemetry_m.sc_hypothesis_input_events.append((schema_param, 0))
-                    telemetry_m.sc_log_error(
-                        HYPOTHESIS_INPUT_SCHEMA_ERROR, telemetry_data
-                    )
-                    telemetry_m._sc_send_batch(telemetry_m.sc_log_batch)
-            return None, None
-    except Exception:
-        return None, None
+    if result is not None and return_indexes is not None:
+        if multiple_return:
+            for name, index in return_indexes:
+                param_data[name] = result[index]
+        else:
+            param_data[return_indexes[0][0]] = result[return_indexes[0][1]]
+
+    telemetry_data = {
+        FUNCTION_KEY: func_name,
+    }
+
+    telemetry_event = None
+    data = None
+    if func_name == "_check_dataframe_schema":
+        telemetry_event, data = check_dataframe_schema_event(telemetry_data, param_data)
+    elif func_name in ["check_output_schema", "check_input_schema"]:
+        telemetry_event, data = check_output_or_input_schema_event(
+            telemetry_data, param_data
+        )
+    elif func_name == "_collect_dataframe_checkpoint_mode_schema":
+        telemetry_event, data = collect_dataframe_checkpoint_mode_schema(
+            telemetry_data, param_data
+        )
+    elif func_name == "_assert_return":
+        telemetry_event, data = assert_return_event(telemetry_data, param_data)
+    elif func_name == "dataframe_strategy":
+        telemetry_event, data = dataframe_strategy_event(
+            telemetry_data, param_data, telemetry_m
+        )
+    return telemetry_event, data
 
 
 fn = TypeVar("fn", bound=Callable)
@@ -643,14 +718,13 @@ def report_telemetry(
             except Exception as err:
                 func_exception = err
 
-            param_data = {}
-            event = None
+            telemetry_event = None
             data = None
             telemetry_m = None
             try:
                 param_data = extract_parameters(func, args, kwargs, params_list)
                 telemetry_m = get_telemetry_manager()
-                event, data = handle_result(
+                telemetry_event, data = handle_result(
                     func_name,
                     result,
                     param_data,
@@ -658,15 +732,19 @@ def report_telemetry(
                     multiple_return,
                     telemetry_m,
                 )
-            except Exception as err:
-                event, data = handle_exception(func_name, param_data, err)
-
-            if func_exception is not None:
+            except Exception:
+                # Report error in telemetry
+                telemetry_event = TELEMETRY_REPORT_ERROR
+                data = {
+                    FUNCTION_KEY: func_name,
+                }
+            finally:
+                if func_exception is not None:
+                    if telemetry_m is not None:
+                        telemetry_m.sc_log_error(telemetry_event, data)
+                    raise func_exception
                 if telemetry_m is not None:
-                    telemetry_m.sc_log_error(event, data)
-                raise func_exception
-            if telemetry_m is not None:
-                telemetry_m.sc_log_info(event, data)
+                    telemetry_m.sc_log_info(telemetry_event, data)
 
             return result
 
@@ -684,6 +762,7 @@ HYPOTHESIS_INPUT_SCHEMA = "Hypothesis_Input_Schema"
 DATAFRAME_COLLECTION_ERROR = "DataFrame_Collection_Error"
 DATAFRAME_VALIDATOR_ERROR = "DataFrame_Validator_Error"
 HYPOTHESIS_INPUT_SCHEMA_ERROR = "Hypothesis_Input_Schema_Error"
+TELEMETRY_REPORT_ERROR = "Telemetry_Report_Error"
 
 FUNCTION_KEY = "function"
 STATUS_KEY = "status"

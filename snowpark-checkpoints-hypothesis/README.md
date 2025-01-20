@@ -117,3 +117,5 @@ To run tests, run the following command.
 ```shell
 hatch run test:check
 ```
+
+------

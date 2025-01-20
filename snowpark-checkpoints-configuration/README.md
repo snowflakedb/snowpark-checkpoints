@@ -22,3 +22,4 @@ my_checkpoint_metadata = CheckpointMetadata("path/to/checkpoint.json")
 checkpoint_model = my_checkpoint_metadata.get("my_checkpoint_name")
 ...
 ```
+------

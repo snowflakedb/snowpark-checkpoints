@@ -5,6 +5,7 @@
 import json
 import os
 import random
+import re
 
 from contextlib import contextmanager
 from typing import Optional, Union
@@ -201,3 +202,31 @@ def generate_snowpark_schema(
             struct_fields.append(struct_field)
 
     return StructType(struct_fields)
+
+
+def replace_surrogate_chars(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    """Replace surrogate characters in the specified columns of a Pandas DataFrame with a space.
+
+    Args:
+        df: The Pandas DataFrame to process.
+        columns: The list of columns to process.
+
+    Returns:
+        A new DataFrame with surrogate characters replaced.
+
+    """
+    surrogate_pattern = re.compile(r"[\uD800-\uDFFF]")
+    replacement = " "
+    df_copy = df.copy()
+
+    for column in columns:
+        if column not in df_copy.columns:
+            continue
+
+        df_copy[column] = df_copy[column].apply(
+            lambda value: re.sub(surrogate_pattern, replacement, value)
+            if isinstance(value, str)
+            else value
+        )
+
+    return df_copy

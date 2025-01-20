@@ -7,6 +7,7 @@ import random
 
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pandera as pa
 import pytest
@@ -16,6 +17,7 @@ from snowflake.hypothesis_snowpark.strategies_utils import (
     generate_snowpark_dataframe,
     generate_snowpark_schema,
     load_json_schema,
+    replace_surrogate_chars,
     temporary_random_seed,
 )
 from snowflake.snowpark import DataFrame, Row, Session
@@ -262,3 +264,55 @@ def test_temporary_random_seed_with_seed():
         assert random_state_inside == expected_state
     random_state_outside = random.getstate()
     assert random_state_outside == initial_state
+
+
+def test_replace_surrogate_chars_no_surrogates():
+    pandas_df = pd.DataFrame({"col1": ["a", "b", "c"], "col2": ["d", "e", "f"]})
+    columns = ["col1", "col2"]
+    result_df = replace_surrogate_chars(pandas_df, columns)
+    assert result_df.equals(pandas_df)
+
+
+def test_replace_surrogate_chars_with_surrogates():
+    pandas_df = pd.DataFrame(
+        {
+            "col1": ["a", "\uD800", "c"],
+            "col2": ["d", "\uD950", "f"],
+            "col3": ["g", "\uDFFF", "i"],
+        }
+    )
+    columns = ["col1", "col2", "col3"]
+    expected_df = pd.DataFrame(
+        {"col1": ["a", " ", "c"], "col2": ["d", " ", "f"], "col3": ["g", " ", "i"]}
+    )
+    result_df = replace_surrogate_chars(pandas_df, columns)
+    assert result_df.equals(expected_df)
+
+
+def test_replace_surrogate_chars_partial_columns():
+    pandas_df = pd.DataFrame(
+        {"col1": ["a", "\uD800", "c"], "col2": ["d", "\uDFFF", "f"]}
+    )
+    columns = ["col1"]
+    expected_df = pd.DataFrame({"col1": ["a", " ", "c"], "col2": ["d", "\uDFFF", "f"]})
+    result_df = replace_surrogate_chars(pandas_df, columns)
+    assert result_df.equals(expected_df)
+
+
+def test_replace_surrogate_chars_empty_dataframe():
+    columns = ["col1", "col2"]
+    pandas_df = pd.DataFrame(columns=columns)
+    result_df = replace_surrogate_chars(pandas_df, columns)
+    assert result_df.equals(pandas_df)
+
+
+def test_replace_surrogate_chars_non_string_columns():
+    pandas_df = pd.DataFrame(
+        {"col1": [1, 2, 3], "col2": ["d", "\uDFFF", "f"], "col3": [None, np.NaN, "x"]}
+    )
+    columns = ["col1", "col2", "col3"]
+    expected_df = pd.DataFrame(
+        {"col1": [1, 2, 3], "col2": ["d", " ", "f"], "col3": [None, np.NaN, "x"]}
+    )
+    result_df = replace_surrogate_chars(pandas_df, columns)
+    assert result_df.equals(expected_df)

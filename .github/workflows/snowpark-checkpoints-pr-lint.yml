@@ -1,14 +1,16 @@
 name: PR Lint
 on:
+  pull_request_target:
+    types: [edited, opened, reopened, synchronize]
   pull_request:
-    types: [edited, opened, reopened, synchronize, ready_for_review]
+    types: [ready_for_review]
     branches: [main]
 jobs:
   pr-lint:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 

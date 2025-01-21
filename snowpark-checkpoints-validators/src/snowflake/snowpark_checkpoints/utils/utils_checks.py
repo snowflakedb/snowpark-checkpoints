@@ -40,6 +40,7 @@ from snowflake.snowpark_checkpoints.utils.extra_config import (
 from snowflake.snowpark_checkpoints.utils.pandera_check_manager import (
     PanderaCheckManager,
 )
+from snowflake.snowpark_checkpoints.utils.telemetry import STATUS_KEY, report_telemetry
 from snowflake.snowpark_checkpoints.validation_result_metadata import (
     ValidationResultsMetadata,
 )
@@ -187,7 +188,7 @@ Please run the Snowpark checkpoint collector first."""
     return schema
 
 
-def _compare_data(
+def _check_compare_data(
     df: SnowparkDataFrame,
     job_context: Optional[SnowparkJobContext],
     checkpoint_name: str,
@@ -201,9 +202,43 @@ def _compare_data(
 
     Args:
         df (SnowparkDataFrame): The Snowpark DataFrame to compare.
-        job_context (SnowparkJobContext): The job context containing the Snowpark session and job state.
+        job_context (Optional[SnowparkJobContext]): The job context containing the Snowpark session and job state.
         checkpoint_name (str): The name of the checkpoint table to compare against.
-        output_path (str): The path to the output directory.
+        output_path (Optional[str]): The path to the output directory.
+
+    Raises:
+        SchemaValidationError: If there is a data mismatch between the DataFrame and the checkpoint table.
+
+    """
+    result, err = _compare_data(df, job_context, checkpoint_name, output_path)
+    if err is not None:
+        raise err
+
+
+@report_telemetry(
+    params_list=["df"], return_indexes=[(STATUS_KEY, 0)], multiple_return=True
+)
+def _compare_data(
+    df: SnowparkDataFrame,
+    job_context: Optional[SnowparkJobContext],
+    checkpoint_name: str,
+    output_path: Optional[str] = None,
+) -> tuple[bool, Optional[SchemaValidationError]]:
+    """Compare the data in the provided Snowpark DataFrame with the data in a checkpoint table.
+
+    This function writes the provided DataFrame to a table and compares it with an existing checkpoint table
+    using a hash aggregation query. If there is a data mismatch, it marks the job context as failed and raises a
+    SchemaValidationError. If the data matches, it marks the job context as passed.
+
+    Args:
+        df (SnowparkDataFrame): The Snowpark DataFrame to compare.
+        job_context (Optional[SnowparkJobContext]): The job context containing the Snowpark session and job state.
+        checkpoint_name (str): The name of the checkpoint table to compare against.
+        output_path (Optional[str]): The path to the output directory.
+
+    Returns:
+        Tuple[bool, Optional[SchemaValidationError]]: A tuple containing a boolean indicating if the data matches
+        and an optional SchemaValidationError if there is a data mismatch.
 
     Raises:
         SchemaValidationError: If there is a data mismatch between the DataFrame and the checkpoint table.
@@ -230,7 +265,7 @@ def _compare_data(
             FAIL_STATUS,
             output_path,
         )
-        raise SchemaValidationError(
+        return False, SchemaValidationError(
             error_message,
             job_context,
             checkpoint_name,
@@ -239,6 +274,7 @@ def _compare_data(
     else:
         _update_validation_result(checkpoint_name, PASS_STATUS, output_path)
         job_context._mark_pass(checkpoint_name, DATAFRAME_EXECUTION_MODE)
+        return True, None
 
 
 def _find_frame_in(stack: list[inspect.FrameInfo]) -> tuple:

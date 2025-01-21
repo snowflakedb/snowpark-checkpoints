@@ -36,7 +36,7 @@ from unittest.mock import MagicMock
 import numpy as np
 from snowflake.snowpark import DataFrame as SnowparkDataFrame
 from snowflake.snowpark_checkpoints.utils.utils_checks import (
-    _compare_data,
+    _check_compare_data,
     _process_sampling,
     _update_validation_result,
     _replace_special_characters,
@@ -292,7 +292,7 @@ def test_compare_data_match():
         ) as mock_update_validation_result,
     ):
         # Call the function
-        _compare_data(df, job_context, checkpoint_name, output_path)
+        _check_compare_data(df, job_context, checkpoint_name, output_path)
 
     # Assertions
     mock_update_validation_result.assert_called_once_with(
@@ -342,7 +342,7 @@ def test_compare_data_mismatch():
             SchemaValidationError,
             match=f"Data mismatch for checkpoint {checkpoint_name}",
         ):
-            _compare_data(df, job_context, checkpoint_name)
+            _check_compare_data(df, job_context, checkpoint_name)
 
     # Assertions
     mock_update_validation_result.assert_called_once_with(

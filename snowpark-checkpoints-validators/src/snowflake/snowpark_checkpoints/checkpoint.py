@@ -28,7 +28,7 @@ from snowflake.snowpark_checkpoints.utils.pandera_check_manager import (
 )
 from snowflake.snowpark_checkpoints.utils.telemetry import STATUS_KEY, report_telemetry
 from snowflake.snowpark_checkpoints.utils.utils_checks import (
-    _compare_data,
+    _check_compare_data,
     _generate_schema,
     _process_sampling,
     _replace_special_characters,
@@ -92,7 +92,7 @@ def validate_dataframe_checkpoint(
                 raise ValueError(
                     "Connectionless mode is not supported for Parquet validation"
                 )
-            _compare_data(df, job_context, checkpoint_name, output_path)
+            _check_compare_data(df, job_context, checkpoint_name, output_path)
         else:
             raise ValueError(
                 """Invalid validation mode.

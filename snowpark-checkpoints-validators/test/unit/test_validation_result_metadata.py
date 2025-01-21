@@ -1,6 +1,7 @@
 import os
 from unittest.mock import mock_open, patch
-from unittest.mock import mock_open, patch, MagicMock
+from pytest import fixture
+from snowflake.snowpark_checkpoints.singleton import Singleton
 from snowflake.snowpark_checkpoints.utils.constants import (
     PASS_STATUS,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
@@ -13,6 +14,11 @@ from snowflake.snowpark_checkpoints.validation_results import (
     ValidationResult,
     ValidationResults,
 )
+
+
+@fixture(autouse=True)
+def singleton():
+    Singleton._instances = {}
 
 
 def test_load_with_valid_file():

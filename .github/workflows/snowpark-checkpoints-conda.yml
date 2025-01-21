@@ -1,10 +1,11 @@
 name: Build and Test Conda Package
 on:
-  pull_request_target:
-    types: [edited, opened, reopened, synchronize]
+  push:
+    branches:
+      - main
   pull_request:
-    types: [ready_for_review]
-    branches: [main]
+    branches:
+      - main
 
 env:
   PYTHON_VERSION: "3.11"

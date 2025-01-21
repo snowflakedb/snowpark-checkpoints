@@ -200,7 +200,7 @@ def _dataframe_strategy_from_json_schema(
             not_supported_columns.append(column)
         elif dtype in (PYSPARK_ARRAY_TYPE, PYSPARK_BINARY_TYPE, PYSPARK_DATE_TYPE):
             columns_with_custom_strategy.append(column)
-        elif dtype is PYSPARK_STRING_TYPE:
+        elif dtype == PYSPARK_STRING_TYPE:
             str_columns.append(column.get(CUSTOM_DATA_NAME_KEY))
 
     if not_supported_columns:

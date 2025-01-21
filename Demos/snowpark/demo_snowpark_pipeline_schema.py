@@ -25,7 +25,7 @@ from snowflake.snowpark_checkpoints.checkpoint import (
     validate_dataframe_checkpoint,
 )
 from snowflake.snowpark_checkpoints.spark_migration import check_with_spark
-from snowflake.snowpark_checkpoints.utils.constant import (
+from snowflake.snowpark_checkpoints.utils.constants import (
     SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH_ENV_VAR,
 )
 

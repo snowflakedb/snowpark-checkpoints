@@ -10,7 +10,7 @@ from snowflake.snowpark_checkpoints.checkpoint import (
 )
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from snowflake.snowpark_checkpoints.spark_migration import check_with_spark
-from snowflake.snowpark_checkpoints.utils.constant import CheckpointMode
+from snowflake.snowpark_checkpoints.utils.constants import CheckpointMode
 
 __all__ = [
     "check_with_spark",

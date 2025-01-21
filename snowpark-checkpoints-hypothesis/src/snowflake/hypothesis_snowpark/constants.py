@@ -24,11 +24,6 @@ from snowflake.snowpark.types import (
 
 
 PANDERA_SCHEMA_KEY: Final[str] = "pandera_schema"
-PANDERA_IN_RANGE_CHECK: Final[str] = "in_range"
-PANDERA_MIN_VALUE_KEY: Final[str] = "min_value"
-PANDERA_MAX_VALUE_KEY: Final[str] = "max_value"
-PANDERA_INCLUDE_MIN_KEY: Final[str] = "include_min"
-PANDERA_INCLUDE_MAX_KEY: Final[str] = "include_max"
 
 CUSTOM_DATA_KEY: Final[str] = "custom_data"
 CUSTOM_DATA_FORMAT_KEY: Final[str] = "format"
@@ -39,6 +34,8 @@ CUSTOM_DATA_ROWS_COUNT: Final[str] = "rows_count"
 CUSTOM_DATA_ROWS_NULL_COUNT_KEY: Final[str] = "rows_null_count"
 CUSTOM_DATA_MIN_SIZE_KEY: Final[str] = "min_size"
 CUSTOM_DATA_MAX_SIZE_KEY: Final[str] = "max_size"
+CUSTOM_DATA_MIN_KEY: Final[str] = "min"
+CUSTOM_DATA_MAX_KEY: Final[str] = "max"
 CUSTOM_DATA_VALUE_TYPE_KEY: Final[str] = "value_type"
 
 PYSPARK_ARRAY_TYPE: Final[str] = "array"

@@ -68,7 +68,7 @@ jobs:
           python-version: "${{ env.PYTHON_VERSION }}"
 
       - name: Set up Miniconda
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v3
         with:
           auto-update-conda: true
           channels: conda-forge,defaults,anaconda
@@ -201,7 +201,7 @@ jobs:
           path: ./dist
 
       - name: Set up Miniconda
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v3
         with:
           auto-update-conda: true
           channels: conda-forge,defaults,anaconda

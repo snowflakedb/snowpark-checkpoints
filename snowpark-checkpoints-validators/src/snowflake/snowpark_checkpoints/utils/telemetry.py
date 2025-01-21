@@ -455,7 +455,7 @@ def extract_parameters(
 
 def check_dataframe_schema_event(
     telemetry_data: dict, param_data: dict
-) -> tuple[Optional[str], Optional[dict]]:
+) -> tuple[str, dict]:
     """Handle telemetry event for checking dataframe schema.
 
     Args:
@@ -492,7 +492,7 @@ def check_dataframe_schema_event(
 
 def check_output_or_input_schema_event(
     telemetry_data: dict, param_data: dict
-) -> tuple[Optional[str], Optional[dict]]:
+) -> tuple[str, dict]:
     """Handle telemetry event for checking output or input schema.
 
     Args:
@@ -518,7 +518,7 @@ def check_output_or_input_schema_event(
 
 def collect_dataframe_checkpoint_mode_schema(
     telemetry_data: dict, param_data: dict
-) -> tuple[Optional[str], Optional[dict]]:
+) -> tuple[str, dict]:
     """Handle telemetry event for collecting dataframe checkpoint mode schema.
 
     Args:
@@ -542,9 +542,7 @@ def collect_dataframe_checkpoint_mode_schema(
         return DATAFRAME_COLLECTION_ERROR, telemetry_data
 
 
-def assert_return_event(
-    telemetry_data: dict, param_data: dict
-) -> tuple[Optional[str], Optional[dict]]:
+def assert_return_event(telemetry_data: dict, param_data: dict) -> tuple[str, dict]:
     """Handle telemetry event for asserting return values.
 
     Args:
@@ -586,7 +584,7 @@ def assert_return_event(
 
 def dataframe_strategy_event(
     telemetry_data: dict, param_data: dict, telemetry_m: TelemetryManager
-):
+) -> tuple[Optional[str], Optional[dict]]:
     """Handle telemetry event for dataframe strategy.
 
     Args:

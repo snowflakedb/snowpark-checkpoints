@@ -14,7 +14,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: morrisoncole/pr-lint-action@327d08270eeda69f390c2073935506556987b9a1
+      - uses: morrisoncole/pr-lint-action@51f3cfabaf5d46f94e54524214e45685f0401b2a
         with:
           title-regex: "^[a-zA-Z]+-[0-9]+"
           on-failed-regex-fail-action: true

@@ -1,4 +1,4 @@
-name: Run tests [hypothesis.snowpark]
+name: Run tests [snowpark-checkpoints-hypothesis]
 
 on:
   workflow_call:

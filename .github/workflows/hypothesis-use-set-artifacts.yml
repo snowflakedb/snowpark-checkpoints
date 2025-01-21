@@ -1,4 +1,4 @@
-name: Publish artifact [hypothesis.snowpark]
+name: Publish artifact [snowpark-checkpoints-hypothesis]
 
 on:
   workflow_call:

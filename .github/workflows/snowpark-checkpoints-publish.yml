@@ -1,4 +1,4 @@
-name: Publish All Packages
+name: Build Snowpark Checkpoints
 
 on:
   push:

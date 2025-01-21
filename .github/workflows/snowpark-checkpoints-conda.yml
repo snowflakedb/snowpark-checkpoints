@@ -1,4 +1,4 @@
-name: Build and Test Conda Package
+name: Conda Package
 on:
   push:
     branches:

@@ -1,4 +1,4 @@
-name: Run Security Scans PR [hypothesis.snowpark]
+name: Run Security Scans PR [snowpark_checkpoints]
 
 on:
   pull_request:
@@ -6,8 +6,9 @@ on:
       - "**"
     paths:
       - "**"
-      - "!snowpark-checkpoints-validators/**"
       - "!snowpark-checkpoints-collectors/**"
+      - "!snowpark-checkpoints-configuration/**"
+      - "!snowpark-checkpoints-hypothesis/**"
       - "!Demos/**"
 
 permissions:
@@ -60,7 +61,7 @@ jobs:
           python -m pip install -r requirements.txt
           pip list
         env:
-          DIR_NAME: "snowpark-checkpoints-hypothesis"
+          DIR_NAME: "snowpark-checkpoints-validators"
 
       - name: Run Snyk test
         run: |

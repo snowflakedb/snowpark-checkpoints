@@ -2,7 +2,7 @@
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
 
-from snowflake.snowpark_checkpoints.utils.constant import (
+from snowflake.snowpark_checkpoints.utils.constants import (
     BINARY_TYPE,
     BOOLEAN_TYPE,
     BYTE_TYPE,

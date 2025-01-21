@@ -6,7 +6,7 @@ import os
 
 from typing import Optional
 
-from snowflake.snowpark_checkpoints.utils.constant import (
+from snowflake.snowpark_checkpoints.utils.constants import (
     SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH_ENV_VAR,
 )
 

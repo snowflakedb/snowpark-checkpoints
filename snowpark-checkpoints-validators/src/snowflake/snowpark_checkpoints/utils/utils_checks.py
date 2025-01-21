@@ -12,7 +12,7 @@ from typing import Any, Optional
 
 import numpy as np
 
-from pandera import Check, DataFrameSchema
+from pandera import DataFrameSchema
 
 from snowflake.snowpark import DataFrame as SnowparkDataFrame
 from snowflake.snowpark_checkpoints.errors import SchemaValidationError
@@ -21,37 +21,24 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
     SamplingAdapter,
     SamplingStrategy,
 )
-from snowflake.snowpark_checkpoints.utils.checkpoint_logger import CheckpointLogger
-from snowflake.snowpark_checkpoints.utils.constant import (
+from snowflake.snowpark_checkpoints.utils.constants import (
     CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME,
     CHECKPOINT_TABLE_NAME_FORMAT,
     COLUMNS_KEY,
     DATAFRAME_CUSTOM_DATA_KEY,
     DATAFRAME_EXECUTION_MODE,
     DATAFRAME_PANDERA_SCHEMA_KEY,
-    DECIMAL_PRECISION_KEY,
     DEFAULT_KEY,
     EXCEPT_HASH_AGG_QUERY,
     FAIL_STATUS,
-    FALSE_COUNT_KEY,
-    MARGIN_ERROR_KEY,
-    MEAN_KEY,
-    NAME_KEY,
-    NULL_COUNT_KEY,
-    NULLABLE_KEY,
     PASS_STATUS,
-    ROWS_COUNT_KEY,
-    SKIP_ALL,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
-    TRUE_COUNT_KEY,
-    TYPE_KEY,
 )
 from snowflake.snowpark_checkpoints.utils.extra_config import (
     get_checkpoint_file,
 )
-from snowflake.snowpark_checkpoints.utils.supported_types import (
-    BooleanTypes,
-    NumericTypes,
+from snowflake.snowpark_checkpoints.utils.pandera_check_manager import (
+    PanderaCheckManager,
 )
 from snowflake.snowpark_checkpoints.validation_result_metadata import (
     ValidationResultsMetadata,
@@ -128,127 +115,6 @@ def _process_sampling(
     return pandera_schema_upper, sample_df
 
 
-def _add_numeric_checks(
-    schema: DataFrameSchema, col: str, additional_check: dict[str, Any]
-):
-    """Add numeric checks to a specified column in a DataFrameSchema.
-
-    Args:
-        schema (DataFrameSchema): The schema to which the checks will be added.
-        col (str): The name of the column to which the checks will be applied.
-        additional_check (dict[str, Any]): A dictionary containing additional checks.
-            - MEAN_KEY (str): The key for the mean value to check against.
-            - MARGIN_ERROR_KEY (str): The key for the margin of error for the mean check.
-            - DECIMAL_PRECISION_KEY (str): The key for the maximum decimal precision allowed.
-
-    Returns:
-        None
-
-    """
-    mean = additional_check.get(MEAN_KEY, 0)
-    std = additional_check.get(MARGIN_ERROR_KEY, 0)
-
-    def check_mean(series):
-        series_mean = series.mean()
-        return mean - std <= series_mean <= mean + std
-
-    schema.columns[col].checks.append(
-        Check(check_mean, element_wise=False, name="mean")
-    )
-
-    if DECIMAL_PRECISION_KEY in additional_check:
-        schema.columns[col].checks.append(
-            Check(
-                lambda series: series.apply(
-                    lambda x: len(str(x).split(".")[1]) if "." in str(x) else 0
-                )
-                <= additional_check[DECIMAL_PRECISION_KEY],
-                name="decimal_precision",
-            )
-        )
-
-
-def _add_boolean_checks(
-    schema: DataFrameSchema, col: str, additional_check: dict[str, Any]
-):
-    """Add boolean checks to a specified column in a DataFrameSchema.
-
-    Args:
-        schema (DataFrameSchema): The schema to which the checks will be added.
-        col (str): The name of the column to which the checks will be applied.
-        additional_check (dict[str, Any]): A dictionary containing additional check parameters.
-            - TRUE_COUNT_KEY (int): Expected count of True values in the column.
-            - FALSE_COUNT_KEY (int): Expected count of False values in the column.
-            - MARGIN_ERROR_KEY (int): Margin of error allowed for the counts.
-
-    Returns:
-        None
-
-    """
-    count_of_true = additional_check.get(TRUE_COUNT_KEY, 0)
-    count_of_false = additional_check.get(FALSE_COUNT_KEY, 0)
-    rows_count = additional_check.get(ROWS_COUNT_KEY, 0)
-    std = additional_check.get(MARGIN_ERROR_KEY, 0)
-    percentage_true = count_of_true / rows_count
-    percentage_false = count_of_false / rows_count
-
-    schema.columns[col].checks.extend(
-        [
-            Check(
-                lambda series: (
-                    percentage_true - std
-                    <= series.value_counts().get(True, 0) / series.count()
-                    if series.count() > 0
-                    else 1 <= percentage_true + std
-                ),
-            ),
-            Check(
-                lambda series: (
-                    percentage_false - std
-                    <= series.value_counts().get(False, 0) / series.count()
-                    if series.count() > 0
-                    else 1 <= percentage_false + std
-                ),
-            ),
-        ]
-    )
-
-
-def _add_null_checks(
-    schema: DataFrameSchema, col: str, additional_check: dict[str, Any]
-):
-    """Add null checks to a specified column in a DataFrameSchema.
-
-    Args:
-        schema (DataFrameSchema): The schema to which the checks will be added.
-        col (str): The name of the column to which the checks will be applied.
-        additional_check (dict[str, Any]): A dictionary containing additional check parameters.
-            - NULL_COUNT_KEY (int): Expected count of Null values in the column.
-            - ROWS_COUNT_KEY (int): Total number of rows in the column.
-            - MARGIN_ERROR_KEY (int): Margin of error allowed for the counts.
-
-    Returns:
-        None
-
-    """
-    count_of_null = additional_check.get(NULL_COUNT_KEY, 0)
-    rows_count = additional_check.get(ROWS_COUNT_KEY, 0)
-    std = additional_check.get(MARGIN_ERROR_KEY, 0)
-    percentage_null = count_of_null / rows_count
-
-    schema.columns[col].checks.extend(
-        [
-            Check(
-                lambda series: (
-                    percentage_null - std <= series.isnull().sum() / series.count()
-                    if series.count() > 0
-                    else 1 <= percentage_null + std
-                ),
-            ),
-        ]
-    )
-
-
 def _generate_schema(
     checkpoint_name: str, output_path: Optional[str] = None
 ) -> DataFrameSchema:
@@ -281,128 +147,44 @@ def _generate_schema(
 Please run the Snowpark checkpoint collector first."""
         )
 
-    checkpoint_file_path = os.path.join(
+    checkpoint_schema_file_path = os.path.join(
         output_directory_path,
         CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME.format(checkpoint_name),
     )
 
-    if not os.path.exists(checkpoint_file_path):
+    if not os.path.exists(checkpoint_schema_file_path):
         raise ValueError(
             f"Checkpoint {checkpoint_name} JSON file not found. Please run the Snowpark checkpoint collector first."
         )
 
-    with open(checkpoint_file_path) as custom_data_schema:
-        custom_data_schema_json = json.load(custom_data_schema)
+    with open(checkpoint_schema_file_path) as schema_file:
+        checkpoint_schema_config = json.load(schema_file)
 
-    if DATAFRAME_PANDERA_SCHEMA_KEY not in custom_data_schema_json:
+    if DATAFRAME_PANDERA_SCHEMA_KEY not in checkpoint_schema_config:
         raise ValueError(
             f"Pandera schema not found in the JSON file for checkpoint: {checkpoint_name}"
         )
 
-    schema_dict = custom_data_schema_json.get(DATAFRAME_PANDERA_SCHEMA_KEY)
+    schema_dict = checkpoint_schema_config.get(DATAFRAME_PANDERA_SCHEMA_KEY)
     schema_dict_str = json.dumps(schema_dict)
     schema = DataFrameSchema.from_json(schema_dict_str)
 
-    if DATAFRAME_CUSTOM_DATA_KEY not in custom_data_schema_json:
+    if DATAFRAME_CUSTOM_DATA_KEY not in checkpoint_schema_config:
         return schema
 
-    custom_data = custom_data_schema_json.get(DATAFRAME_CUSTOM_DATA_KEY)
+    custom_data = checkpoint_schema_config.get(DATAFRAME_CUSTOM_DATA_KEY)
 
     if COLUMNS_KEY not in custom_data:
         raise ValueError(
             f"Columns not found in the JSON file for checkpoint: {checkpoint_name}"
         )
 
-    logger = CheckpointLogger().get_logger()
-
-    for additional_check in custom_data.get(COLUMNS_KEY):
-
-        type = additional_check.get(TYPE_KEY, None)
-        name = additional_check.get(NAME_KEY, None)
-        is_nullable = additional_check.get(NULLABLE_KEY, False)
-
-        if name is None:
-            raise ValueError(f"Column name not defined in the schema {checkpoint_name}")
-
-        if type is None:
-            raise ValueError(f"Type not defined for column {name}")
-
-        if schema.columns.get(name) is None:
-            logger.warning(f"Column {name} not found in schema")
-            continue
-
-        if type in NumericTypes:
-            _add_numeric_checks(schema, name, additional_check)
-
-        elif type in BooleanTypes:
-            _add_boolean_checks(schema, name, additional_check)
-
-        if is_nullable:
-            _add_null_checks(schema, name, additional_check)
+    pandera_check_manager = PanderaCheckManager(
+        checkpoint_name=checkpoint_name, schema=schema
+    )
+    schema = pandera_check_manager.proccess_checks(custom_data)
 
     return schema
-
-
-def _skip_checks_on_schema(
-    pandera_schema: DataFrameSchema,
-    skip_checks: Optional[dict[str, list[str]]] = None,
-) -> None:
-    """Modify a Pandera DataFrameSchema to skip specified checks on certain columns.
-
-    Args:
-        pandera_schema (DataFrameSchema): The Pandera DataFrameSchema object to modify.
-        skip_checks (Optional[dict[str, list[str]]]): A dictionary where keys are column names
-                                                and values are lists of checks to skip for
-                                                those columns. If the list is empty, all
-                                                checks for the column will be removed.
-
-    Returns:
-        None
-
-    """
-    if not skip_checks:
-        return
-
-    for col, checks_to_skip in skip_checks.items():
-
-        if col in pandera_schema.columns:
-
-            if SKIP_ALL in checks_to_skip:
-                pandera_schema.columns[col].checks = {}
-
-            else:
-                pandera_schema.columns[col].checks = [
-                    check
-                    for check in pandera_schema.columns[col].checks
-                    if check.name not in checks_to_skip
-                ]
-
-
-def _add_custom_checks(
-    schema: DataFrameSchema,
-    custom_checks: Optional[dict[str, list[Check]]] = None,
-):
-    """Add custom checks to a Pandera DataFrameSchema.
-
-    Args:
-        schema (DataFrameSchema): The Pandera DataFrameSchema object to modify.
-        custom_checks (Optional[dict[str, list[Check]]]): A dictionary where keys are column names
-                                                and values are lists of checks to add for
-                                                those columns.
-
-    Returns:
-        None
-
-    """
-    if not custom_checks:
-        return
-
-    for col, checks in custom_checks.items():
-        if col in schema.columns:
-            col_schema = schema.columns[col]
-            col_schema.checks.extend(checks)
-        else:
-            raise ValueError(f"Column {col} not found in schema")
 
 
 def _compare_data(

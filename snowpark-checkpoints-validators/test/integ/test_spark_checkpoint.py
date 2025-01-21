@@ -12,6 +12,27 @@ from pyspark.sql import SparkSession
 import pytest
 import pandas as pd
 import numpy as np
+import os
+from pathlib import Path
+import tempfile
+from snowflake.snowpark_checkpoints.utils.telemetry import (
+    get_telemetry_manager,
+)
+from telemetry_compare_utils import validate_telemetry_file_output
+
+telemetry_folder = "telemetry"
+
+
+@pytest.fixture(scope="function")
+def telemetry_output_path():
+    folder = os.urandom(8).hex()
+    directory = Path(tempfile.gettempdir()).resolve() / folder
+    os.makedirs(directory)
+    telemetry_dir = directory / telemetry_folder
+
+    telemetry_manager = get_telemetry_manager()
+    telemetry_manager.set_sc_output_path(telemetry_dir)
+    return str(telemetry_dir)
 
 
 @pytest.fixture
@@ -21,7 +42,7 @@ def job_context():
     return SnowparkJobContext(session, spark_session, "test job", True)
 
 
-def test_spark_checkpoint_scalar_passing(job_context):
+def test_spark_checkpoint_scalar_passing(job_context, telemetry_output_path):
     def my_spark_scalar_fn(df: SparkDataFrame):
         return df.count()
 
@@ -38,9 +59,12 @@ def test_spark_checkpoint_scalar_passing(job_context):
     )
     count = my_snowpark_scalar_fn(df)
     assert count == 2
+    validate_telemetry_file_output(
+        "spark_checkpoint_scalar_passing_telemetry.json", telemetry_output_path
+    )
 
 
-def test_spark_checkpoint_scalar_fail(job_context):
+def test_spark_checkpoint_scalar_fail(job_context, telemetry_output_path):
     def my_spark_scalar_fn(df: SparkDataFrame):
         return df.count() + 1
 
@@ -60,9 +84,12 @@ def test_spark_checkpoint_scalar_fail(job_context):
         assert (False, "Should have failed")
     except:
         pass
+    validate_telemetry_file_output(
+        "spark_checkpoint_scalar_fail_telemetry.json", telemetry_output_path
+    )
 
 
-def test_spark_checkpoint_df_pass(job_context):
+def test_spark_checkpoint_df_pass(job_context, telemetry_output_path):
     def my_spark_fn(df: SparkDataFrame):
         return df.filter(df.A > 2)
 
@@ -78,9 +105,12 @@ def test_spark_checkpoint_df_pass(job_context):
         [[1, 2], [3, 4]], schema=["a", "b"]
     )
     my_snowpark_fn(df)
+    validate_telemetry_file_output(
+        "spark_checkpoint_df_pass_telemetry.json", telemetry_output_path
+    )
 
 
-def test_spark_checkpoint_df_fail(job_context):
+def test_spark_checkpoint_df_fail(job_context, telemetry_output_path):
     def my_spark_fn(df: SparkDataFrame):
         return df.filter(df.A > 2)
 
@@ -100,9 +130,12 @@ def test_spark_checkpoint_df_fail(job_context):
         assert (False, "Should have failed")
     except:
         pass
+    validate_telemetry_file_output(
+        "spark_checkpoint_df_fail_telemetry.json", telemetry_output_path
+    )
 
 
-def test_spark_checkpoint_limit_sample(job_context):
+def test_spark_checkpoint_limit_sample(job_context, telemetry_output_path):
     def my_spark_fn(df: SparkDataFrame):
         return df.filter(df.A < 50)
 
@@ -121,9 +154,12 @@ def test_spark_checkpoint_limit_sample(job_context):
     )
     df = job_context.snowpark_session.create_dataframe(data_df)
     my_snowpark_fn(df)
+    validate_telemetry_file_output(
+        "spark_checkpoint_limit_sample_telemetry.json", telemetry_output_path
+    )
 
 
-def test_spark_checkpoint_random_sample(job_context):
+def test_spark_checkpoint_random_sample(job_context, telemetry_output_path):
     def my_spark_fn(df: SparkDataFrame):
         return df.filter(df.A < 50)
 
@@ -142,3 +178,6 @@ def test_spark_checkpoint_random_sample(job_context):
     )
     df = job_context.snowpark_session.create_dataframe(data_df)
     my_snowpark_fn(df)
+    validate_telemetry_file_output(
+        "spark_checkpoint_random_sample_telemetry.json", telemetry_output_path
+    )

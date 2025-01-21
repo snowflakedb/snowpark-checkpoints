@@ -1,5 +1,5 @@
 {% set name = "snowpark-checkpoints-validators" %}
-{% set version = "0.0.0" %}
+{% set version = "0.2.0rc1" %}
 
 package:
   name: {{ name|lower }}

@@ -28,9 +28,31 @@ from snowflake.snowpark_checkpoints.utils.constants import (
     SKIP_ALL,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
 )
+import pytest
+import os
+from pathlib import Path
+import tempfile
+from snowflake.snowpark_checkpoints.utils.telemetry import (
+    get_telemetry_manager,
+)
+from telemetry_compare_utils import validate_telemetry_file_output
+
+telemetry_folder = "telemetry"
 
 
-def test_input():
+@pytest.fixture(scope="function")
+def telemetry_output_path():
+    folder = os.urandom(8).hex()
+    directory = Path(tempfile.gettempdir()).resolve() / folder
+    os.makedirs(directory)
+    telemetry_dir = directory / telemetry_folder
+
+    telemetry_manager = get_telemetry_manager()
+    telemetry_manager.set_sc_output_path(telemetry_dir)
+    return str(telemetry_dir)
+
+
+def test_input(telemetry_output_path):
     checkpoint_name = "test_checkpoint"
     output__path = "test_output_path/unit/"
     df = PandasDataFrame(
@@ -65,9 +87,10 @@ def test_input():
     mock_update_validation_result.assert_called_once_with(
         checkpoint_name, PASS_STATUS, output__path
     )
+    validate_telemetry_file_output("test_input_telemetry.json", telemetry_output_path)
 
 
-def test_input_fail():
+def test_input_fail(telemetry_output_path):
     checkpoint_name = "test_checkpoint"
     output_path = "test_output_path/unit/"
     df = PandasDataFrame(
@@ -105,9 +128,12 @@ def test_input_fail():
     mock_update_validation_result.assert_called_once_with(
         checkpoint_name, FAIL_STATUS, output_path
     )
+    validate_telemetry_file_output(
+        "test_input_fail_telemetry.json", telemetry_output_path
+    )
 
 
-def test_output():
+def test_output(telemetry_output_path):
     checkpoint_name = "test_checkpoint"
     df = PandasDataFrame(
         {
@@ -143,9 +169,10 @@ def test_output():
     mock_update_validation_result.assert_called_once_with(
         checkpoint_name, PASS_STATUS, None
     )
+    validate_telemetry_file_output("test_output_telemetry.json", telemetry_output_path)
 
 
-def test_output_fail():
+def test_output_fail(telemetry_output_path):
     checkpoint_name = "test_checkpoint"
     df = PandasDataFrame(
         {
@@ -182,9 +209,12 @@ def test_output_fail():
     mock_update_validation_result.assert_called_once_with(
         checkpoint_name, FAIL_STATUS, None
     )
+    validate_telemetry_file_output(
+        "test_output_fail_telemetry.json", telemetry_output_path
+    )
 
 
-def test_df_check():
+def test_df_check(telemetry_output_path):
     checkpoint_name = "test_checkpoint"
     output_path = "test_output_path/unit/"
     df = PandasDataFrame(
@@ -216,9 +246,12 @@ def test_df_check():
         check_dataframe_schema(sp_df, schema, checkpoint_name, output_path=output_path)
 
     mocked_update.assert_called_once_with(checkpoint_name, PASS_STATUS, output_path)
+    validate_telemetry_file_output(
+        "test_df_check_telemetry.json", telemetry_output_path
+    )
 
 
-def test_df_check_fail():
+def test_df_check_fail(telemetry_output_path):
     checkpoint_name = "test_checkpoint"
     output_path = "test_output_path/unit/"
     df = PandasDataFrame(
@@ -251,9 +284,12 @@ def test_df_check_fail():
         check_dataframe_schema(sp_df, schema, checkpoint_name, output_path=output_path)
 
     mocked_update.assert_called_once_with(checkpoint_name, FAIL_STATUS, output_path)
+    validate_telemetry_file_output(
+        "test_df_check_fail_telemetry.json", telemetry_output_path
+    )
 
 
-def test_df_check_from_file():
+def test_df_check_from_file(telemetry_output_path):
     df = PandasDataFrame(
         {
             "COLUMN1": [1, 4, 0, 10, 9],
@@ -336,9 +372,12 @@ def test_df_check_from_file():
         _check_dataframe_schema_file(sp_df, checkpoint_name)
 
     mocked_update.assert_called_once_with(checkpoint_name, PASS_STATUS, None)
+    validate_telemetry_file_output(
+        "test_df_check_from_file_telemetry.json", telemetry_output_path
+    )
 
 
-def test_df_check_custom_check():
+def test_df_check_custom_check(telemetry_output_path):
     checkpoint_name = "test_checkpoint"
 
     df = PandasDataFrame(
@@ -379,9 +418,12 @@ def test_df_check_custom_check():
     mocked_update.assert_called_once_with(checkpoint_name, PASS_STATUS, None)
     assert len(schema.columns["COLUMN1"].checks) == 2
     assert len(schema.columns["COLUMN2"].checks) == 2
+    validate_telemetry_file_output(
+        "test_df_check_custom_check_telemetry.json", telemetry_output_path
+    )
 
 
-def test_df_check_skip_check():
+def test_df_check_skip_check(telemetry_output_path):
     checkpoint_name = "test_checkpoint"
     df = PandasDataFrame(
         {
@@ -428,3 +470,6 @@ def test_df_check_skip_check():
     mocked_update.assert_called_once_with(checkpoint_name, PASS_STATUS, None)
     assert len(schema.columns["COLUMN1"].checks) == 0
     assert len(schema.columns["COLUMN2"].checks) == 1
+    validate_telemetry_file_output(
+        "test_df_check_skip_check_telemetry.json", telemetry_output_path
+    )

@@ -74,6 +74,7 @@ def collect_dataframe_checkpoint(
 
     Raises:
         Exception: Invalid mode value.
+        Exception: Invalid checkpoint name. Checkpoint names must only contain alphanumeric characters and underscores.
 
     """
     try:

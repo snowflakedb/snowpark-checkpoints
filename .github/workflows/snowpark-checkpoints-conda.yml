@@ -1,9 +1,5 @@
 name: Build and Test Conda Package
-
 on:
-  push:
-    branches:
-      - main
   pull_request_target:
     types: [edited, opened, reopened, synchronize]
   pull_request:

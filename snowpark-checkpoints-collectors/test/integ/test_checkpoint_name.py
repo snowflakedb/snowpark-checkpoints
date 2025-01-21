@@ -30,10 +30,6 @@ def output_path():
     folder = os.urandom(8).hex()
     directory = Path(tempfile.gettempdir()).resolve() / folder
     os.makedirs(directory)
-    telemetry_dir = directory / telemetry_folder
-
-    telemetry_manager = get_telemetry_manager()
-    telemetry_manager.set_sc_output_path(telemetry_dir)
     return str(directory)
 
 

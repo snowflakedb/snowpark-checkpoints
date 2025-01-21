@@ -9,8 +9,8 @@ import numpy as np
 import pandas as pd
 import pandera as pa
 import pytest
-from snowflake.hypothesis_snowpark.constants import PYSPARK_TO_SNOWPARK_SUPPORTED_TYPES
 
+from snowflake.hypothesis_snowpark.constants import PYSPARK_TO_SNOWPARK_SUPPORTED_TYPES
 from snowflake.hypothesis_snowpark.datatype_mapper import (
     pandera_dtype_to_snowpark_dtype,
     pyspark_dtype_to_snowpark_dtype,
@@ -27,7 +27,6 @@ from snowflake.snowpark.types import (
     StringType,
     TimestampTimeZone,
     TimestampType,
-    DataType,
 )
 from snowflake.snowpark.types import (
     DataType as SnowparkDataType,
@@ -179,7 +178,7 @@ def test_pyspark_dtype_to_snowpark_dtype_valid_types():
         expected_snowpark_type,
     ) in PYSPARK_TO_SNOWPARK_SUPPORTED_TYPES.items():
         actual_snowpark_type = pyspark_dtype_to_snowpark_dtype(pyspark_type)
-        assert isinstance(actual_snowpark_type, DataType)
+        assert isinstance(actual_snowpark_type, SnowparkDataType)
         assert actual_snowpark_type == expected_snowpark_type
 
 

@@ -11,16 +11,20 @@ import hypothesis.strategies as st
 import pandas as pd
 import pytest
 
-from hypothesis import given, settings, HealthCheck
+from hypothesis import HealthCheck, given, settings
 
 from snowflake.hypothesis_snowpark.constants import (
+    CUSTOM_DATA_FORMAT_KEY,
+    CUSTOM_DATA_MAX_KEY,
     CUSTOM_DATA_MAX_SIZE_KEY,
+    CUSTOM_DATA_MIN_KEY,
     CUSTOM_DATA_MIN_SIZE_KEY,
     CUSTOM_DATA_NAME_KEY,
     CUSTOM_DATA_TYPE_KEY,
     CUSTOM_DATA_VALUE_TYPE_KEY,
     PYSPARK_ARRAY_TYPE,
     PYSPARK_BINARY_TYPE,
+    PYSPARK_DATE_TYPE,
     PYSPARK_INTEGER_TYPE,
     PYSPARK_STRING_TYPE,
 )
@@ -38,6 +42,7 @@ from snowflake.hypothesis_snowpark.custom_strategies import (
     string_strategy,
     update_pandas_df_strategy,
 )
+from snowflake.hypothesis_snowpark.strategy_register import register_strategy
 
 
 MAX_EXAMPLES: Final[int] = 5
@@ -221,6 +226,20 @@ def test_update_pandas_df_strategy_empty_columns(data: st.DataObject):
 
 @given(data=st.data())
 @settings(max_examples=MAX_EXAMPLES)
+def test_update_pandas_df_strategy_empty_df(data: st.DataObject):
+    col_name = "col1"
+    dummy_dtype = "dummy_dtype"
+    register_strategy(dummy_dtype)(st.integers)
+
+    df = pd.DataFrame(columns=[col_name])
+    columns = [{CUSTOM_DATA_TYPE_KEY: dummy_dtype, CUSTOM_DATA_NAME_KEY: col_name}]
+    result_df = data.draw(update_pandas_df_strategy(df, columns))
+
+    assert len(result_df) == 0
+
+
+@given(data=st.data())
+@settings(max_examples=MAX_EXAMPLES)
 def test_update_pandas_df_strategy_array_type(data: st.DataObject):
     col_name = "col1"
     min_size = 1
@@ -263,3 +282,43 @@ def test_update_pandas_df_strategy_binary_type(data: st.DataObject):
 
     assert result_df[col_name].apply(lambda x: isinstance(x, bytes)).all()
     assert result_df[col_name].apply(lambda x: min_size <= len(x) <= max_size).all()
+
+
+@given(data=st.data())
+@settings(max_examples=MAX_EXAMPLES)
+def test_update_pandas_df_strategy_unsupported_dtype(data: st.DataObject):
+    col_name = "col1"
+    dtype = "unsupported_dtype"
+
+    df = pd.DataFrame({col_name: [1, 2, 3]})
+    columns = [{CUSTOM_DATA_TYPE_KEY: dtype}]
+
+    with pytest.raises(
+        ValueError, match=f"Unsupported custom strategy for data type: {dtype}"
+    ):
+        data.draw(update_pandas_df_strategy(df, columns))
+
+
+@given(data=st.data())
+@settings(max_examples=MAX_EXAMPLES)
+def test_update_pandas_df_strategy_date_type(data: st.DataObject):
+    col_name = "col1"
+    date_format = "%Y-%m-%d"
+    min_date = dt.datetime.strptime("2021-01-01", date_format).date()
+    max_date = dt.datetime.strptime("2021-12-31", date_format).date()
+
+    df = pd.DataFrame({col_name: [1, 2, 3]})
+    columns = [
+        {
+            CUSTOM_DATA_TYPE_KEY: PYSPARK_DATE_TYPE,
+            CUSTOM_DATA_FORMAT_KEY: date_format,
+            CUSTOM_DATA_MIN_KEY: str(min_date),
+            CUSTOM_DATA_MAX_KEY: str(max_date),
+            CUSTOM_DATA_NAME_KEY: col_name,
+        }
+    ]
+    result_df = data.draw(update_pandas_df_strategy(df, columns))
+
+    assert len(result_df) == len(df)
+    assert result_df[col_name].apply(lambda x: isinstance(x, dt.date)).all()
+    assert result_df[col_name].apply(lambda x: min_date <= x <= max_date).all()

@@ -782,7 +782,6 @@ HYPOTHESIS_INPUT_SCHEMA = "Hypothesis_Input_Schema"
 DATAFRAME_COLLECTION_ERROR = "DataFrame_Collection_Error"
 DATAFRAME_VALIDATOR_ERROR = "DataFrame_Validator_Error"
 HYPOTHESIS_INPUT_SCHEMA_ERROR = "Hypothesis_Input_Schema_Error"
-TELEMETRY_REPORT_ERROR = "Telemetry_Report_Error"
 
 FUNCTION_KEY = "function"
 STATUS_KEY = "status"

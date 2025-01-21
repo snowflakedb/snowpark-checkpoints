@@ -8,13 +8,6 @@ on:
       - "**"
       - "!Demos/**"
       - "!docs/**"
-  push:
-    branches:
-      - "support/**"
-    paths:
-      - "**"
-      - "!Demos/**"
-      - "!docs/**"
 
 jobs:
   test:

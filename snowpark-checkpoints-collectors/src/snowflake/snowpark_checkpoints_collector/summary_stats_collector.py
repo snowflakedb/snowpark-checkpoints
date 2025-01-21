@@ -41,7 +41,10 @@ from snowflake.snowpark_checkpoints_collector.column_pandera_checks import (
 from snowflake.snowpark_checkpoints_collector.snow_connection_model import (
     SnowConnection,
 )
-from snowflake.snowpark_checkpoints_collector.utils import file_utils
+from snowflake.snowpark_checkpoints_collector.utils import (
+    checkpoint_name_utils,
+    file_utils,
+)
 from snowflake.snowpark_checkpoints_collector.utils.extra_config import (
     get_checkpoint_mode,
     get_checkpoint_sample,
@@ -71,52 +74,82 @@ def collect_dataframe_checkpoint(
 
     Raises:
         Exception: Invalid mode value.
+        Exception: Invalid checkpoint name. Checkpoint names must only contain alphanumeric characters and underscores.
 
     """
-    if is_checkpoint_enabled(checkpoint_name):
-
-        collection_point_file_path = file_utils.get_collection_point_source_file_path()
-        collection_point_line_of_code = file_utils.get_collection_point_line_of_code()
-        collection_point_result = CollectionPointResult(
-            collection_point_file_path, collection_point_line_of_code, checkpoint_name
+    try:
+        normalized_checkpoint_name = checkpoint_name_utils.normalize_checkpoint_name(
+            checkpoint_name
         )
+        is_valid_checkpoint_name = checkpoint_name_utils.is_valid_checkpoint_name(
+            normalized_checkpoint_name
+        )
+        if not is_valid_checkpoint_name:
+            raise Exception(
+                f"Invalid checkpoint name: {checkpoint_name}. Checkpoint names must only contain alphanumeric "
+                f"characters and underscores."
+            )
 
-        try:
+        if is_checkpoint_enabled(normalized_checkpoint_name):
 
-            _sample = get_checkpoint_sample(checkpoint_name, sample)
+            collection_point_file_path = (
+                file_utils.get_collection_point_source_file_path()
+            )
+            collection_point_line_of_code = (
+                file_utils.get_collection_point_line_of_code()
+            )
+            collection_point_result = CollectionPointResult(
+                collection_point_file_path,
+                collection_point_line_of_code,
+                normalized_checkpoint_name,
+            )
 
-            if _is_empty_dataframe_without_schema(df):
-                raise Exception(
-                    "It is not possible to collect an empty DataFrame without schema"
+            try:
+
+                _sample = get_checkpoint_sample(normalized_checkpoint_name, sample)
+
+                if _is_empty_dataframe_without_schema(df):
+                    raise Exception(
+                        "It is not possible to collect an empty DataFrame without schema"
+                    )
+
+                _mode = get_checkpoint_mode(normalized_checkpoint_name, mode)
+
+                if _mode == CheckpointMode.SCHEMA:
+                    column_type_dict = _get_spark_column_types(df)
+                    _collect_dataframe_checkpoint_mode_schema(
+                        normalized_checkpoint_name,
+                        df,
+                        _sample,
+                        column_type_dict,
+                        output_path,
+                    )
+
+                elif _mode == CheckpointMode.DATAFRAME:
+                    snow_connection = SnowConnection()
+                    _collect_dataframe_checkpoint_mode_dataframe(
+                        normalized_checkpoint_name, df, snow_connection, output_path
+                    )
+
+                else:
+                    raise Exception("Invalid mode value.")
+
+                collection_point_result.result = CollectionResult.PASS
+
+            except Exception as err:
+                collection_point_result.result = CollectionResult.FAIL
+                error_message = str(err)
+                raise Exception(error_message) from err
+
+            finally:
+                collection_point_result_manager = CollectionPointResultManager(
+                    output_path
                 )
+                collection_point_result_manager.add_result(collection_point_result)
 
-            _mode = get_checkpoint_mode(checkpoint_name, mode)
-
-            if _mode == CheckpointMode.SCHEMA:
-                column_type_dict = _get_spark_column_types(df)
-                _collect_dataframe_checkpoint_mode_schema(
-                    checkpoint_name, df, _sample, column_type_dict, output_path
-                )
-
-            elif _mode == CheckpointMode.DATAFRAME:
-                snow_connection = SnowConnection()
-                _collect_dataframe_checkpoint_mode_dataframe(
-                    checkpoint_name, df, snow_connection, output_path
-                )
-
-            else:
-                raise Exception("Invalid mode value.")
-
-            collection_point_result.result = CollectionResult.PASS
-
-        except Exception as err:
-            collection_point_result.result = CollectionResult.FAIL
-            error_message = str(err)
-            raise Exception(error_message) from err
-
-        finally:
-            collection_point_result_manager = CollectionPointResultManager(output_path)
-            collection_point_result_manager.add_result(collection_point_result)
+    except Exception as err:
+        error_message = str(err)
+        raise Exception(error_message) from err
 
 
 @report_telemetry(params_list=["column_type_dict"])
@@ -240,7 +273,6 @@ def _get_pandera_infer_schema_as_dict(
 def _generate_json_checkpoint_file(
     checkpoint_name, dataframe_schema_contract, output_path: Optional[str] = None
 ) -> None:
-
     checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
         checkpoint_name
     )

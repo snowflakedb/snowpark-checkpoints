@@ -4,7 +4,7 @@
 import decimal
 import json
 import os
-from datetime import date, datetime, timezone, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from pandera import DataFrameSchema

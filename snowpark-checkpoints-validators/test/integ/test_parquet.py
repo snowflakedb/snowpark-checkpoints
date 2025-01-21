@@ -17,7 +17,7 @@ from snowflake.snowpark.types import (
 from snowflake.snowpark_checkpoints.checkpoint import validate_dataframe_checkpoint
 from snowflake.snowpark_checkpoints.errors import SchemaValidationError
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
-from snowflake.snowpark_checkpoints.utils.constant import (
+from snowflake.snowpark_checkpoints.utils.constants import (
     DATAFRAME_EXECUTION_MODE,
     CheckpointMode,
     FAIL_STATUS,

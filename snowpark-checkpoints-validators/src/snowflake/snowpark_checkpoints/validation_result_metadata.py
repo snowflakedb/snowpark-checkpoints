@@ -6,7 +6,7 @@ import os
 
 from typing import Optional
 
-from snowflake.snowpark_checkpoints.utils.constant import (
+from snowflake.snowpark_checkpoints.utils.constants import (
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
     VALIDATION_RESULTS_JSON_FILE_NAME,
 )

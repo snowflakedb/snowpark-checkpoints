@@ -30,6 +30,7 @@ from snowflake.hypothesis_snowpark.constants import (
     PANDERA_SCHEMA_KEY,
     PYSPARK_ARRAY_TYPE,
     PYSPARK_BINARY_TYPE,
+    PYSPARK_STRING_TYPE,
     PYSPARK_TO_SNOWPARK_SUPPORTED_TYPES,
 )
 from snowflake.hypothesis_snowpark.custom_strategies import update_pandas_df_strategy
@@ -38,6 +39,7 @@ from snowflake.hypothesis_snowpark.strategies_utils import (
     generate_snowpark_dataframe,
     generate_snowpark_schema,
     load_json_schema,
+    replace_surrogate_chars,
 )
 from snowflake.hypothesis_snowpark.telemetry.telemetry import report_telemetry
 from snowflake.snowpark import DataFrame, Session
@@ -153,6 +155,7 @@ def _dataframe_strategy_from_object_schema(
 
     """
     original_schema = copy.deepcopy(schema)
+    str_columns = []
 
     for column in schema.columns.values():
         if isinstance(column.dtype, pa.engines.pandas_engine.Date):
@@ -160,11 +163,14 @@ def _dataframe_strategy_from_object_schema(
             # As a workaround, we can change the data type to pa.DateTime to
             # avoid an exception and let Snowpark handle the conversion to Date.
             column.dtype = pa.DateTime
+        elif isinstance(column.dtype, pa.String):
+            str_columns.append(column.name)
 
     @composite
     def _dataframe_strategy(draw: DrawFn) -> DataFrame:
         pandas_strategy = schema.strategy(size=size)
         pandas_df = draw(pandas_strategy)
+        pandas_df = replace_surrogate_chars(pandas_df, str_columns)
         snowpark_schema = generate_snowpark_schema(original_schema)
         snowpark_df = generate_snowpark_dataframe(pandas_df, snowpark_schema, session)
         return snowpark_df
@@ -196,7 +202,7 @@ def _dataframe_strategy_from_json_schema(
         )
 
     custom_data_columns = custom_data.get(CUSTOM_DATA_COLUMNS_KEY, [])
-    not_supported_columns, columns_with_custom_strategy = [], []
+    not_supported_columns, columns_with_custom_strategy, str_columns = [], [], []
 
     for column in custom_data_columns:
         dtype = column.get(CUSTOM_DATA_TYPE_KEY)
@@ -204,6 +210,8 @@ def _dataframe_strategy_from_json_schema(
             not_supported_columns.append(column)
         elif dtype in (PYSPARK_ARRAY_TYPE, PYSPARK_BINARY_TYPE):
             columns_with_custom_strategy.append(column)
+        elif dtype is PYSPARK_STRING_TYPE:
+            str_columns.append(column.get(CUSTOM_DATA_NAME_KEY))
 
     if not_supported_columns:
         raise ValueError(
@@ -222,6 +230,7 @@ def _dataframe_strategy_from_json_schema(
             update_pandas_df_strategy(pandas_df, columns_with_custom_strategy)
         )
         pandas_df = apply_custom_null_values(pandas_df, custom_data)
+        pandas_df = replace_surrogate_chars(pandas_df, str_columns)
         snowpark_schema = generate_snowpark_schema(df_schema, custom_data)
         snowpark_df = generate_snowpark_dataframe(pandas_df, snowpark_schema, session)
         return snowpark_df

@@ -344,7 +344,7 @@ def test_collect_invalid_mode(spark_session, data, spark_schema):
     pyspark_df = spark_session.createDataFrame(data=data, schema=spark_schema)
 
     with pytest.raises(Exception) as ex_info:
-        collect_dataframe_checkpoint(pyspark_df, checkpoint_name="", mode=3)
+        collect_dataframe_checkpoint(pyspark_df, checkpoint_name="invalid_mode", mode=3)
     assert "Invalid mode value." == str(ex_info.value)
 
 

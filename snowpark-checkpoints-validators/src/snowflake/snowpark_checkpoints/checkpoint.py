@@ -17,20 +17,21 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
     SamplingStrategy,
 )
 from snowflake.snowpark_checkpoints.utils.checkpoint_logger import CheckpointLogger
-from snowflake.snowpark_checkpoints.utils.constant import (
+from snowflake.snowpark_checkpoints.utils.constants import (
     FAIL_STATUS,
     PASS_STATUS,
     CheckpointMode,
 )
 from snowflake.snowpark_checkpoints.utils.extra_config import is_checkpoint_enabled
+from snowflake.snowpark_checkpoints.utils.pandera_check_manager import (
+    PanderaCheckManager,
+)
 from snowflake.snowpark_checkpoints.utils.telemetry import STATUS_KEY, report_telemetry
 from snowflake.snowpark_checkpoints.utils.utils_checks import (
-    _add_custom_checks,
     _compare_data,
     _generate_schema,
     _process_sampling,
     _replace_special_characters,
-    _skip_checks_on_schema,
     _update_validation_result,
 )
 
@@ -239,9 +240,10 @@ def _check_dataframe_schema(
     sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
     output_path: Optional[str] = None,
 ) -> tuple[bool, PandasDataFrame]:
-    _skip_checks_on_schema(pandera_schema, skip_checks)
 
-    _add_custom_checks(pandera_schema, custom_checks)
+    pandera_check_manager = PanderaCheckManager(checkpoint_name, pandera_schema)
+    pandera_check_manager.skip_checks_on_schema(skip_checks)
+    pandera_check_manager.add_custom_checks(custom_checks)
 
     pandera_schema_upper, sample_df = _process_sampling(
         df, pandera_schema, job_context, sample_frac, sample_number, sampling_strategy

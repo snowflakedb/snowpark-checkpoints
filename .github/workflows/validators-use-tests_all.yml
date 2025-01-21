@@ -1,4 +1,4 @@
-name: Run tests [hypothesis.snowpark]
+name: Run tests [snowpark_checkpoints_validators]
 
 on:
   workflow_call:
@@ -8,7 +8,6 @@ jobs:
     name: Test ${{ matrix.download_name }}-${{ matrix.python-version }}-${{ matrix.cloud-provider }}
     runs-on: ${{ matrix.os }}
     env:
-      TERM: unknown
       SNOWFLAKE_CONNECTIONS_MYCONNECTION_AUTHENTICATOR: SNOWFLAKE_JWT
       SNOWFLAKE_CONNECTIONS_MYCONNECTION_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
       SNOWFLAKE_CONNECTIONS_MYCONNECTION_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
@@ -42,6 +41,8 @@ jobs:
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -49,7 +50,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Set up Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v4.5.0
         with:
           distribution: "temurin"
           java-version: "21"
@@ -58,10 +59,10 @@ jobs:
 
       - name: Display Python version
         run: |
-            python -c "import sys; print(sys.version)"
-            python ../.github/scripts/py_show_env.py
+          python -c "import sys; print(sys.version)"
+          python ../.github/scripts/py_show_env.py
         shell: bash
-        working-directory: ./snowpark-checkpoints-hypothesis
+        working-directory: ./snowpark-checkpoints-validators
 
       - name: Set up Snowflake CLI
         uses: Snowflake-Labs/snowflake-cli-action@main
@@ -71,6 +72,7 @@ jobs:
 
       - name: Set up key (Linux)
         if: runner.os == 'Linux'
+        shell: bash
         run: |
           PARENT_DIR=$(dirname "${{ github.workspace }}")
           PRIVATE_KEY_FILE=$PARENT_DIR/.ssh/key.p8
@@ -84,6 +86,7 @@ jobs:
 
       - name: Set up Connection Snowflake CLI (Linux)
         if: runner.os == 'Linux'
+        shell: bash
         run: |
           PARENT_DIR=$(dirname "${{ github.workspace }}")
           PRIVATE_KEY_FILE=$PARENT_DIR/.ssh/key.p8
@@ -91,7 +94,11 @@ jobs:
           SNOWFLAKE_CONFIG_DIR="/home/runner/.snowflake"
           SNOWFLAKE_CONFIG_PATH="$SNOWFLAKE_CONFIG_DIR/config.toml"
 
-          mkdir -p "$SNOWFLAKE_CONFIG_DIR"
+          if [ ! -d "$SNOWFLAKE_CONFIG_DIR" ]; then
+            mkdir -p "$SNOWFLAKE_CONFIG_DIR"
+          else
+            echo "Snowflake Configuration directory already exists: $SNOWFLAKE_CONFIG_DIR"
+          fi
 
           echo "[connections.myconnection]" > "$CONFIG_FILE"
           echo "authenticator = \"$SNOWFLAKE_CONNECTIONS_MYCONNECTION_AUTHENTICATOR\"" >> "$CONFIG_FILE"
@@ -109,7 +116,7 @@ jobs:
 
           echo "Snowflake configuration at $SNOWFLAKE_CONFIG_PATH:"
           cat "$SNOWFLAKE_CONFIG_PATH"
-        shell: bash
+
 
       - name: Set up key (Windows)
         if: runner.os == 'Windows'
@@ -171,23 +178,24 @@ jobs:
           python -m pip install ".[development]"
           pip install hatch pyyaml frictionless requests -q
           pip list
-        working-directory: ./snowpark-checkpoints-hypothesis
+        shell: bash
+        working-directory: ./snowpark-checkpoints-validators
 
       - name: Display Host Info
         run: |
           python ../.github/scripts/py_show_host.py
         shell: bash
-        working-directory: ./snowpark-checkpoints-hypothesis
+        working-directory: ./snowpark-checkpoints-validators
 
-      - name: Run tests
+      - name: Run Tests
         run: |
-            echo "Current working directory: $PWD"
-            hatch config set dirs.env.virtual .hatch
-            hatch status && hatch env show
-            hatch run test:check
-            hatch run test:coverage
+          echo "Current working directory: $PWD"
+          hatch config set dirs.env.virtual .hatch
+          hatch status && hatch env show
+          hatch run test:check
+          hatch run test:coverage
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
           PYTEST_ADDOPTS: --color=yes --tb=short -v
         shell: bash
-        working-directory: ./snowpark-checkpoints-hypothesis
+        working-directory: ./snowpark-checkpoints-validators

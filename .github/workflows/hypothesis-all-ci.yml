@@ -1,4 +1,4 @@
-name: Run All workflows [hypothesis.snowpark]
+name: Run All workflows [snowpark-checkpoints-hypothesis]
 
 on:
   push:
@@ -23,24 +23,24 @@ on:
 jobs:
   lint:
     name: Static analysis and linting hypothesis-snowpark
-    uses: ./.github/workflows/hypothesis-snowpark-lint.yml
+    uses: ./.github/workflows/hypothesis-lint.yml
 
   build:
     needs: lint
     name: Build wheels hypothesis-snowpark
-    uses: ./.github/workflows/hypothesis-snowpark-use-build-wheels.yml
+    uses: ./.github/workflows/hypothesis-use-build-wheels.yml
     secrets: inherit
 
   test:
     needs: build
     name: Run all tests hypothesis-snowpark
-    uses: ./.github/workflows/hypothesis-snowpark-use-tests_all.yml
+    uses: ./.github/workflows/hypothesis-use-tests_all.yml
     secrets: inherit
 
   artifact:
     needs: test
     name: Artifact package hypothesis-snowpark
-    uses: ./.github/workflows/hypothesis-snowpark-use-set-artifacts.yml
+    uses: ./.github/workflows/hypothesis-use-set-artifacts.yml
     secrets: inherit
     with:
       artifact-name: snowpark-checkpoints-hypothesis

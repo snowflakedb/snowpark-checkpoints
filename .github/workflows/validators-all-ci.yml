@@ -23,24 +23,24 @@ on:
 jobs:
   lint:
     name: Static analysis and linting snowpark-checkpoints-validators
-    uses: ./.github/workflows/snowpark_checkpoints-lint.yml
+    uses: ./.github/workflows/validators-lint.yml
 
   build:
     needs: lint
     name: Build wheels snowpark-checkpoints-validators
-    uses: ./.github/workflows/snowpark_checkpoints-use-build-wheels.yml
+    uses: ./.github/workflows/validators-use-build-wheels.yml
     secrets: inherit
 
   test:
     needs: build
     name: Run all tests snowpark-checkpoints-validators
-    uses: ./.github/workflows/snowpark_checkpoints-use-tests_all.yml
+    uses: ./.github/workflows/validators-use-tests_all.yml
     secrets: inherit
 
   artifact:
     needs: test
     name: Artifact package snowpark-checkpoints-validators
-    uses: ./.github/workflows/snowpark_checkpoints-use-set-artifacts.yml
+    uses: ./.github/workflows/validators-use-set-artifacts.yml
     secrets: inherit
     with:
       artifact-name: snowpark-checkpoints-validators

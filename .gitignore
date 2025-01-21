@@ -4,9 +4,12 @@
 
 # demos
 snowpark-checkpoints-output/
+Demos/Demos/
+Demos/snowpark-checkpoints-output/
 
 # env
 wheelvenv/
+
 
 # version
 !__version__.py

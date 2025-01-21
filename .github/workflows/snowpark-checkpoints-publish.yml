@@ -1,4 +1,4 @@
-name: Publish All Packages
+name: Build Snowpark Checkpoints
 
 on:
   push:
@@ -9,6 +9,9 @@ on:
       - main
 
 permissions: write-all
+
+env:
+  PYTHON_VERSION: "3.11"
 
 jobs:
   build:
@@ -24,7 +27,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "${{ env.PYTHON_VERSION }}"
 
       - name: Install Dependencies
         run: |
@@ -32,25 +35,30 @@ jobs:
           pip install build twine sigstore hatch -q
           pip list
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "8.0.x"
+      - name: Fetch tags
+        run: git fetch --tags
 
-      - name: Install GitVersion
+      - name: Get version from tag
+        id: get_version
         run: |
-          dotnet tool install --global GitVersion.Tool
-          echo "export PATH=\$PATH:\$HOME/.dotnet/tools" >> $GITHUB_ENV
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+            VERSION=${VERSION#v}
+            echo "version=$VERSION"
+          else
+            echo "GIT REF is not a tag"
+            VERSION=$(git describe --tags $(git rev-list --tags --max-count=1))
+            VERSION=${VERSION#v}
+            echo "version=$VERSION"
+          fi
 
-      - name: Generate Version
-        id: gitversion
-        run: |
-          version_info=$(dotnet gitversion /output json /showvariable InformationalVersion)
-          version_output=$(dotnet gitversion /output json /showvariable MajorMinorPatch)
-          echo "Calculated Version: $version_output" && echo "Informational Version: $version_info"
-          echo "version=$version_output" >> $GITHUB_OUTPUT
-        env:
-          DOTNET_ROOT: $HOME/.dotnet
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(rc[0-9]+)?$ ]]; then
+            echo "version=$VERSION"
+            echo "Error: No version found"
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Update Version [snowpark-checkpoints]
         run: |
@@ -58,7 +66,7 @@ jobs:
           sed -i "s/^__version__ = \".*\"/__version__ = \"${NEW_VERSION}\"/" ${FILE_VERSION}
           echo "Package Version updated:" && cat ${FILE_VERSION}
         env:
-          NEW_VERSION: ${{ steps.gitversion.outputs.version }}
+          NEW_VERSION: ${{ steps.get_version.outputs.version }}
           FILE_VERSION: __version__.py
         working-directory: ${{ github.workspace }}
 
@@ -68,7 +76,7 @@ jobs:
           sed -i "s/^__version__ = \".*\"/__version__ = \"${NEW_VERSION}\"/" ${FILE_VERSION}
           echo "Package Version updated:" && cat ${FILE_VERSION}
         env:
-          NEW_VERSION: ${{ steps.gitversion.outputs.version }}
+          NEW_VERSION: ${{ steps.get_version.outputs.version }}
           FILE_VERSION: ../snowpark-checkpoints-configuration/__version__.py
         working-directory: ./snowpark-checkpoints-configuration
 
@@ -77,7 +85,7 @@ jobs:
           sed -i "s/^__version__ = \".*\"/__version__ = \"${NEW_VERSION}\"/" ${FILE_VERSION}
           echo "Package Version updated:" && cat ${FILE_VERSION}
         env:
-          NEW_VERSION: ${{ steps.gitversion.outputs.version }}
+          NEW_VERSION: ${{ steps.get_version.outputs.version }}
           FILE_VERSION: ../snowpark-checkpoints-hypothesis/__version__.py
         working-directory: ./snowpark-checkpoints-hypothesis
 
@@ -86,7 +94,7 @@ jobs:
           sed -i "s/^__version__ = \".*\"/__version__ = \"${NEW_VERSION}\"/" ${FILE_VERSION}
           echo "Package Version updated:" && cat ${FILE_VERSION}
         env:
-          NEW_VERSION: ${{ steps.gitversion.outputs.version }}
+          NEW_VERSION: ${{ steps.get_version.outputs.version }}
           FILE_VERSION: ../snowpark-checkpoints-validators/__version__.py
         working-directory: ./snowpark-checkpoints-validators
 
@@ -95,7 +103,7 @@ jobs:
           sed -i "s/^__version__ = \".*\"/__version__ = \"${NEW_VERSION}\"/" ${FILE_VERSION}
           echo "Package Version updated:" && cat ${FILE_VERSION}
         env:
-          NEW_VERSION: ${{ steps.gitversion.outputs.version }}
+          NEW_VERSION: ${{ steps.get_version.outputs.version }}
           FILE_VERSION: ../snowpark-checkpoints-collectors/__version__.py
         working-directory: ./snowpark-checkpoints-collectors
 
@@ -137,7 +145,6 @@ jobs:
             ./dist/*
             ./**/dist/*
 
-
   publish:
     name: Publish Packages Internally
     runs-on: ubuntu-latest
@@ -153,7 +160,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "${{ env.PYTHON_VERSION }}"
 
       - name: Verify Artifacts
         run: |
@@ -162,12 +169,8 @@ jobs:
           python -m venv wheelvenv
           wheelvenv/bin/pip install --upgrade pip -q
           wheelvenv/bin/pip install dist/*.whl -q
-          wheelvenv/bin/pip list
+          wheelvenv/bin/pip list --verbose
           wheelvenv/bin/pip show $PACKAGE_NAME
         working-directory: ./dist
         env:
           PACKAGE_NAME: snowpark-checkpoints
-
-      - name: Install Dependencies
-        run: |
-          pip install build twine sigstore -q

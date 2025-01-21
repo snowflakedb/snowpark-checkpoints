@@ -1,4 +1,4 @@
-name: Run Security Scans [hypothesis.snowpark]
+name: Run Security Scans [snowpark-checkpoints-hypothesis]
 
 on:
   push:
@@ -13,6 +13,9 @@ on:
 
 permissions:
   contents: read
+
+env:
+  PYTHON_VERSION: "3.11"
 
 jobs:
   snyk:
@@ -31,7 +34,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "${{ env.PYTHON_VERSION }}"
 
       - name: Setup Python environment
         run: |

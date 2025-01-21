@@ -19,7 +19,7 @@ jobs:
       SNOWPARK_CHECKPOINTS_TELEMETRY_TESTING: "true"
       HADOOP_HOME: "${{ github.workspace }}\\hadoop"
       HADOOP_VERSION: "3.3.6"
-      JAVA_VERSION: "11"
+      JAVA_VERSION: "21"
 
     strategy:
       fail-fast: false
@@ -54,14 +54,14 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: "temurin"
-          java-version: "21"
+          java-version: ${{ env.JAVA_VERSION }}
           check-latest: true
       - run: java --version
 
       - name: Display Python version
         run: |
-            python -c "import sys; print(sys.version)"
-            python ../.github/scripts/py_show_env.py
+          python -c "import sys; print(sys.version)"
+          python ../.github/scripts/py_show_env.py
         shell: bash
         working-directory: ./snowpark-checkpoints-configuration
 
@@ -283,11 +283,11 @@ jobs:
 
       - name: Run tests
         run: |
-            echo "Current working directory: $PWD"
-            hatch config set dirs.env.virtual .hatch
-            hatch status && hatch env show
-            hatch run test:check
-            hatch run test:coverage
+          echo "Current working directory: $PWD"
+          hatch config set dirs.env.virtual .hatch
+          hatch status && hatch env show
+          hatch run test:check
+          hatch run test:coverage
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
           PYTEST_ADDOPTS: --color=yes --tb=short -v

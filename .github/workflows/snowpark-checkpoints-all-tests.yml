@@ -1,4 +1,4 @@
-name: Run All Tests
+name: Run All Unit Tests
 
 on:
   pull_request:
@@ -18,7 +18,7 @@ on:
 
 jobs:
   test:
-    name: Integration Tests ${{ matrix.download_name }}-${{ matrix.python-version }}-${{ matrix.cloud-provider }}
+    name: Unit Tests ${{ matrix.download_name }}-${{ matrix.python-version }}-${{ matrix.cloud-provider }}
     runs-on: ${{ matrix.os }}
     env:
       SNOWFLAKE_CONNECTIONS_MYCONNECTION_AUTHENTICATOR: SNOWFLAKE_JWT
@@ -32,7 +32,7 @@ jobs:
       SNOWPARK_CHECKPOINTS_TELEMETRY_TESTING: "true"
       HADOOP_HOME: "${{ github.workspace }}\\hadoop"
       HADOOP_VERSION: "3.3.6"
-      JAVA_VERSION: "11"
+      JAVA_VERSION: "21"
 
     strategy:
       fail-fast: false
@@ -69,7 +69,7 @@ jobs:
         uses: actions/setup-java@v4.5.0
         with:
           distribution: "temurin"
-          java-version: "21"
+          java-version: ${{ env.JAVA_VERSION }}
           check-latest: true
       - run: java --version
 

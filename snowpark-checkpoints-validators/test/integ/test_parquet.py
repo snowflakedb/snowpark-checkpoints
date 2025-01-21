@@ -317,9 +317,7 @@ def test_df_mode_dataframe_mismatch(
     )
 
 
-def test_df_mode_dataframe_job_none(
-    job_context, snowpark_schema, data, telemetry_output_path
-):
+def test_df_mode_dataframe_job_none(job_context, snowpark_schema, data):
     checkpoint_name = "test_mode_dataframe_checkpoint_fail"
     df_spark = job_context.snowpark_session.create_dataframe(data, snowpark_schema)
 
@@ -334,9 +332,7 @@ def test_df_mode_dataframe_job_none(
         )
 
 
-def test_df_mode_dataframe_invalid_mode(
-    job_context, snowpark_schema, data, telemetry_output_path
-):
+def test_df_mode_dataframe_invalid_mode(job_context, snowpark_schema, data):
     checkpoint_name = "test_mode_dataframe_checkpoint_fail"
     df_spark = job_context.snowpark_session.create_dataframe(data, snowpark_schema)
 

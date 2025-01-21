@@ -8,7 +8,7 @@ import os
 import shutil
 
 from datetime import date, datetime
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 from zoneinfo import ZoneInfo
 
 import hypothesis.strategies as st
@@ -21,7 +21,7 @@ from hypothesis import HealthCheck, given, settings
 
 from snowflake.hypothesis_snowpark import dataframe_strategy
 from snowflake.hypothesis_snowpark.telemetry.telemetry import get_telemetry_manager
-from snowflake.snowpark import DataFrame, Session
+from snowflake.snowpark import DataFrame, Row, Session
 from snowflake.snowpark.functions import col, count, when
 from snowflake.snowpark.types import (
     ArrayType,
@@ -418,6 +418,89 @@ def test_dataframe_strategy_from_object_schema_generated_values(
     validate_telemetry_file_output(
         "test_dataframe_strategy_from_object_schema_generated_values_telemetry.json"
     )
+
+
+@given(data=st.data())
+@settings(deadline=None)
+def test_dataframe_strategy_from_object_schema_surrogate_characters(
+    data: st.DataObject, session: Session
+):
+    schema = pa.DataFrameSchema({"string_column": pa.Column(pa.String)})
+
+    with patch.object(
+        schema,
+        "strategy",
+        return_value=st.just(
+            pd.DataFrame(
+                {"string_column": ["a", "\uD800", "c", "\uDC00", "e", "\uDFFF"]}
+            )
+        ),
+    ):
+        strategy = dataframe_strategy(
+            schema=schema,
+            session=session,
+        )
+
+        df = data.draw(strategy)
+
+        assert df.collect() == [
+            Row(STRING_COLUMN="a"),
+            Row(STRING_COLUMN=" "),
+            Row(STRING_COLUMN="c"),
+            Row(STRING_COLUMN=" "),
+            Row(STRING_COLUMN="e"),
+            Row(STRING_COLUMN=" "),
+        ]
+
+
+@given(data=st.data())
+@settings(deadline=None)
+def test_dataframe_strategy_from_json_schema_surrogate_characters(
+    data: st.DataObject, session: Session
+):
+    with patch(
+        "snowflake.hypothesis_snowpark.strategies.load_json_schema",
+        return_value={
+            "pandera_schema": {
+                "columns": {
+                    "string_column": {
+                        "dtype": "object",
+                        "nullable": False,
+                    }
+                }
+            },
+            "custom_data": {
+                "columns": [
+                    {
+                        "name": "string_column",
+                        "type": "string",
+                    }
+                ]
+            },
+        },
+    ), patch(
+        "snowflake.hypothesis_snowpark.strategies.pa.DataFrameSchema.strategy",
+        return_value=st.just(
+            pd.DataFrame(
+                {"string_column": ["a", "\uD800", "c", "\uDC00", "e", "\uDFFF"]}
+            )
+        ),
+    ):
+        strategy = dataframe_strategy(
+            schema="schema.json",
+            session=session,
+        )
+
+        df = data.draw(strategy)
+
+        assert df.collect() == [
+            Row(STRING_COLUMN="a"),
+            Row(STRING_COLUMN=" "),
+            Row(STRING_COLUMN="c"),
+            Row(STRING_COLUMN=" "),
+            Row(STRING_COLUMN="e"),
+            Row(STRING_COLUMN=" "),
+        ]
 
 
 def get_expected(file_name: str) -> str:

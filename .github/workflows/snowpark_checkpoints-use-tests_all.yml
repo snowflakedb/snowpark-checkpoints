@@ -1,4 +1,4 @@
-name: Run tests [snowpark_checkpoints]
+name: Run tests [snowpark_checkpoints_validators]
 
 on:
   workflow_call:

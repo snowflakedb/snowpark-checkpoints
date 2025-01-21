@@ -644,21 +644,14 @@ def compare_data_event(telemetry_data: dict, param_data: dict) -> tuple[str, dic
         tuple: A tuple containing the event name and the updated telemetry data dictionary.
 
     """
+    telemetry_data[MODE_KEY] = CheckpointMode.DATAFRAME.value
+    telemetry_data[STATUS_KEY] = param_data.get(STATUS_KEY, None)
     try:
-        telemetry_data[MODE_KEY] = CheckpointMode.DATAFRAME.value
-        telemetry_data[STATUS_KEY] = param_data[STATUS_KEY]
         telemetry_data[SCHEMA_TYPES_KEY] = get_snowflake_schema_types(
             param_data.get("df")
         )
         return DATAFRAME_VALIDATOR_DF, telemetry_data
     except Exception:
-        telemetry_data[MODE_KEY] = CheckpointMode.DATAFRAME.value
-        if param_data[STATUS_KEY]:
-            telemetry_data[STATUS_KEY] = param_data[STATUS_KEY]
-        if param_data.get("df"):
-            telemetry_data[SCHEMA_TYPES_KEY] = get_snowflake_schema_types(
-                param_data.get("df")
-            )
         return DATAFRAME_VALIDATOR_ERROR, telemetry_data
 
 

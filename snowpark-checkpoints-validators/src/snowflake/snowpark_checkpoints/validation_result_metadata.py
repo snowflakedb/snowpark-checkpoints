@@ -6,6 +6,7 @@ import os
 
 from typing import Optional
 
+from snowflake.snowpark_checkpoints.singleton import Singleton
 from snowflake.snowpark_checkpoints.utils.constants import (
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
     VALIDATION_RESULTS_JSON_FILE_NAME,
@@ -16,7 +17,7 @@ from snowflake.snowpark_checkpoints.validation_results import (
 )
 
 
-class ValidationResultsMetadata:
+class ValidationResultsMetadata(metaclass=Singleton):
 
     """ValidationResultsMetadata is a class that manages the loading, storing, and updating of validation results.
 

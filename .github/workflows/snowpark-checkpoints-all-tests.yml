@@ -1,6 +1,13 @@
 name: Run All Unit Tests
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - "**"
+      - "!Demos/**"
+      - "!docs/**"
   pull_request:
     branches:
       - main
@@ -11,7 +18,7 @@ on:
 
 jobs:
   test:
-    name: Unit Tests ${{ matrix.download_name }}-${{ matrix.python-version }}-${{ matrix.cloud-provider }}
+    name: Unit Tests ${{ matrix.download_name }}-${{ matrix.python-version }}-snowcli-${{ matrix.snow_cli_version }}
     runs-on: ${{ matrix.os }}
     env:
       SNOWFLAKE_CONNECTIONS_MYCONNECTION_AUTHENTICATOR: SNOWFLAKE_JWT

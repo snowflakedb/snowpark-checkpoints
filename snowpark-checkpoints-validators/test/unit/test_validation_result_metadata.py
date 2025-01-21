@@ -1,7 +1,7 @@
 import os
 from unittest.mock import mock_open, patch
 from unittest.mock import mock_open, patch, MagicMock
-from snowflake.snowpark_checkpoints.utils.constant import (
+from snowflake.snowpark_checkpoints.utils.constants import (
     PASS_STATUS,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
     VALIDATION_RESULTS_JSON_FILE_NAME,

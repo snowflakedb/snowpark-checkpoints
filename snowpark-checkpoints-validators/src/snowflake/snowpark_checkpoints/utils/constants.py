@@ -79,9 +79,13 @@ ROWS_NOT_NULL_COUNT_KEY: Final[str] = "rows_not_null_count"
 TRUE_COUNT_KEY: Final[str] = "true_count"
 TYPE_KEY: Final[str] = "type"
 ROWS_COUNT_KEY: Final[str] = "rows_count"
+FORMAT_KEY: Final[str] = "format"
 
 DATAFRAME_CUSTOM_DATA_KEY: Final[str] = "custom_data"
 DATAFRAME_PANDERA_SCHEMA_KEY: Final[str] = "pandera_schema"
+
+# Default values
+DEFAULT_DATE_FORMAT: Final[str] = "%Y-%m-%d"
 
 # SQL Column names
 TABLE_NAME_COL: Final[str] = "TABLE_NAME"

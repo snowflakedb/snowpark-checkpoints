@@ -19,10 +19,9 @@ from snowflake.snowpark_checkpoints.checkpoint import (
     check_input_schema,
 )
 from snowflake.snowpark import Session
-from snowflake.snowpark.functions import lit
 
 from snowflake.snowpark_checkpoints.errors import SchemaValidationError
-from snowflake.snowpark_checkpoints.utils.constant import (
+from snowflake.snowpark_checkpoints.utils.constants import (
     CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME,
     FAIL_STATUS,
     PASS_STATUS,

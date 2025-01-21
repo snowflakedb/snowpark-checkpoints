@@ -630,6 +630,38 @@ def dataframe_strategy_event(
         return None, None
 
 
+def compare_data_event(telemetry_data: dict, param_data: dict) -> tuple[str, dict]:
+    """Handle telemetry event for comparing data.
+
+    This function processes telemetry data for a data comparison event. It updates the telemetry data
+    with the mode, status, and schema types of the Snowflake DataFrame being compared.
+
+    Args:
+        telemetry_data (dict): The telemetry data dictionary to be updated.
+        param_data (dict): The parameter data dictionary containing the DataFrame and status information.
+
+    Returns:
+        tuple: A tuple containing the event name and the updated telemetry data dictionary.
+
+    """
+    try:
+        telemetry_data[MODE_KEY] = CheckpointMode.DATAFRAME.value
+        telemetry_data[STATUS_KEY] = param_data[STATUS_KEY]
+        telemetry_data[SCHEMA_TYPES_KEY] = get_snowflake_schema_types(
+            param_data.get("df")
+        )
+        return DATAFRAME_VALIDATOR_DF, telemetry_data
+    except Exception:
+        telemetry_data[MODE_KEY] = CheckpointMode.DATAFRAME.value
+        if param_data[STATUS_KEY]:
+            telemetry_data[STATUS_KEY] = param_data[STATUS_KEY]
+        if param_data.get("df"):
+            telemetry_data[SCHEMA_TYPES_KEY] = get_snowflake_schema_types(
+                param_data.get("df")
+            )
+        return DATAFRAME_VALIDATOR_ERROR, telemetry_data
+
+
 def handle_result(
     func_name: str,
     result: Any,
@@ -671,6 +703,8 @@ def handle_result(
         telemetry_event, data = check_output_or_input_schema_event(
             telemetry_data, param_data
         )
+    if func_name == "_compare_data":
+        telemetry_event, data = compare_data_event(telemetry_data, param_data)
     elif func_name == "_collect_dataframe_checkpoint_mode_schema":
         telemetry_event, data = collect_dataframe_checkpoint_mode_schema(
             telemetry_data, param_data
@@ -730,12 +764,6 @@ def report_telemetry(
                     telemetry_m,
                     return_indexes,
                 )
-            except Exception:
-                # Report error in telemetry
-                telemetry_event = TELEMETRY_REPORT_ERROR
-                data = {
-                    FUNCTION_KEY: func_name,
-                }
             finally:
                 if func_exception is not None:
                     if telemetry_m is not None:
@@ -756,6 +784,7 @@ DATAFRAME_COLLECTION = "DataFrame_Collection"
 DATAFRAME_VALIDATOR_MIRROR = "DataFrame_Validator_Mirror"
 VALUE_VALIDATOR_MIRROR = "Value_Validator_Mirror"
 DATAFRAME_VALIDATOR_SCHEMA = "DataFrame_Validator_Schema"
+DATAFRAME_VALIDATOR_DF = "DataFrame_Validator_DF"
 HYPOTHESIS_INPUT_SCHEMA = "Hypothesis_Input_Schema"
 DATAFRAME_COLLECTION_ERROR = "DataFrame_Collection_Error"
 DATAFRAME_VALIDATOR_ERROR = "DataFrame_Validator_Error"

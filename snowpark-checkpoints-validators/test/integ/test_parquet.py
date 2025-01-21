@@ -23,6 +23,27 @@ from snowflake.snowpark_checkpoints.utils.constants import (
     FAIL_STATUS,
     PASS_STATUS,
 )
+import os
+from pathlib import Path
+import tempfile
+from snowflake.snowpark_checkpoints.utils.telemetry import (
+    get_telemetry_manager,
+)
+from telemetry_compare_utils import validate_telemetry_file_output
+
+telemetry_folder = "telemetry"
+
+
+@fixture(scope="function")
+def telemetry_output_path():
+    folder = os.urandom(8).hex()
+    directory = Path(tempfile.gettempdir()).resolve() / folder
+    os.makedirs(directory)
+    telemetry_dir = directory / telemetry_folder
+
+    telemetry_manager = get_telemetry_manager()
+    telemetry_manager.set_sc_output_path(telemetry_dir)
+    return str(telemetry_dir)
 
 
 @fixture
@@ -238,7 +259,7 @@ def data():
     ]
 
 
-def test_df_mode_dataframe(job_context, snowpark_schema, data):
+def test_df_mode_dataframe(job_context, snowpark_schema, data, telemetry_output_path):
     stage_name = "test_df_mode_dataframe"
     checkpoint_name = "test_mode_dataframe_checkpoint"
     df = job_context.snowpark_session.create_dataframe(data, snowpark_schema)
@@ -259,9 +280,14 @@ def test_df_mode_dataframe(job_context, snowpark_schema, data):
 
     mocked_update.assert_called_once_with(checkpoint_name, PASS_STATUS, None)
     mocked_session.assert_called_once_with(checkpoint_name, DATAFRAME_EXECUTION_MODE)
+    validate_telemetry_file_output(
+        "df_mode_dataframe_telemetry.json", telemetry_output_path
+    )
 
 
-def test_df_mode_dataframe_mismatch(job_context, snowpark_schema, data):
+def test_df_mode_dataframe_mismatch(
+    job_context, snowpark_schema, data, telemetry_output_path
+):
     checkpoint_name = "test_mode_dataframe_checkpoint_fail"
 
     data_copy = data.copy()
@@ -286,9 +312,14 @@ def test_df_mode_dataframe_mismatch(job_context, snowpark_schema, data):
             )
 
     mocked_update.assert_called_once_with(checkpoint_name, FAIL_STATUS, None)
+    validate_telemetry_file_output(
+        "df_mode_dataframe_mismatch_telemetry.json", telemetry_output_path
+    )
 
 
-def test_df_mode_dataframe_job_none(job_context, snowpark_schema, data):
+def test_df_mode_dataframe_job_none(
+    job_context, snowpark_schema, data, telemetry_output_path
+):
     checkpoint_name = "test_mode_dataframe_checkpoint_fail"
     df_spark = job_context.snowpark_session.create_dataframe(data, snowpark_schema)
 
@@ -303,7 +334,9 @@ def test_df_mode_dataframe_job_none(job_context, snowpark_schema, data):
         )
 
 
-def test_df_mode_dataframe_invalid_mode(job_context, snowpark_schema, data):
+def test_df_mode_dataframe_invalid_mode(
+    job_context, snowpark_schema, data, telemetry_output_path
+):
     checkpoint_name = "test_mode_dataframe_checkpoint_fail"
     df_spark = job_context.snowpark_session.create_dataframe(data, snowpark_schema)
 

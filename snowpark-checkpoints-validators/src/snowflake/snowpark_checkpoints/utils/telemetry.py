@@ -468,25 +468,25 @@ def check_dataframe_schema_event(
     """
     try:
         telemetry_data[STATUS_KEY] = param_data.get(STATUS_KEY)
-        pandera_schema = param_data.get("pandera_schema")
-        telemetry_data[SCHEMA_TYPES_KEY] = [
-            str(schema_type.dtype)
-            if schema_type.dtype is not None
-            else schema_type.dtype
-            for schema_type in pandera_schema.columns.values()
-        ]
+        pandera_schema = param_data.get(PANDER_SCHEMA_PARAM)
+        schema_types = []
+        for schema_type in pandera_schema.columns.values():
+            if schema_type.dtype is not None:
+                schema_types.append(str(schema_type.dtype))
+        if schema_types:
+            telemetry_data[SCHEMA_TYPES_KEY] = schema_types
         return DATAFRAME_VALIDATOR_SCHEMA, telemetry_data
     except Exception:
         if param_data.get(STATUS_KEY):
             telemetry_data[STATUS_KEY] = param_data.get(STATUS_KEY)
-        pandera_schema = param_data.get("pandera_schema")
+        pandera_schema = param_data.get(PANDER_SCHEMA_PARAM)
         if pandera_schema:
-            telemetry_data[SCHEMA_TYPES_KEY] = [
-                str(schema_type.dtype)
-                if schema_type.dtype is not None
-                else schema_type.dtype
-                for schema_type in pandera_schema.columns.values()
-            ]
+            schema_types = []
+            for schema_type in pandera_schema.columns.values():
+                if schema_type.dtype is not None:
+                    schema_types.append(str(schema_type.dtype))
+            if schema_types:
+                telemetry_data[SCHEMA_TYPES_KEY] = schema_types
         return DATAFRAME_VALIDATOR_ERROR, telemetry_data
 
 
@@ -504,13 +504,13 @@ def check_output_or_input_schema_event(
 
     """
     try:
-        pandera_schema = param_data.get("pandera_schema")
-        telemetry_data[SCHEMA_TYPES_KEY] = [
-            str(schema_type.dtype)
-            if schema_type.dtype is not None
-            else schema_type.dtype
-            for schema_type in pandera_schema.columns.values()
-        ]
+        pandera_schema = param_data.get(PANDER_SCHEMA_PARAM)
+        schema_types = []
+        for schema_type in pandera_schema.columns.values():
+            if schema_type.dtype is not None:
+                schema_types.append(str(schema_type.dtype))
+        if schema_types:
+            telemetry_data[SCHEMA_TYPES_KEY] = schema_types
         return DATAFRAME_VALIDATOR_SCHEMA, telemetry_data
     except Exception:
         return DATAFRAME_VALIDATOR_ERROR, telemetry_data
@@ -558,14 +558,14 @@ def assert_return_event(
     try:
         telemetry_data[STATUS_KEY] = param_data.get(STATUS_KEY)
         if _is_snowpark_dataframe(
-            param_data.get("snowpark_results")
-            and _is_spark_dataframe(param_data.get("spark_results"))
+            param_data.get(SNOWPARK_RESULTS)
+            and _is_spark_dataframe(param_data.get(SPARK_RESULTS))
         ):
             telemetry_data[SNOWFLAKE_SCHEMA_TYPES_KEY] = get_snowflake_schema_types(
-                param_data.get("snowpark_results")
+                param_data.get(SNOWPARK_RESULTS)
             )
             telemetry_data[SPARK_SCHEMA_TYPES_KEY] = _get_spark_schema_types(
-                param_data.get("spark_results")
+                param_data.get(SPARK_RESULTS)
             )
             return DATAFRAME_VALIDATOR_MIRROR, telemetry_data
         else:
@@ -573,13 +573,13 @@ def assert_return_event(
     except Exception:
         if param_data.get(STATUS_KEY) is not None:
             telemetry_data[STATUS_KEY] = param_data.get(STATUS_KEY)
-        if _is_snowpark_dataframe(param_data.get("snowpark_results")):
+        if _is_snowpark_dataframe(param_data.get(SNOWPARK_RESULTS)):
             telemetry_data[SNOWFLAKE_SCHEMA_TYPES_KEY] = get_snowflake_schema_types(
-                param_data.get("snowpark_results")
+                param_data.get(SNOWPARK_RESULTS)
             )
-        if _is_spark_dataframe(param_data.get("spark_results")):
+        if _is_spark_dataframe(param_data.get(SPARK_RESULTS)):
             telemetry_data[SPARK_SCHEMA_TYPES_KEY] = _get_spark_schema_types(
-                param_data.get("spark_results")
+                param_data.get(SPARK_RESULTS)
             )
         return DATAFRAME_VALIDATOR_ERROR, telemetry_data
 
@@ -609,12 +609,12 @@ def dataframe_strategy_event(
                     column["type"] for column in json_data
                 ]
             else:
-                telemetry_data[SCHEMA_TYPES_KEY] = [
-                    str(schema_type.dtype)
-                    if schema_type.dtype is not None
-                    else schema_type.dtype
-                    for schema_type in schema_param.columns.values()
-                ]
+                schema_types = []
+                for schema_type in schema_param.columns.values():
+                    if schema_type.dtype is not None:
+                        schema_types.append(str(schema_type.dtype))
+                if schema_types:
+                    telemetry_data[SCHEMA_TYPES_KEY] = schema_types
             telemetry_m.sc_hypothesis_input_events.append((test_function_name, 0))
             if None in telemetry_data[SCHEMA_TYPES_KEY]:
                 telemetry_m.sc_log_error(HYPOTHESIS_INPUT_SCHEMA_ERROR, telemetry_data)
@@ -636,9 +636,9 @@ def handle_result(
     func_name: str,
     result: Any,
     param_data: dict,
-    return_indexes: Optional[list[tuple[str, int]]],
     multiple_return: bool,
     telemetry_m: TelemetryManager,
+    return_indexes: Optional[list[tuple[str, int]]] = None,
 ) -> tuple[Optional[str], Optional[dict]]:
     """Handle the result of the function and collect telemetry data.
 
@@ -646,9 +646,9 @@ def handle_result(
         func_name (str): The name of the function.
         result: The result of the function.
         param_data (dict): The extracted parameters.
-        return_indexes (list[tuple[str, int]]): The list of return values to report.
         multiple_return (bool): Whether the function returns multiple values.
         telemetry_m (TelemetryManager): The telemetry manager.
+        return_indexes (list[tuple[str, int]]): The list of return values to report. Defaults to None.
 
     Returns:
         tuple: A tuple containing the event name (str) and telemetry data (dict).
@@ -728,9 +728,9 @@ def report_telemetry(
                     func_name,
                     result,
                     param_data,
-                    return_indexes,
                     multiple_return,
                     telemetry_m,
+                    return_indexes,
                 )
             except Exception:
                 # Report error in telemetry
@@ -773,6 +773,9 @@ SNOWFLAKE_SCHEMA_TYPES_KEY = "snowflake_schema_types"
 SPARK_SCHEMA_TYPES_KEY = "spark_schema_types"
 
 DATAFRAME_STRATEGY_SCHEMA_PARAM_NAME = "schema"
+PANDER_SCHEMA_PARAM = "pandera_schema"
+SNOWPARK_RESULTS = "snowpark_results"
+SPARK_RESULTS = "spark_results"
 
 
 class CheckpointMode(IntEnum):

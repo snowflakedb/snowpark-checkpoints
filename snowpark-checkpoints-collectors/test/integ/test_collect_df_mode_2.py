@@ -41,6 +41,22 @@ from snowflake.snowpark_checkpoints_collector.snow_connection_model import (
 from snowflake.snowpark_checkpoints_collector.summary_stats_collector import (
     generate_parquet_for_spark_df,
 )
+from snowflake.snowpark_checkpoints_collector.utils.telemetry import (
+    get_telemetry_manager,
+)
+from telemetry_compare_utils import validate_telemetry_file_output
+
+TEST_COLLECT_DF_MODE_2_EXPECTED_DIRECTORY_NAME = "test_collect_df_mode_2_expected"
+telemetry_folder = "telemetry"
+
+
+@pytest.fixture(scope="function")
+def telemetry_output():
+    temp_dir = Path(tempfile.gettempdir()).resolve()
+    telemetry_m = get_telemetry_manager()
+    telemetry_output_path = temp_dir / telemetry_folder
+    telemetry_m.set_sc_output_path(telemetry_output_path)
+    return telemetry_output_path
 
 
 @pytest.fixture(scope="function")
@@ -261,7 +277,13 @@ def data():
 
 
 def test_collect_checkpoint_mode_2_parquet_directory(
-    spark_session, data, spark_schema, snowpark_schema, singleton, test_id
+    spark_session,
+    data,
+    spark_schema,
+    snowpark_schema,
+    singleton,
+    test_id,
+    telemetry_output,
 ):
     checkpoint_name = f"test_collect_checkpoint_mode_2_{test_id}"
 
@@ -299,10 +321,19 @@ def test_collect_checkpoint_mode_2_parquet_directory(
         os.path.join(parquet_directory, f"*{DOT_PARQUET_EXTENSION}")
     )
     assert parquet_files_first != parquet_files_second
+    validate_telemetry(
+        "test_collect_checkpoint_mode_2_parquet_directory ", telemetry_output
+    )
 
 
 def test_collect_checkpoint_mode_2(
-    spark_session, data, spark_schema, snowpark_schema, singleton, test_id
+    spark_session,
+    data,
+    spark_schema,
+    snowpark_schema,
+    singleton,
+    test_id,
+    telemetry_output,
 ):
     checkpoint_name = f"test_collect_checkpoint_mode_2_{test_id}"
 
@@ -321,10 +352,11 @@ def test_collect_checkpoint_mode_2(
     )
 
     validate_dataframes(checkpoint_name, pyspark_df, snowpark_schema)
+    validate_telemetry("test_collect_checkpoint_mode_2", telemetry_output)
 
 
 def test_collect_empty_dataframe_with_schema(
-    spark_session, spark_schema, snowpark_schema
+    spark_session, spark_schema, snowpark_schema, telemetry_output
 ):
     checkpoint_name = "test_collect_empty_dataframe_with_schema"
 
@@ -338,17 +370,19 @@ def test_collect_empty_dataframe_with_schema(
     )
 
     validate_dataframes(checkpoint_name, pyspark_df, snowpark_schema)
+    validate_telemetry("test_collect_empty_dataframe_with_schema", telemetry_output)
 
 
-def test_collect_invalid_mode(spark_session, data, spark_schema):
+def test_collect_invalid_mode(spark_session, data, spark_schema, telemetry_output):
     pyspark_df = spark_session.createDataFrame(data=data, schema=spark_schema)
 
     with pytest.raises(Exception) as ex_info:
         collect_dataframe_checkpoint(pyspark_df, checkpoint_name="invalid_mode", mode=3)
     assert "Invalid mode value." == str(ex_info.value)
+    validate_telemetry("test_collect_invalid_mode", telemetry_output)
 
 
-def test_generate_parquet_for_spark_df(data, spark_schema, test_id):
+def test_generate_parquet_for_spark_df(data, spark_schema, test_id, telemetry_output):
     spark = SparkSession.builder.getOrCreate()
     spark_df = spark.createDataFrame(data, schema=spark_schema)
     parquet_directory = os.path.join(
@@ -360,9 +394,12 @@ def test_generate_parquet_for_spark_df(data, spark_schema, test_id):
     target_dir = os.path.join(parquet_directory, "**", f"*{DOT_PARQUET_EXTENSION}")
     files = glob.glob(target_dir, recursive=True)
     assert len(files) > 0
+    validate_telemetry("test_generate_parquet_for_spark_df", telemetry_output)
 
 
-def test_spark_df_mode_dataframe(spark_schema, snowpark_schema, data, test_id):
+def test_spark_df_mode_dataframe(
+    spark_schema, snowpark_schema, data, test_id, telemetry_output
+):
     spark = SparkSession.builder.getOrCreate()
     spark_df = spark.createDataFrame(data, schema=spark_schema)
     checkpoint_name = f"test_spark_df_mode_dataframe_{test_id}"
@@ -377,6 +414,7 @@ def test_spark_df_mode_dataframe(spark_schema, snowpark_schema, data, test_id):
     snow.create_snowflake_table_from_local_parquet(checkpoint_name, parquet_directory)
 
     validate_dataframes(checkpoint_name, spark_df, snowpark_schema)
+    validate_telemetry("test_spark_df_mode_dataframe", telemetry_output)
 
 
 def validate_dataframes(
@@ -393,4 +431,13 @@ def validate_dataframes(
     assert expected_schema == snowpark_df.schema
     assert_frame_equal(
         expected_df, actual_df, check_dtype=False, check_categorical=False
+    )
+
+
+def validate_telemetry(checkpoint_name: str, telemetry_output: Path) -> None:
+    telemetry_file_name = "{}.json".format(checkpoint_name + "_telemetry")
+    validate_telemetry_file_output(
+        telemetry_file_name=telemetry_file_name,
+        output_path=telemetry_output,
+        telemetry_expected_folder=TEST_COLLECT_DF_MODE_2_EXPECTED_DIRECTORY_NAME,
     )

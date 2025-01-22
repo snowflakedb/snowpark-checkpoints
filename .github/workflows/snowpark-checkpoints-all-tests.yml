@@ -280,7 +280,7 @@ jobs:
         run: |
           snow --info && snow --version
           snow connection test -c myconnection
-          snow sql -q " Select current_organization_name(); select current_account_name();" -c myconnection
+          snow sql -q " Select current_organization_name(); select current_account_name(); SELECT CURRENT_DATABASE(), CURRENT_SCHEMA();" -c myconnection
           snow connection set-default myconnection
           snow connection list
 

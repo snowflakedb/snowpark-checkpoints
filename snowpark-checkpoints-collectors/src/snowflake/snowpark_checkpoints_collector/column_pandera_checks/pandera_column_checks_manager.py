@@ -3,13 +3,19 @@
 #
 import pandas as pd
 
-from pandas import DataFrame as PandasDataFrame
 from pandera import Check, Column
+from pyspark.sql import DataFrame as SparkDataFrame
+from pyspark.sql.functions import col as spark_col
+from pyspark.sql.functions import length as spark_length
+from pyspark.sql.functions import max as spark_max
+from pyspark.sql.functions import min as spark_min
 
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     BETWEEN_CHECK_ERROR_MESSAGE_FORMAT,
     BOOLEAN_COLUMN_TYPE,
     BYTE_COLUMN_TYPE,
+    COLUMN_MAX_KEY,
+    COLUMN_MIN_KEY,
     DATE_COLUMN_TYPE,
     DAYTIMEINTERVAL_COLUMN_TYPE,
     DOUBLE_COLUMN_TYPE,
@@ -72,7 +78,7 @@ class PanderaColumnChecksManager:
         self,
         clm_name: str,
         clm_type: str,
-        pandas_df: PandasDataFrame,
+        pyspark_df: SparkDataFrame,
         pandera_column: Column,
     ) -> None:
         """Add checks to Pandera column based on the column type.
@@ -80,7 +86,7 @@ class PanderaColumnChecksManager:
         Args:
             clm_name (str): the name of the column.
             clm_type (str): the type of the column.
-            pandas_df (pandas.DataFrame): the DataFrame.
+            pyspark_df (pyspark.sql.DataFrame): the DataFrame.
             pandera_column (pandera.Column): the Pandera column.
 
         """
@@ -89,27 +95,32 @@ class PanderaColumnChecksManager:
 
         func_name = self._collectors[clm_type]
         func = getattr(self, func_name)
-        func(clm_name, pandas_df, pandera_column)
+        func(clm_name, pyspark_df, pandera_column)
 
     @column_register(BOOLEAN_COLUMN_TYPE)
     def _add_boolean_type_checks(
-        self, clm_name: str, pandas_df: PandasDataFrame, pandera_column: Column
+        self, clm_name: str, pyspark_df: SparkDataFrame, pandera_column: Column
     ) -> None:
         pandera_column.checks.extend([Check.isin([True, False])])
 
     @column_register(DATE_COLUMN_TYPE)
     def _add_date_type_checks(
-        self, clm_name: str, pandas_df: PandasDataFrame, pandera_column: Column
+        self, clm_name: str, pyspark_df: SparkDataFrame, pandera_column: Column
     ) -> None:
         pass
 
     @column_register(DAYTIMEINTERVAL_COLUMN_TYPE)
     def _add_daytimeinterval_type_checks(
-        self, clm_name: str, pandas_df: PandasDataFrame, pandera_column: Column
+        self, clm_name: str, pyspark_df: SparkDataFrame, pandera_column: Column
     ) -> None:
-        column_values = pandas_df[clm_name].dropna()
-        min_value = pd.to_timedelta(column_values.min())
-        max_value = pd.to_timedelta(column_values.max())
+        select_result = pyspark_df.select(
+            spark_min(spark_col(clm_name)).alias(COLUMN_MIN_KEY),
+            spark_max(spark_col(clm_name)).alias(COLUMN_MAX_KEY),
+        ).collect()[0]
+
+        min_value = pd.to_timedelta(select_result[COLUMN_MIN_KEY])
+        max_value = pd.to_timedelta(select_result[COLUMN_MAX_KEY])
+
         pandera_column.checks.append(
             Check.between(
                 min_value=min_value,
@@ -129,11 +140,16 @@ class PanderaColumnChecksManager:
         DOUBLE_COLUMN_TYPE,
     )
     def _add_numeric_type_checks(
-        self, clm_name: str, pandas_df: PandasDataFrame, pandera_column: Column
+        self, clm_name: str, pyspark_df: SparkDataFrame, pandera_column: Column
     ) -> None:
-        column_values = pandas_df[clm_name].dropna()
-        min_value = column_values.min().item()
-        max_value = column_values.max().item()
+        select_result = pyspark_df.select(
+            spark_min(spark_col(clm_name)).alias(COLUMN_MIN_KEY),
+            spark_max(spark_col(clm_name)).alias(COLUMN_MAX_KEY),
+        ).collect()[0]
+
+        min_value = select_result[COLUMN_MIN_KEY]
+        max_value = select_result[COLUMN_MAX_KEY]
+
         pandera_column.checks.append(
             Check.between(
                 min_value=min_value,
@@ -146,21 +162,30 @@ class PanderaColumnChecksManager:
 
     @column_register(STRING_COLUMN_TYPE)
     def _add_string_type_checks(
-        self, clm_name: str, pandas_df: PandasDataFrame, pandera_column: Column
+        self, clm_name: str, pyspark_df: SparkDataFrame, pandera_column: Column
     ) -> None:
-        column_values = pandas_df[clm_name].dropna()
-        colum_str_length = column_values.str.len()
-        min_length = colum_str_length.min().item()
-        max_length = colum_str_length.max().item()
+        select_result = pyspark_df.select(
+            spark_min(spark_length(spark_col(clm_name))).alias(COLUMN_MIN_KEY),
+            spark_max(spark_length(spark_col(clm_name))).alias(COLUMN_MAX_KEY),
+        ).collect()[0]
+
+        min_length = select_result[COLUMN_MIN_KEY]
+        max_length = select_result[COLUMN_MAX_KEY]
+
         pandera_column.checks.append(Check.str_length(min_length, max_length))
 
     @column_register(TIMESTAMP_COLUMN_TYPE)
     def _add_timestamp_type_checks(
-        self, clm_name: str, pandas_df: PandasDataFrame, pandera_column: Column
+        self, clm_name: str, pyspark_df: SparkDataFrame, pandera_column: Column
     ) -> None:
-        column_values = pandas_df[clm_name].dropna()
-        min_value = pd.Timestamp(column_values.min())
-        max_value = pd.Timestamp(column_values.max())
+        select_result = pyspark_df.select(
+            spark_min(spark_col(clm_name)).alias(COLUMN_MIN_KEY),
+            spark_max(spark_col(clm_name)).alias(COLUMN_MAX_KEY),
+        ).collect()[0]
+
+        min_value = pd.Timestamp(select_result[COLUMN_MIN_KEY])
+        max_value = pd.Timestamp(select_result[COLUMN_MAX_KEY])
+
         pandera_column.checks.append(
             Check.between(
                 min_value=min_value,
@@ -173,11 +198,16 @@ class PanderaColumnChecksManager:
 
     @column_register(TIMESTAMP_NTZ_COLUMN_TYPE)
     def _add_timestamp_ntz_type_checks(
-        self, clm_name: str, pandas_df: PandasDataFrame, pandera_column: Column
+        self, clm_name: str, pyspark_df: SparkDataFrame, pandera_column: Column
     ) -> None:
-        column_values = pandas_df[clm_name].dropna()
-        min_value = pd.Timestamp(column_values.min())
-        max_value = pd.Timestamp(column_values.max())
+        select_result = pyspark_df.select(
+            spark_min(spark_col(clm_name)).alias(COLUMN_MIN_KEY),
+            spark_max(spark_col(clm_name)).alias(COLUMN_MAX_KEY),
+        ).collect()[0]
+
+        min_value = pd.Timestamp(select_result[COLUMN_MIN_KEY])
+        max_value = pd.Timestamp(select_result[COLUMN_MAX_KEY])
+
         pandera_column.checks.append(
             Check.between(
                 min_value=min_value,

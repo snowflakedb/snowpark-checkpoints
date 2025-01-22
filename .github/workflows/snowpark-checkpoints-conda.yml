@@ -1,5 +1,4 @@
-name: Build and Test Conda Package
-
+name: Conda Package
 on:
   push:
     branches:
@@ -11,7 +10,6 @@ on:
 env:
   PYTHON_VERSION: "3.11"
   CONDA_ENV_NAME: "snow_3_11"
-  DOTNET_VERSION: "8.0.x"
 
 jobs:
   build:
@@ -24,33 +22,38 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "${{ env.DOTNET_VERSION }}"
+      - name: Fetch tags
+        run: git fetch --tags
 
-      - name: Install GitVersion
+      - name: Get version from tag
+        id: get_version
         run: |
-          dotnet tool install --global GitVersion.Tool
-          echo "export PATH=\$PATH:\$HOME/.dotnet/tools" >> $GITHUB_ENV
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+            VERSION=${VERSION#v}
+            echo "version=$VERSION"
+          else
+            echo "GIT REF is not a tag"
+            VERSION=$(git describe --tags $(git rev-list --tags --max-count=1))
+            VERSION=${VERSION#v}
+            echo "version=$VERSION"
+          fi
 
-      - name: Generate Version
-        id: gitversion
-        run: |
-          version_info=$(dotnet gitversion /output json /showvariable InformationalVersion)
-          version_output=$(dotnet gitversion /output json /showvariable MajorMinorPatch)
-          echo "Calculated Version: $version_output" && echo "Informational Version: $version_info"
-          echo "version=$version_output" >> $GITHUB_OUTPUT
-        env:
-          DOTNET_ROOT: $HOME/.dotnet
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(rc[0-9]+)?$ ]]; then
+            echo "version=$VERSION"
+            echo "Error: No version found"
+            exit 1
+          fi
 
-      - name: Update Conda files version
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update version file
         run: |
           echo "Current directory: $PWD" && ls -l
           echo "Updating conda meta files ${FILE_NAME} with version: ${NEW_VERSION}"
           find . -name "${FILE_NAME}" -exec sh -c 'sed -i "s/{% set version = \".*\" %}/{% set version = \"${NEW_VERSION}\" %}/" "$1"' _ {} \;
         env:
-          NEW_VERSION: ${{ steps.gitversion.outputs.version }}
+          NEW_VERSION: ${{ steps.get_version.outputs.version }}
           FILE_NAME: meta.yaml
         working-directory: ${{ github.workspace }}
 

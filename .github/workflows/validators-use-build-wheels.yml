@@ -1,6 +1,9 @@
-name: Build wheels [snowpark_checkpoints_configuration]
+name: Build wheels [snowpark_checkpoints_validators]
 
 on: workflow_call
+
+env:
+  PYTHON_VERSION: "3.11"
 
 jobs:
   wheels:
@@ -13,7 +16,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "${{ env.PYTHON_VERSION }}"
 
       - name: Install required tools
         run: |
@@ -26,12 +29,12 @@ jobs:
 
       - name: Generate wheel and sdist
         run: hatch build
-        working-directory: ./snowpark-checkpoints-configuration
+        working-directory: ./snowpark-checkpoints-validators
 
       - name: Show generated artifacts
         run: |
           echo "Current directory: $PWD" && ls -la dist
-        working-directory: ./snowpark-checkpoints-configuration
+        working-directory: ./snowpark-checkpoints-validators
 
       - name: Verify build artifacts
         run: |
@@ -40,6 +43,6 @@ jobs:
           wheelvenv/bin/pip install dist/*.whl -q
           wheelvenv/bin/pip list
           wheelvenv/bin/pip show $PACKAGE_NAME
-        working-directory: ./snowpark-checkpoints-configuration
+        working-directory: ./snowpark-checkpoints-validators
         env:
-          PACKAGE_NAME: snowpark-checkpoints-configuration
+          PACKAGE_NAME: snowpark-checkpoints-validators

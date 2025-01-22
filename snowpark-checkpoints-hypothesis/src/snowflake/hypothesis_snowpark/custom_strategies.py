@@ -12,7 +12,10 @@ import hypothesis.strategies as st
 import pandas as pd
 
 from snowflake.hypothesis_snowpark.constants import (
+    CUSTOM_DATA_FORMAT_KEY,
+    CUSTOM_DATA_MAX_KEY,
     CUSTOM_DATA_MAX_SIZE_KEY,
+    CUSTOM_DATA_MIN_KEY,
     CUSTOM_DATA_MIN_SIZE_KEY,
     CUSTOM_DATA_NAME_KEY,
     CUSTOM_DATA_TYPE_KEY,
@@ -282,6 +285,18 @@ def update_pandas_df_strategy(
             strategy_kwargs = {
                 "min_size": column.get(CUSTOM_DATA_MIN_SIZE_KEY, 0),
                 "max_size": column.get(CUSTOM_DATA_MAX_SIZE_KEY, None),
+            }
+        elif column_dtype == PYSPARK_DATE_TYPE:
+            date_format = column.get(CUSTOM_DATA_FORMAT_KEY)
+            min_value = dt.datetime.strptime(
+                column.get(CUSTOM_DATA_MIN_KEY, dt.date.min), date_format
+            )
+            max_value = dt.datetime.strptime(
+                column.get(CUSTOM_DATA_MAX_KEY, dt.date.max), date_format
+            )
+            strategy_kwargs = {
+                "min_value": min_value.date(),
+                "max_value": max_value.date(),
             }
 
         column_name = column.get(CUSTOM_DATA_NAME_KEY)

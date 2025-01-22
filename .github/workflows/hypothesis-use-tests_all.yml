@@ -1,4 +1,4 @@
-name: Run tests [snowpark_checkpoints_collector]
+name: Run tests [snowpark-checkpoints-hypothesis]
 
 on:
   workflow_call:
@@ -8,6 +8,7 @@ jobs:
     name: Test ${{ matrix.download_name }}-${{ matrix.python-version }}-${{ matrix.cloud-provider }}
     runs-on: ${{ matrix.os }}
     env:
+      TERM: unknown
       SNOWFLAKE_CONNECTIONS_MYCONNECTION_AUTHENTICATOR: SNOWFLAKE_JWT
       SNOWFLAKE_CONNECTIONS_MYCONNECTION_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
       SNOWFLAKE_CONNECTIONS_MYCONNECTION_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
@@ -17,9 +18,6 @@ jobs:
       SNOWFLAKE_CONNECTIONS_MYCONNECTION_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
       SNOWFLAKE_CONNECTIONS_MYCONNECTION_PRIVATE_KEY_RAW: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_RAW }}
       SNOWPARK_CHECKPOINTS_TELEMETRY_TESTING: "true"
-      HADOOP_HOME: "${{ github.workspace }}\\hadoop"
-      HADOOP_VERSION: "3.3.6"
-      JAVA_VERSION: "11"
 
     strategy:
       fail-fast: false
@@ -36,9 +34,9 @@ jobs:
             snow_cli_version: "3.2.2"
             download_name: linux
           - os: windows-latest
-            python-version: "3.9"
+            python-version: "3.10"
             cloud-provider: aws
-            snow_cli_version: "2.8.2"
+            snow_cli_version: "3.2.2"
             download_name: windows
 
     steps:
@@ -63,90 +61,7 @@ jobs:
             python -c "import sys; print(sys.version)"
             python ../.github/scripts/py_show_env.py
         shell: bash
-        working-directory: ./snowpark-checkpoints-collectors
-
-      - name: Enable long paths (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          Write-Output "Enabling long paths on Windows..."
-          Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name "LongPathsEnabled" -Value 1
-          Write-Output "Long paths have been enabled."
-
-      - name: Download Winutils (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $winutilsRepo = "https://github.com/cdarlint/winutils"
-          $hadoopDir = "hadoop-${{ env.HADOOP_VERSION }}/bin"
-          $tempDir = "$env:RUNNER_TEMP\hadoop_bin"
-
-          New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
-
-          try {
-            Invoke-WebRequest -Uri "$winutilsRepo/archive/master.zip" -OutFile "$tempDir\winutils.zip"
-            Expand-Archive -Path "$tempDir\winutils.zip" -DestinationPath $tempDir -Force
-
-            $sourceDir = Join-Path -Path $tempDir -ChildPath "winutils-master\$hadoopDir"
-            $destinationDir = "${{ env.HADOOP_HOME }}\bin"
-
-            New-Item -ItemType Directory -Force -Path $destinationDir | Out-Null
-            Get-ChildItem -Path $sourceDir | Move-Item -Destination $destinationDir -Force
-            $winutilsPath = Join-Path -Path $destinationDir -ChildPath "winutils.exe"
-
-            if (-Not (Test-Path $winutilsPath)) {
-              throw "winutils.exe not found in $destinationDir"
-            }
-
-            Write-Output "Winutils successfully installed at $winutilsPath"
-          }
-          catch {
-            Write-Error "Winutils download or installation failed: $_"
-            exit 1
-          }
-
-      - name: Configure Hadoop (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          Write-Output "Configuring Hadoop environment variables"
-          echo "HADOOP_HOME=${{ env.HADOOP_HOME }}" | Out-File -FilePath $env:GITHUB_ENV -Append
-          $hadoopBinPath = "${{ env.HADOOP_HOME }}\bin"
-          echo "PATH=$env:PATH;$hadoopBinPath" | Out-File -FilePath $env:GITHUB_ENV -Append
-          Write-Output "HADOOP_HOME set to: ${{ env.HADOOP_HOME }}"
-          Write-Output "Hadoop bin added to PATH"
-
-      - name: Verify Hadoop (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          try {
-            $hadoopVersion = & "${{ env.HADOOP_HOME }}\bin\hadoop" version
-            Write-Output "Hadoop version verified: $hadoopVersion"
-          }
-          catch {
-            Write-Error "Hadoop version check failed: $_"
-            exit 1
-          }
-
-          Write-Output "Hadoop Home Contents:"
-          Get-ChildItem -Path "${{ env.HADOOP_HOME }}" -Recurse | Select-Object FullName, Length | Format-Table -AutoSize
-
-      - name: Test Hadoop Configuration (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          try {
-            & "${{ env.HADOOP_HOME }}\bin\hdfs" dfs -mkdir -p /test
-
-            $testList = & "${{ env.HADOOP_HOME }}\bin\hdfs" dfs -ls /
-            Write-Output "HDFS Basic Test Passed"
-            Write-Output "Directory Listing: $testList"
-          }
-          catch {
-            Write-Error "Hadoop HDFS test failed: $_"
-            exit 1
-          }
+        working-directory: ./snowpark-checkpoints-hypothesis
 
       - name: Set up Snowflake CLI
         uses: Snowflake-Labs/snowflake-cli-action@main
@@ -256,30 +171,13 @@ jobs:
           python -m pip install ".[development]"
           pip install hatch pyyaml frictionless requests -q
           pip list
-        working-directory: ./snowpark-checkpoints-collectors
+        working-directory: ./snowpark-checkpoints-hypothesis
 
       - name: Display Host Info
         run: |
           python ../.github/scripts/py_show_host.py
         shell: bash
-        working-directory: ./snowpark-checkpoints-collectors
-
-      - name: Set PySpark (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $pythonPath = (Get-Command python).Source
-          Write-Host "Python Path: $pythonPath"
-          echo "PYSPARK_PYTHON=$pythonPath" >> $env:GITHUB_ENV
-          echo "PYSPARK_DRIVER_PYTHON=$pythonPath" >> $env:GITHUB_ENV
-
-      - name: Verify PySpark (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          python --version
-          Write-Host "PYSPARK_PYTHON: $env:PYSPARK_PYTHON"
-          Write-Host "PYSPARK_DRIVER_PYTHON: $env:PYSPARK_DRIVER_PYTHON"
+        working-directory: ./snowpark-checkpoints-hypothesis
 
       - name: Run tests
         run: |
@@ -292,4 +190,4 @@ jobs:
           PYTHON_VERSION: ${{ matrix.python-version }}
           PYTEST_ADDOPTS: --color=yes --tb=short -v
         shell: bash
-        working-directory: ./snowpark-checkpoints-collectors
+        working-directory: ./snowpark-checkpoints-hypothesis

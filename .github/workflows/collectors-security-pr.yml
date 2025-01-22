@@ -1,4 +1,4 @@
-name: Run Security Scans PR [snowpark_checkpoints]
+name: Run Security Scans PR [snowpark_checkpoints_collector]
 
 on:
   pull_request:
@@ -6,12 +6,15 @@ on:
       - "**"
     paths:
       - "**"
-      - "!snowpark-checkpoints-collectors/**"
+      - "!snowpark-checkpoints-validators/**"
       - "!snowpark-checkpoints-hypothesis/**"
       - "!Demos/**"
 
 permissions:
   contents: read
+
+env:
+  PYTHON_VERSION: "3.11"
 
 jobs:
   snyk:
@@ -30,7 +33,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "${{ env.PYTHON_VERSION }}"
 
       - name: Setup Python environment
         run: |
@@ -57,7 +60,7 @@ jobs:
           python -m pip install -r requirements.txt
           pip list
         env:
-          DIR_NAME: "snowpark-checkpoints-validators"
+          DIR_NAME: "snowpark-checkpoints-collectors"
 
       - name: Run Snyk test
         run: |

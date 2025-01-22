@@ -73,6 +73,9 @@ class DecimalColumnCollector(ColumnCollectorBase):
         value = self.values.dropna().collect()[0][0]
         value_str = str(value)
         value_split_by_token = value_str.split(decimal_token)
+        if len(value_split_by_token) == 1:
+            return 0
+
         decimal_part = value_split_by_token[decimal_part_index]
         decimal_digits_counted = len(decimal_part)
         return decimal_digits_counted

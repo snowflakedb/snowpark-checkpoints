@@ -651,27 +651,3 @@ def validate_serializable_schema_contract_output(schema_contract_output: str) ->
     dataframe_schema_json = json.dumps(schema_contract_pandera)
     dataframe_schema = DataFrameSchema.from_json(dataframe_schema_json)
     assert dataframe_schema is not None
-
-
-def test_xyz(spark_session, singleton, output_path):
-    sample_size = 1.0
-    checkpoint_name = "xyz"
-
-    data = [
-        ("A", b"robin"),
-        ("B", b"snowflake"),
-        ("C", b"batman"),
-    ]
-    columns = StructType(
-        [StructField("a", StringType(), True), StructField("q", BinaryType(), False)]
-    )
-
-    pyspark_df = spark_session.createDataFrame(data=data, schema=columns)
-    collect_dataframe_checkpoint(
-        pyspark_df,
-        checkpoint_name=checkpoint_name,
-        sample=sample_size,
-        output_path=output_path,
-    )
-
-    # validate_checkpoint_file_output(output_path, checkpoint_name)

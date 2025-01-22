@@ -109,6 +109,7 @@ DATAFRAME_PANDERA_SCHEMA_KEY = "pandera_schema"
 PANDERA_COLUMN_TYPE_KEY = "dtype"
 
 CONTAINS_NULL_KEY = "containsNull"
+ELEMENT_CONTAINS_NULL_KEY = "containsNull"
 ELEMENT_TYPE_KEY = "elementType"
 FIELD_METADATA_KEY = "metadata"
 FIELDS_KEY = "fields"

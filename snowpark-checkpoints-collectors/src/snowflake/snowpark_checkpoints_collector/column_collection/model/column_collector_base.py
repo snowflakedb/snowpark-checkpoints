@@ -4,7 +4,7 @@
 
 from abc import ABC, abstractmethod
 
-from pandas import Series
+from pyspark.sql import DataFrame as SparkDataFrame
 from pyspark.sql.types import StructField
 
 from snowflake.snowpark_checkpoints_collector.collection_common import (
@@ -25,19 +25,19 @@ class ColumnCollectorBase(ABC):
         name (str): the name of the column.
         type (str): the type of the column.
         struct_field (pyspark.sql.types.StructField): the struct field of the column type.
-        values (pandas.Series): the column values as Pandas.Series.
+        values (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
 
     """
 
     def __init__(
-        self, clm_name: str, struct_field: StructField, clm_values: Series
+        self, clm_name: str, struct_field: StructField, clm_values: SparkDataFrame
     ) -> None:
         """Init ColumnCollectorBase.
 
         Args:
             clm_name (str): the name of the column.
             struct_field (pyspark.sql.types.StructField): the struct field of the column type.
-            clm_values (pandas.Series): the column values as Pandas.Series.
+            clm_values (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
 
         """
         self.name = clm_name
@@ -56,8 +56,8 @@ class ColumnCollectorBase(ABC):
         pass
 
     def _get_common_data(self) -> dict[str, any]:
-        column_size = len(self.values)
-        rows_not_null_count = self.values.count().item()
+        column_size = self.values.count()
+        rows_not_null_count = self.values.dropna().count()
         rows_null_count = column_size - rows_not_null_count
 
         common_data_dict = {

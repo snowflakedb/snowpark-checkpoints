@@ -148,11 +148,11 @@ def test_collect_dataframe_all_column_types(spark_session, singleton, output_pat
             timestamp_data,
             timestamp_ntz_data,
             decimal_data,
-            ["A", "B", "C", "D", "E"],
+            [None, None, "C", "D", "E"],
             bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00]),
             {
-                "C1": "black",
-                "C2": "yellow",
+                "C1": None,
+                "C2": None,
                 "C3": "orange",
                 "C4": "blue",
                 "C5": "brown",
@@ -217,9 +217,9 @@ def test_collect_dataframe_all_column_types(spark_session, singleton, output_pat
             StructField("m", TimestampType(), False),
             StructField("n", TimestampNTZType(), False),
             StructField("o", DecimalType(15, 13), False),
-            StructField("p", ArrayType(StringType(), False), False),
+            StructField("p", ArrayType(StringType(), True), False),
             StructField("q", BinaryType(), False),
-            StructField("r", MapType(StringType(), StringType(), False), False),
+            StructField("r", MapType(StringType(), StringType(), True), False),
             StructField("s", NullType(), True),
             StructField("t", inner_schema, False),
         ]
@@ -497,7 +497,7 @@ def test_collect_dataframe_all_column_types_with_null_values(
             timestamp_data,
             timestamp_ntz_data,
             decimal_data,
-            ["A", "B", "C", "D", "E"],
+            [None, "B", "C", "D", "E"],
             bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00]),
             {
                 "C1": "black",
@@ -651,3 +651,27 @@ def validate_serializable_schema_contract_output(schema_contract_output: str) ->
     dataframe_schema_json = json.dumps(schema_contract_pandera)
     dataframe_schema = DataFrameSchema.from_json(dataframe_schema_json)
     assert dataframe_schema is not None
+
+
+def test_xyz(spark_session, singleton, output_path):
+    sample_size = 1.0
+    checkpoint_name = "xyz"
+
+    data = [
+        ("A", b"robin"),
+        ("B", b"snowflake"),
+        ("C", b"batman"),
+    ]
+    columns = StructType(
+        [StructField("a", StringType(), True), StructField("q", BinaryType(), False)]
+    )
+
+    pyspark_df = spark_session.createDataFrame(data=data, schema=columns)
+    collect_dataframe_checkpoint(
+        pyspark_df,
+        checkpoint_name=checkpoint_name,
+        sample=sample_size,
+        output_path=output_path,
+    )
+
+    # validate_checkpoint_file_output(output_path, checkpoint_name)

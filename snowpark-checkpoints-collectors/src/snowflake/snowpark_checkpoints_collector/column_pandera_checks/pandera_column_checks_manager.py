@@ -16,7 +16,6 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
     BYTE_COLUMN_TYPE,
     COLUMN_MAX_KEY,
     COLUMN_MIN_KEY,
-    DATE_COLUMN_TYPE,
     DAYTIMEINTERVAL_COLUMN_TYPE,
     DOUBLE_COLUMN_TYPE,
     FLOAT_COLUMN_TYPE,
@@ -102,12 +101,6 @@ class PanderaColumnChecksManager:
         self, clm_name: str, pyspark_df: SparkDataFrame, pandera_column: Column
     ) -> None:
         pandera_column.checks.extend([Check.isin([True, False])])
-
-    @column_register(DATE_COLUMN_TYPE)
-    def _add_date_type_checks(
-        self, clm_name: str, pyspark_df: SparkDataFrame, pandera_column: Column
-    ) -> None:
-        pass
 
     @column_register(DAYTIMEINTERVAL_COLUMN_TYPE)
     def _add_daytimeinterval_type_checks(

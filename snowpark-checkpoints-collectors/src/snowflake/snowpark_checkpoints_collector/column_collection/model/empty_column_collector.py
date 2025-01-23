@@ -2,7 +2,7 @@
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
 
-from pandas import Series
+from pyspark.sql import DataFrame as SparkDataFrame
 from pyspark.sql.types import StructField
 
 from snowflake.snowpark_checkpoints_collector.collection_common import (
@@ -11,6 +11,8 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
     COLUMN_KEY_TYPE_KEY,
     COLUMN_METADATA_KEY,
     COLUMN_VALUE_TYPE_KEY,
+    CONTAINS_NULL_KEY,
+    ELEMENT_TYPE_KEY,
     FIELD_METADATA_KEY,
     FIELDS_KEY,
     KEY_TYPE_KEY,
@@ -32,29 +34,29 @@ class EmptyColumnCollector(ColumnCollectorBase):
         name (str): the name of the column.
         type (str): the type of the column.
         struct_field (pyspark.sql.types.StructField): the struct field of the column type.
-        values (pandas.Series): the column values as Pandas.Series.
+        column_df (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
 
     """
 
     def __init__(
-        self, clm_name: str, struct_field: StructField, clm_values: Series
+        self, clm_name: str, struct_field: StructField, clm_df: SparkDataFrame
     ) -> None:
         """Init EmptyColumnCollector.
 
         Args:
             clm_name (str): the name of the column.
             struct_field (pyspark.sql.types.StructField): the struct field of the column type.
-            clm_values (pandas.Series): the column values as Pandas.Series.
+            clm_df (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
 
         """
-        super().__init__(clm_name, struct_field, clm_values)
+        super().__init__(clm_name, struct_field, clm_df)
 
     def get_custom_data(self) -> dict[str, any]:
         custom_data = {}
         data_type_dict = self.struct_field.dataType.jsonValue()
         if self.type == ARRAY_COLUMN_TYPE:
-            custom_data[COLUMN_VALUE_TYPE_KEY] = data_type_dict[VALUE_TYPE_KEY]
-            custom_data[COLUMN_ALLOW_NULL_KEY] = data_type_dict[VALUE_CONTAINS_NULL_KEY]
+            custom_data[COLUMN_VALUE_TYPE_KEY] = data_type_dict[ELEMENT_TYPE_KEY]
+            custom_data[COLUMN_ALLOW_NULL_KEY] = data_type_dict[CONTAINS_NULL_KEY]
 
         elif self.type == MAP_COLUMN_TYPE:
             custom_data[COLUMN_KEY_TYPE_KEY] = data_type_dict[KEY_TYPE_KEY]

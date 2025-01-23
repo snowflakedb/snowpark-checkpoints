@@ -3,7 +3,12 @@
 #
 from statistics import mean
 
-from pandas import Series
+from pyspark.sql import DataFrame as SparkDataFrame
+from pyspark.sql.functions import array as spark_array
+from pyspark.sql.functions import coalesce as spark_coalesce
+from pyspark.sql.functions import col as spark_col
+from pyspark.sql.functions import explode as spark_explode
+from pyspark.sql.functions import size as spark_size
 from pyspark.sql.types import StructField
 
 from snowflake.snowpark_checkpoints_collector.collection_common import (
@@ -13,6 +18,8 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
     COLUMN_MEAN_SIZE_KEY,
     COLUMN_MIN_SIZE_KEY,
     COLUMN_NULL_VALUE_PROPORTION_KEY,
+    COLUMN_SIZE_KEY,
+    COLUMN_VALUE_KEY,
     COLUMN_VALUE_TYPE_KEY,
     CONTAINS_NULL_KEY,
     ELEMENT_TYPE_KEY,
@@ -30,22 +37,22 @@ class ArrayColumnCollector(ColumnCollectorBase):
         name (str): the name of the column.
         type (str): the type of the column.
         struct_field (pyspark.sql.types.StructField): the struct field of the column type.
-        values (pandas.Series): the column values as Pandas.Series.
+        column_df (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
 
     """
 
     def __init__(
-        self, clm_name: str, struct_field: StructField, clm_values: Series
+        self, clm_name: str, struct_field: StructField, clm_df: SparkDataFrame
     ) -> None:
         """Init ArrayColumnCollector.
 
         Args:
             clm_name (str): the name of the column.
             struct_field (pyspark.sql.types.StructField): the struct field of the column type.
-            clm_values (pandas.Series): the column values as Pandas.Series.
+            clm_df (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
 
         """
-        super().__init__(clm_name, struct_field, clm_values)
+        super().__init__(clm_name, struct_field, clm_df)
         self._array_size_collection = self._compute_array_size_collection()
 
     def get_custom_data(self) -> dict[str, any]:
@@ -73,23 +80,22 @@ class ArrayColumnCollector(ColumnCollectorBase):
         return custom_data_dict
 
     def _compute_array_size_collection(self) -> list[int]:
-        size_collection = []
-        for array in self.values:
-            if array is None:
-                continue
+        select_result = self.column_df.select(
+            spark_size(spark_coalesce(spark_col(self.name), spark_array([]))).alias(
+                COLUMN_SIZE_KEY
+            )
+        ).collect()
 
-            length = len(array)
-            size_collection.append(length)
+        size_collection = [row[COLUMN_SIZE_KEY] for row in select_result]
 
         return size_collection
 
     def _compute_null_value_proportion(self) -> float:
-        null_counter = 0
-        for array in self.values:
-            if array is None:
-                continue
+        select_result = self.column_df.select(
+            spark_explode(spark_col(self.name)).alias(COLUMN_VALUE_KEY)
+        )
 
-            null_counter += array.count(None)
+        null_counter = select_result.where(spark_col(COLUMN_VALUE_KEY).isNull()).count()
 
         total_values = sum(self._array_size_collection)
         null_value_proportion = (null_counter / total_values) * 100

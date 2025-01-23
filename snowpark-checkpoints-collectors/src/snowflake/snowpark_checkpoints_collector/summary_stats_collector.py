@@ -282,6 +282,7 @@ def _generate_json_checkpoint_file(
         f.write(dataframe_schema_contract)
 
 
+@report_telemetry(params_list=["df"])
 def _collect_dataframe_checkpoint_mode_dataframe(
     checkpoint_name: str,
     df: SparkDataFrame,

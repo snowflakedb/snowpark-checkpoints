@@ -12,7 +12,7 @@ from snowflake.snowpark_checkpoints_collector.utils.telemetry import (
     get_telemetry_manager,
 )
 
-telemetry_folder = "telemetry"
+TELEMETRY_FOLDER = "telemetry"
 
 
 @pytest.fixture

@@ -468,7 +468,7 @@ def check_dataframe_schema_event(
     """
     try:
         telemetry_data[STATUS_KEY] = param_data.get(STATUS_KEY)
-        pandera_schema = param_data.get(PANDER_SCHEMA_PARAM)
+        pandera_schema = param_data.get(PANDERA_SCHEMA_PARAM_NAME)
         schema_types = []
         for schema_type in pandera_schema.columns.values():
             if schema_type.dtype is not None:
@@ -479,7 +479,7 @@ def check_dataframe_schema_event(
     except Exception:
         if param_data.get(STATUS_KEY):
             telemetry_data[STATUS_KEY] = param_data.get(STATUS_KEY)
-        pandera_schema = param_data.get(PANDER_SCHEMA_PARAM)
+        pandera_schema = param_data.get(PANDERA_SCHEMA_PARAM_NAME)
         if pandera_schema:
             schema_types = []
             for schema_type in pandera_schema.columns.values():
@@ -504,7 +504,7 @@ def check_output_or_input_schema_event(
 
     """
     try:
-        pandera_schema = param_data.get(PANDER_SCHEMA_PARAM)
+        pandera_schema = param_data.get(PANDERA_SCHEMA_PARAM_NAME)
         schema_types = []
         for schema_type in pandera_schema.columns.values():
             if schema_type.dtype is not None:
@@ -516,7 +516,7 @@ def check_output_or_input_schema_event(
         return DATAFRAME_VALIDATOR_ERROR, telemetry_data
 
 
-def collect_dataframe_checkpoint_mode_schema(
+def collect_dataframe_checkpoint_mode_schema_event(
     telemetry_data: dict, param_data: dict
 ) -> tuple[str, dict]:
     """Handle telemetry event for collecting dataframe checkpoint mode schema.
@@ -536,9 +536,36 @@ def collect_dataframe_checkpoint_mode_schema(
             schema_types[schema_type].dataType.typeName()
             for schema_type in schema_types
         ]
-        return DATAFRAME_COLLECTION, telemetry_data
+        return DATAFRAME_COLLECTION_SCHEMA, telemetry_data
     except Exception:
         telemetry_data[MODE_KEY] = CheckpointMode.SCHEMA.value
+        return DATAFRAME_COLLECTION_ERROR, telemetry_data
+
+
+def collect_dataframe_checkpoint_mode_dataframe_event(
+    telemetry_data: dict, param_data: dict
+) -> tuple[str, dict]:
+    """Handle telemetry event for collecting dataframe checkpoint mode dataframe.
+
+    This function processes telemetry data for a dataframe checkpoint mode event. It updates the telemetry data
+    with the mode and schema types of the Spark DataFrame being collected.
+
+    Args:
+        telemetry_data (dict): The telemetry data dictionary to be updated.
+        param_data (dict): The parameter data dictionary containing the DataFrame information.
+
+    Returns:
+        tuple: A tuple containing the event name and the updated telemetry data dictionary.
+
+    """
+    telemetry_data[MODE_KEY] = CheckpointMode.DATAFRAME.value
+    try:
+        if _is_spark_dataframe(param_data.get(DF_PARAM_NAME)):
+            telemetry_data[SPARK_SCHEMA_TYPES_KEY] = _get_spark_schema_types(
+                param_data.get(DF_PARAM_NAME)
+            )
+            return DATAFRAME_COLLECTION_DF, telemetry_data
+    except Exception:
         return DATAFRAME_COLLECTION_ERROR, telemetry_data
 
 
@@ -553,31 +580,29 @@ def assert_return_event(telemetry_data: dict, param_data: dict) -> tuple[str, di
         tuple: A tuple containing the event name and telemetry data.
 
     """
+    if param_data.get(STATUS_KEY) is not None:
+        telemetry_data[STATUS_KEY] = param_data.get(STATUS_KEY, None)
     try:
-        telemetry_data[STATUS_KEY] = param_data.get(STATUS_KEY)
         if _is_snowpark_dataframe(
-            param_data.get(SNOWPARK_RESULTS)
-            and _is_spark_dataframe(param_data.get(SPARK_RESULTS))
-        ):
+            param_data.get(SNOWPARK_RESULTS_PARAM_NAME)
+        ) and _is_spark_dataframe(param_data.get(SPARK_RESULTS_PARAM_NAME)):
             telemetry_data[SNOWFLAKE_SCHEMA_TYPES_KEY] = get_snowflake_schema_types(
-                param_data.get(SNOWPARK_RESULTS)
+                param_data.get(SNOWPARK_RESULTS_PARAM_NAME)
             )
             telemetry_data[SPARK_SCHEMA_TYPES_KEY] = _get_spark_schema_types(
-                param_data.get(SPARK_RESULTS)
+                param_data.get(SPARK_RESULTS_PARAM_NAME)
             )
             return DATAFRAME_VALIDATOR_MIRROR, telemetry_data
         else:
             return VALUE_VALIDATOR_MIRROR, telemetry_data
     except Exception:
-        if param_data.get(STATUS_KEY) is not None:
-            telemetry_data[STATUS_KEY] = param_data.get(STATUS_KEY)
-        if _is_snowpark_dataframe(param_data.get(SNOWPARK_RESULTS)):
+        if _is_snowpark_dataframe(param_data.get(SNOWPARK_RESULTS_PARAM_NAME)):
             telemetry_data[SNOWFLAKE_SCHEMA_TYPES_KEY] = get_snowflake_schema_types(
-                param_data.get(SNOWPARK_RESULTS)
+                param_data.get(SNOWPARK_RESULTS_PARAM_NAME)
             )
-        if _is_spark_dataframe(param_data.get(SPARK_RESULTS)):
+        if _is_spark_dataframe(param_data.get(SPARK_RESULTS_PARAM_NAME)):
             telemetry_data[SPARK_SCHEMA_TYPES_KEY] = _get_spark_schema_types(
-                param_data.get(SPARK_RESULTS)
+                param_data.get(SPARK_RESULTS_PARAM_NAME)
             )
         return DATAFRAME_VALIDATOR_ERROR, telemetry_data
 
@@ -699,7 +724,11 @@ def handle_result(
     if func_name == "_compare_data":
         telemetry_event, data = compare_data_event(telemetry_data, param_data)
     elif func_name == "_collect_dataframe_checkpoint_mode_schema":
-        telemetry_event, data = collect_dataframe_checkpoint_mode_schema(
+        telemetry_event, data = collect_dataframe_checkpoint_mode_schema_event(
+            telemetry_data, param_data
+        )
+    elif func_name == "_collect_dataframe_checkpoint_mode_dataframe":
+        telemetry_event, data = collect_dataframe_checkpoint_mode_dataframe_event(
             telemetry_data, param_data
         )
     elif func_name == "_assert_return":
@@ -773,7 +802,8 @@ def report_telemetry(
 
 
 # Constants for telemetry
-DATAFRAME_COLLECTION = "DataFrame_Collection"
+DATAFRAME_COLLECTION_SCHEMA = "DataFrame_Collection_Schema"
+DATAFRAME_COLLECTION_DF = "DataFrame_Collection_DF"
 DATAFRAME_VALIDATOR_MIRROR = "DataFrame_Validator_Mirror"
 VALUE_VALIDATOR_MIRROR = "Value_Validator_Mirror"
 DATAFRAME_VALIDATOR_SCHEMA = "DataFrame_Validator_Schema"
@@ -792,9 +822,10 @@ SNOWFLAKE_SCHEMA_TYPES_KEY = "snowflake_schema_types"
 SPARK_SCHEMA_TYPES_KEY = "spark_schema_types"
 
 DATAFRAME_STRATEGY_SCHEMA_PARAM_NAME = "schema"
-PANDER_SCHEMA_PARAM = "pandera_schema"
-SNOWPARK_RESULTS = "snowpark_results"
-SPARK_RESULTS = "spark_results"
+PANDERA_SCHEMA_PARAM_NAME = "pandera_schema"
+SNOWPARK_RESULTS_PARAM_NAME = "snowpark_results"
+SPARK_RESULTS_PARAM_NAME = "spark_results"
+DF_PARAM_NAME = "df"
 
 
 class CheckpointMode(IntEnum):

@@ -40,22 +40,22 @@ class MapColumnCollector(ColumnCollectorBase):
         name (str): the name of the column.
         type (str): the type of the column.
         struct_field (pyspark.sql.types.StructField): the struct field of the column type.
-        values (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
+        column_df (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
 
     """
 
     def __init__(
-        self, clm_name: str, struct_field: StructField, clm_values: SparkDataFrame
+        self, clm_name: str, struct_field: StructField, clm_df: SparkDataFrame
     ) -> None:
         """Init MapColumnCollector.
 
         Args:
             clm_name (str): the name of the column.
             struct_field (pyspark.sql.types.StructField): the struct field of the column type.
-            clm_values (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
+            clm_df (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
 
         """
-        super().__init__(clm_name, struct_field, clm_values)
+        super().__init__(clm_name, struct_field, clm_df)
         self._map_size_collection = self._compute_map_size_collection()
 
     def get_custom_data(self) -> dict[str, any]:
@@ -85,7 +85,7 @@ class MapColumnCollector(ColumnCollectorBase):
         return custom_data_dict
 
     def _compute_map_size_collection(self) -> list[int]:
-        select_result = self.values.select(
+        select_result = self.column_df.select(
             spark_size(
                 spark_coalesce(spark_col(self.name), spark_create_map([]))
             ).alias(COLUMN_SIZE_KEY)
@@ -96,7 +96,7 @@ class MapColumnCollector(ColumnCollectorBase):
         return size_collection
 
     def _compute_null_value_proportion(self) -> float:
-        select_result = self.values.select(
+        select_result = self.column_df.select(
             spark_explode(spark_map_values(spark_col(self.name))).alias(
                 COLUMN_VALUE_KEY
             )

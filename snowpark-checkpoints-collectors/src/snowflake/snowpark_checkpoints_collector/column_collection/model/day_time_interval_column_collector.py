@@ -25,25 +25,25 @@ class DayTimeIntervalColumnCollector(ColumnCollectorBase):
         name (str): the name of the column.
         type (str): the type of the column.
         struct_field (pyspark.sql.types.StructField): the struct field of the column type.
-        values (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
+        column_df (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
 
     """
 
     def __init__(
-        self, clm_name: str, struct_field: StructField, clm_values: SparkDataFrame
+        self, clm_name: str, struct_field: StructField, clm_df: SparkDataFrame
     ) -> None:
         """Init DayTimeIntervalColumnCollector.
 
         Args:
             clm_name (str): the name of the column.
             struct_field (pyspark.sql.types.StructField): the struct field of the column type.
-            clm_values (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
+            clm_df (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
 
         """
-        super().__init__(clm_name, struct_field, clm_values)
+        super().__init__(clm_name, struct_field, clm_df)
 
     def get_custom_data(self) -> dict[str, any]:
-        select_result = self.values.select(
+        select_result = self.column_df.select(
             spark_min(spark_col(self.name)).alias(COLUMN_MIN_KEY),
             spark_max(spark_col(self.name)).alias(COLUMN_MAX_KEY),
         ).collect()[0]

@@ -25,25 +25,25 @@ class ColumnCollectorBase(ABC):
         name (str): the name of the column.
         type (str): the type of the column.
         struct_field (pyspark.sql.types.StructField): the struct field of the column type.
-        values (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
+        column_df (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
 
     """
 
     def __init__(
-        self, clm_name: str, struct_field: StructField, clm_values: SparkDataFrame
+        self, clm_name: str, struct_field: StructField, clm_df: SparkDataFrame
     ) -> None:
         """Init ColumnCollectorBase.
 
         Args:
             clm_name (str): the name of the column.
             struct_field (pyspark.sql.types.StructField): the struct field of the column type.
-            clm_values (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
+            clm_df (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
 
         """
         self.name = clm_name
         self.type = struct_field.dataType.typeName()
         self.struct_field = struct_field
-        self.values = clm_values
+        self.column_df = clm_df
 
     @abstractmethod
     def get_custom_data(self) -> dict[str, any]:
@@ -56,8 +56,8 @@ class ColumnCollectorBase(ABC):
         pass
 
     def _get_common_data(self) -> dict[str, any]:
-        column_size = self.values.count()
-        rows_not_null_count = self.values.dropna().count()
+        column_size = self.column_df.count()
+        rows_not_null_count = self.column_df.dropna().count()
         rows_null_count = column_size - rows_not_null_count
 
         common_data_dict = {

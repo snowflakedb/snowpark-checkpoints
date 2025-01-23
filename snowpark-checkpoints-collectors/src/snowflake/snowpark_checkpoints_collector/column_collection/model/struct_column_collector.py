@@ -26,22 +26,22 @@ class StructColumnCollector(ColumnCollectorBase):
         name (str): the name of the column.
         type (str): the type of the column.
         struct_field (pyspark.sql.types.StructField): the struct field of the column type.
-        values (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
+        column_df (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
 
     """
 
     def __init__(
-        self, clm_name: str, struct_field: StructField, clm_values: SparkDataFrame
+        self, clm_name: str, struct_field: StructField, clm_df: SparkDataFrame
     ) -> None:
         """Init StructColumnCollector.
 
         Args:
             clm_name (str): the name of the column.
             struct_field (pyspark.sql.types.StructField): the struct field of the column type.
-            clm_values (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
+            clm_df (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
 
         """
-        super().__init__(clm_name, struct_field, clm_values)
+        super().__init__(clm_name, struct_field, clm_df)
 
     def get_custom_data(self) -> dict[str, any]:
         metadata = self._compute_struct_metadata()
@@ -68,7 +68,7 @@ class StructColumnCollector(ColumnCollectorBase):
         rows_count = 0
         rows_not_null_count = 0
         rows_null_count = 0
-        row_collection = self.values.collect()
+        row_collection = self.column_df.collect()
         for row in row_collection:
             inner_row = row[0]
             rows_count += 1

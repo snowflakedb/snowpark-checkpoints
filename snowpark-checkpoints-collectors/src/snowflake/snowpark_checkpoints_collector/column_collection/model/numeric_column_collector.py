@@ -2,7 +2,12 @@
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
 
-from pandas import Series
+from pyspark.sql import DataFrame as SparkDataFrame
+from pyspark.sql.functions import col as spark_col
+from pyspark.sql.functions import max as spark_max
+from pyspark.sql.functions import mean as spark_mean
+from pyspark.sql.functions import min as spark_min
+from pyspark.sql.functions import stddev as spark_sdt
 from pyspark.sql.types import StructField
 
 from snowflake.snowpark_checkpoints_collector.collection_common import (
@@ -27,32 +32,38 @@ class NumericColumnCollector(ColumnCollectorBase):
         name (str): the name of the column.
         type (str): the type of the column.
         struct_field (pyspark.sql.types.StructField): the struct field of the column type.
-        values (pandas.Series): the column values as Pandas.Series.
+        column_df (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
         is_integer (boolean): a flag to indicate if values are integer or do not.
 
     """
 
     def __init__(
-        self, clm_name: str, struct_field: StructField, clm_values: Series
+        self, clm_name: str, struct_field: StructField, clm_df: SparkDataFrame
     ) -> None:
         """Init NumericColumnCollector.
 
         Args:
             clm_name (str): the name of the column.
             struct_field (pyspark.sql.types.StructField): the struct field of the column type.
-            clm_values (pandas.Series): the column values as Pandas.Series.
+            clm_df (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
 
         """
-        super().__init__(clm_name, struct_field, clm_values)
+        super().__init__(clm_name, struct_field, clm_df)
         self.is_integer = self.type in INTEGER_TYPE_COLLECTION
 
     def get_custom_data(self) -> dict[str, any]:
-        local_values = self.values.dropna()
-        min_value = local_values.min().item()
-        max_value = local_values.max().item()
-        mean_value = local_values.mean().item()
+        select_result = self.column_df.select(
+            spark_min(spark_col(self.name)).alias(COLUMN_MIN_KEY),
+            spark_max(spark_col(self.name)).alias(COLUMN_MAX_KEY),
+            spark_mean(spark_col(self.name)).alias(COLUMN_MEAN_KEY),
+            spark_sdt(spark_col(self.name)).alias(COLUMN_MARGIN_ERROR_KEY),
+        ).collect()[0]
+
+        min_value = select_result[COLUMN_MIN_KEY]
+        max_value = select_result[COLUMN_MAX_KEY]
+        mean_value = select_result[COLUMN_MEAN_KEY]
         decimal_precision = self._compute_decimal_precision()
-        margin_error = local_values.std().item()
+        margin_error = select_result[COLUMN_MARGIN_ERROR_KEY]
 
         custom_data_dict = {
             COLUMN_MIN_KEY: min_value,
@@ -72,7 +83,9 @@ class NumericColumnCollector(ColumnCollectorBase):
         decimal_token = get_decimal_token()
         max_decimal_digits_counted = 0
 
-        for value in self.values.dropna():
+        row_collection = self.column_df.dropna().collect()
+        for row in row_collection:
+            value = row[0]
             value_str = str(value)
             value_split_by_token = value_str.split(decimal_token)
             decimal_part = value_split_by_token[decimal_part_index]

@@ -8,6 +8,7 @@ import shutil
 
 from typing import Optional
 
+import pandas
 import pandera as pa
 
 from pyspark.sql import DataFrame as SparkDataFrame
@@ -23,7 +24,9 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
     DATAFRAME_PANDERA_SCHEMA_KEY,
     DECIMAL_COLUMN_TYPE,
     DOT_PARQUET_EXTENSION,
+    INTEGER_TYPE_COLLECTION,
     NULL_COLUMN_TYPE,
+    PANDAS_LONG_TYPE,
     PANDAS_OBJECT_TYPE_COLLECTION,
     CheckpointMode,
 )
@@ -160,10 +163,10 @@ def _collect_dataframe_checkpoint_mode_schema(
     column_type_dict: dict[str, any],
     output_path: Optional[str] = None,
 ) -> None:
-    source_df = df.sample(sample)
-    if source_df.isEmpty():
-        source_df = df
-    pandas_df = source_df.toPandas()
+    sampled_df = df.sample(sample)
+    if sampled_df.isEmpty():
+        sampled_df = df
+    pandas_df = _to_pandas(sampled_df)
     is_empty_df_with_object_column = _is_empty_dataframe_with_object_column(df)
     pandera_infer_schema = (
         pa.infer_schema(pandas_df) if not is_empty_df_with_object_column else {}
@@ -175,35 +178,36 @@ def _collect_dataframe_checkpoint_mode_schema(
     column_collector_manager = ColumnCollectorManager()
     column_pandera_checks_manager = PanderaColumnChecksManager()
 
-    for column in column_name_collection:
-        struct_field_column = column_type_dict[column]
+    for column_name in column_name_collection:
+        struct_field_column = column_type_dict[column_name]
         column_type = struct_field_column.dataType.typeName()
+        pyspark_column = df.select(col(column_name))
 
         is_empty_column = (
-            len(pandas_df[column].dropna()) == 0 and column_type is not NULL_COLUMN_TYPE
+            pyspark_column.dropna().isEmpty() and column_type is not NULL_COLUMN_TYPE
         )
         is_column_to_remove_from_pandera_schema = (
             _is_column_to_remove_from_pandera_schema(column_type)
         )
 
         if is_column_to_remove_from_pandera_schema:
-            columns_to_remove_from_pandera_schema_collection.append(column)
+            columns_to_remove_from_pandera_schema_collection.append(column_name)
 
         if is_empty_column:
             custom_data = column_collector_manager.collect_empty_custom_data(
-                column, struct_field_column, pandas_df[column]
+                column_name, struct_field_column, pyspark_column
             )
             column_custom_data_collection.append(custom_data)
             continue
 
-        pandera_column = pandera_infer_schema.columns[column]
+        pandera_column = pandera_infer_schema.columns[column_name]
         pandera_column.checks = []
         column_pandera_checks_manager.add_checks_column(
-            column, column_type, pandas_df, pandera_column
+            column_name, column_type, df, pandera_column
         )
 
         custom_data = column_collector_manager.collect_column(
-            column, struct_field_column, pandas_df[column]
+            column_name, struct_field_column, pyspark_column
         )
         column_custom_data_collection.append(custom_data)
 
@@ -338,3 +342,14 @@ def _create_snowflake_table_from_parquet(
     table_name: str, input_path: str, snow_connection: SnowConnection
 ) -> None:
     snow_connection.create_snowflake_table_from_local_parquet(table_name, input_path)
+
+
+def _to_pandas(sampled_df: SparkDataFrame) -> pandas.DataFrame:
+    pandas_df = sampled_df.toPandas()
+    for field in sampled_df.schema.fields:
+        has_nan = pandas_df[field.name].isna().any()
+        is_integer = field.dataType.typeName() in INTEGER_TYPE_COLLECTION
+        if has_nan and is_integer:
+            pandas_df[field.name] = pandas_df[field.name].astype(PANDAS_LONG_TYPE)
+
+    return pandas_df

@@ -3,7 +3,12 @@
 #
 from statistics import mean
 
-from pandas import Series
+from pyspark.sql import DataFrame as SparkDataFrame
+from pyspark.sql.functions import coalesce as spark_coalesce
+from pyspark.sql.functions import col as spark_col
+from pyspark.sql.functions import length as spark_length
+from pyspark.sql.functions import lit as spark_lit
+from pyspark.sql.functions import to_binary as spark_to_binary
 from pyspark.sql.types import StructField
 
 from snowflake.snowpark_checkpoints_collector.collection_common import (
@@ -11,6 +16,7 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
     COLUMN_MAX_SIZE_KEY,
     COLUMN_MEAN_SIZE_KEY,
     COLUMN_MIN_SIZE_KEY,
+    COLUMN_SIZE_KEY,
 )
 from snowflake.snowpark_checkpoints_collector.column_collection.model.column_collector_base import (
     ColumnCollectorBase,
@@ -25,22 +31,22 @@ class BinaryColumnCollector(ColumnCollectorBase):
         name (str): the name of the column.
         type (str): the type of the column.
         struct_field (pyspark.sql.types.StructField): the struct field of the column type.
-        values (pandas.Series): the column values as Pandas.Series.
+        column_df (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
 
     """
 
     def __init__(
-        self, clm_name: str, struct_field: StructField, clm_values: Series
+        self, clm_name: str, struct_field: StructField, clm_df: SparkDataFrame
     ) -> None:
         """Init BinaryColumnCollector.
 
         Args:
             clm_name (str): the name of the column.
             struct_field (pyspark.sql.types.StructField): the struct field of the column type.
-            clm_values (pandas.Series): the column values as Pandas.Series.
+            clm_df (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
 
         """
-        super().__init__(clm_name, struct_field, clm_values)
+        super().__init__(clm_name, struct_field, clm_df)
         self._binary_size_collection = self._compute_binary_size_collection()
 
     def get_custom_data(self) -> dict[str, any]:
@@ -59,12 +65,12 @@ class BinaryColumnCollector(ColumnCollectorBase):
         return custom_data_dict
 
     def _compute_binary_size_collection(self) -> list[int]:
-        size_collection = []
-        for binary in self.values:
-            if binary is None:
-                continue
+        select_result = self.column_df.select(
+            spark_length(
+                spark_coalesce(spark_col(self.name), spark_to_binary(spark_lit(b"")))
+            ).alias(COLUMN_SIZE_KEY)
+        ).collect()
 
-            length = len(binary)
-            size_collection.append(length)
+        size_collection = [row[COLUMN_SIZE_KEY] for row in select_result]
 
         return size_collection

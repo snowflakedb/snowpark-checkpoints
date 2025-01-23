@@ -1,9 +1,10 @@
 import os
 import json
 from deepdiff import DeepDiff
+from pathlib import Path
 
 
-def get_output_telemetry(telemetry_directory_path) -> str:
+def get_output_telemetry(telemetry_directory_path: Path) -> str:
     for file in os.listdir(telemetry_directory_path):
         if file.endswith(".json"):
             output_file_path = os.path.join(telemetry_directory_path, file)
@@ -13,7 +14,7 @@ def get_output_telemetry(telemetry_directory_path) -> str:
 
 
 def validate_telemetry_file_output(
-    telemetry_file_name: str, output_path, telemetry_expected_folder: str
+    telemetry_file_name: str, output_path: Path, telemetry_expected_folder: str
 ) -> None:
     telemetry_expected = get_expected(telemetry_file_name, telemetry_expected_folder)
     telemetry_output = get_output_telemetry(output_path)
@@ -35,7 +36,7 @@ def validate_telemetry_file_output(
     assert diff_telemetry == {}
 
 
-def get_expected(file_name: str, telemetry_expected_folder) -> str:
+def get_expected(file_name: str, telemetry_expected_folder: str) -> str:
     current_directory_path = os.path.dirname(__file__)
     expected_file_path = os.path.join(
         current_directory_path,

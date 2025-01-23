@@ -66,7 +66,7 @@ from snowflake.snowpark_checkpoints_collector.utils.telemetry import (
 from telemetry_compare_utils import validate_telemetry_file_output
 
 TEST_COLLECT_DF_MODE_1_EXPECTED_DIRECTORY_NAME = "test_collect_df_mode_1_expected"
-telemetry_folder = "telemetry"
+TELEMETRY_FOLDER = "telemetry"
 
 
 @pytest.fixture(scope="function")
@@ -74,7 +74,7 @@ def output_path():
     folder = os.urandom(8).hex()
     directory = Path(tempfile.gettempdir()).resolve() / folder
     os.makedirs(directory)
-    telemetry_dir = directory / telemetry_folder
+    telemetry_dir = directory / TELEMETRY_FOLDER
 
     telemetry_manager = get_telemetry_manager()
     telemetry_manager.set_sc_output_path(telemetry_dir)
@@ -613,7 +613,7 @@ def validate_telemetry(checkpoint_name: str, output_path: str) -> None:
     telemetry_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
         checkpoint_name + "_telemetry"
     )
-    telemetry_output_path = os.path.join(output_path, telemetry_folder)
+    telemetry_output_path = Path(output_path) / TELEMETRY_FOLDER
     validate_telemetry_file_output(
         telemetry_file_name=telemetry_file_name,
         output_path=telemetry_output_path,

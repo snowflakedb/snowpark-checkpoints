@@ -182,7 +182,7 @@ jobs:
           DATABASE: "${{ env.SNOWFLAKE_CONNECTIONS_MYCONNECTION_DATABASE }}"
           SNOWFLAKE_CONNECTIONS_MYCONNECTION_SCHEMA_ID: ${{ env.SNOWFLAKE_CONNECTIONS_MYCONNECTION_SCHEMA_ID }}
 
-      - name: Install required tools [collectors]
+      - name: Install required tools
         run: |
           python -m pip install ".[development]"
           pip install hatch pyyaml frictionless requests -q

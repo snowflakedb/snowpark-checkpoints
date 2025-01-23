@@ -18,7 +18,7 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
     COLUMN_MEAN_SIZE_KEY,
     COLUMN_MIN_SIZE_KEY,
     COLUMN_NULL_VALUE_PROPORTION_KEY,
-    COLUMN_SIZE_COLLECTION_KEY,
+    COLUMN_SIZE_KEY,
     COLUMN_VALUE_KEY,
     COLUMN_VALUE_TYPE_KEY,
     CONTAINS_NULL_KEY,
@@ -82,14 +82,11 @@ class ArrayColumnCollector(ColumnCollectorBase):
     def _compute_array_size_collection(self) -> list[int]:
         select_result = self.values.select(
             spark_size(spark_coalesce(spark_col(self.name), spark_array([]))).alias(
-                COLUMN_SIZE_COLLECTION_KEY
+                COLUMN_SIZE_KEY
             )
         ).collect()
 
-        size_collection = []
-        for row in select_result:
-            size = row[COLUMN_SIZE_COLLECTION_KEY]
-            size_collection.append(size)
+        size_collection = [row[COLUMN_SIZE_KEY] for row in select_result]
 
         return size_collection
 

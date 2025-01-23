@@ -5,7 +5,7 @@
 from pyspark.sql import DataFrame as SparkDataFrame
 from pyspark.sql.functions import col as spark_col
 from pyspark.sql.functions import max as spark_max
-from pyspark.sql.functions import min as spark_mean
+from pyspark.sql.functions import mean as spark_mean
 from pyspark.sql.functions import min as spark_min
 from pyspark.sql.functions import stddev as spark_sdt
 from pyspark.sql.types import StructField

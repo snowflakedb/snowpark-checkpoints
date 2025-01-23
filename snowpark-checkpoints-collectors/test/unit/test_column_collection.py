@@ -26,22 +26,6 @@ from pyspark.sql.types import (
     TimestampNTZType,
 )
 
-from snowflake.snowpark_checkpoints_collector.collection_common import (
-    INTEGER_COLUMN_TYPE,
-    BOOLEAN_COLUMN_TYPE,
-    DATE_COLUMN_TYPE,
-    DAYTIMEINTERVAL_COLUMN_TYPE,
-    DECIMAL_COLUMN_TYPE,
-    STRING_COLUMN_TYPE,
-    TIMESTAMP_COLUMN_TYPE,
-    TIMESTAMP_NTZ_COLUMN_TYPE,
-    ARRAY_COLUMN_TYPE,
-    BINARY_COLUMN_TYPE,
-    MAP_COLUMN_TYPE,
-    NULL_COLUMN_TYPE,
-    DOUBLE_COLUMN_TYPE,
-)
-
 from snowflake.snowpark_checkpoints_collector.column_collection.model import (
     BooleanColumnCollector,
     DateColumnCollector,
@@ -134,7 +118,7 @@ NULL_DATA_COLLECT_EXPECTED = (
 NUMERIC_DATA_COLLECT_EXPECTED = (
     '{"name": "clmTest", "type": "double", "nullable": true, "rows_count": 5, '
     '"rows_not_null_count": 4, "rows_null_count": 1, "min": 1.000001, "max": 13.14, '
-    '"mean": 1.000001, "decimal_precision": 6, "margin_error": 5.190521508426064}'
+    '"mean": 7.04085025, "decimal_precision": 6, "margin_error": 5.190521508426064}'
 )
 
 STRING_DATA_COLLECT_EXPECTED = (

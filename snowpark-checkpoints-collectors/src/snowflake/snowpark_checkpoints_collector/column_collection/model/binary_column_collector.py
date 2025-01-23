@@ -16,7 +16,7 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
     COLUMN_MAX_SIZE_KEY,
     COLUMN_MEAN_SIZE_KEY,
     COLUMN_MIN_SIZE_KEY,
-    COLUMN_SIZE_COLLECTION_KEY,
+    COLUMN_SIZE_KEY,
 )
 from snowflake.snowpark_checkpoints_collector.column_collection.model.column_collector_base import (
     ColumnCollectorBase,
@@ -68,12 +68,9 @@ class BinaryColumnCollector(ColumnCollectorBase):
         select_result = self.values.select(
             spark_length(
                 spark_coalesce(spark_col(self.name), spark_to_binary(spark_lit(b"")))
-            ).alias(COLUMN_SIZE_COLLECTION_KEY)
+            ).alias(COLUMN_SIZE_KEY)
         ).collect()
 
-        size_collection = []
-        for row in select_result:
-            size = row[COLUMN_SIZE_COLLECTION_KEY]
-            size_collection.append(size)
+        size_collection = [row[COLUMN_SIZE_KEY] for row in select_result]
 
         return size_collection

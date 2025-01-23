@@ -11,7 +11,7 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
     COLUMN_KEY_TYPE_KEY,
     COLUMN_METADATA_KEY,
     COLUMN_VALUE_TYPE_KEY,
-    ELEMENT_CONTAINS_NULL_KEY,
+    CONTAINS_NULL_KEY,
     ELEMENT_TYPE_KEY,
     FIELD_METADATA_KEY,
     FIELDS_KEY,
@@ -56,9 +56,7 @@ class EmptyColumnCollector(ColumnCollectorBase):
         data_type_dict = self.struct_field.dataType.jsonValue()
         if self.type == ARRAY_COLUMN_TYPE:
             custom_data[COLUMN_VALUE_TYPE_KEY] = data_type_dict[ELEMENT_TYPE_KEY]
-            custom_data[COLUMN_ALLOW_NULL_KEY] = data_type_dict[
-                ELEMENT_CONTAINS_NULL_KEY
-            ]
+            custom_data[COLUMN_ALLOW_NULL_KEY] = data_type_dict[CONTAINS_NULL_KEY]
 
         elif self.type == MAP_COLUMN_TYPE:
             custom_data[COLUMN_KEY_TYPE_KEY] = data_type_dict[KEY_TYPE_KEY]

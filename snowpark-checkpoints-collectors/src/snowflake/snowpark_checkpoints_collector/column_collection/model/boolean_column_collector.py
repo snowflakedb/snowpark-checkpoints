@@ -3,7 +3,6 @@
 #
 
 from pyspark.sql import DataFrame as SparkDataFrame
-from pyspark.sql.functions import lit as spark_lit
 from pyspark.sql.types import StructField
 
 from snowflake.snowpark_checkpoints_collector.collection_common import (
@@ -13,6 +12,11 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
 from snowflake.snowpark_checkpoints_collector.column_collection.model.column_collector_base import (
     ColumnCollectorBase,
 )
+
+
+TRUE_KEY = "True"
+FALSE_KEY = "False"
+NONE_KEY = "None"
 
 
 class BooleanColumnCollector(ColumnCollectorBase):
@@ -41,16 +45,16 @@ class BooleanColumnCollector(ColumnCollectorBase):
         super().__init__(clm_name, struct_field, clm_values)
 
     def get_custom_data(self) -> dict[str, any]:
-        true_count = self.values.where(
-            self.values[self.name] == spark_lit(True)
-        ).count()
-        false_count = self.values.where(
-            self.values[self.name] == spark_lit(False)
-        ).count()
+        count_dict = self._get_count_dict()
 
         custom_data_dict = {
-            COLUMN_TRUE_COUNT_KEY: true_count,
-            COLUMN_FALSE_COUNT_KEY: false_count,
+            COLUMN_TRUE_COUNT_KEY: count_dict.get(TRUE_KEY, 0),
+            COLUMN_FALSE_COUNT_KEY: count_dict.get(FALSE_KEY, 0),
         }
 
         return custom_data_dict
+
+    def _get_count_dict(self) -> dict[str, int]:
+        select_result = self.values.groupby(self.name).count().collect()
+        count_dict = {str(row[0]): row[1] for row in select_result}
+        return count_dict

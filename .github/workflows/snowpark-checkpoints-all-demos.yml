@@ -37,6 +37,11 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
+            python-version: "3.9"
+            cloud-provider: aws
+            snow_cli_version: "2.8.2"
+            download_name: linux
+          - os: ubuntu-latest
             python-version: "3.10"
             cloud-provider: aws
             snow_cli_version: "3.2.2"
@@ -65,6 +70,11 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           check-latest: true
       - run: java --version
+
+      - name: Install jq
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq
+          jq --version
 
       - name: Generate timestamp
         id: timestamp
@@ -191,7 +201,9 @@ jobs:
 
       - name: Run Demos [schema]
         if: always()
+        shell: bash
         run: |
+          set -e
           echo "Current directory: $(pwd)"
           DEMO_DIR="${{ github.workspace }}/Demos"
           PYSPARK_DIR="$DEMO_DIR/pyspark"
@@ -202,65 +214,134 @@ jobs:
                   echo "Directory $dir does not exist"
                   exit 1
               else
-                  echo "Current directory: $(pwd)"
-                  echo "Directory exists: $dir"
-                  find "$dir" -name "*.py" -exec ls {} \;
-                  echo "Running ./Demos/pyspark/*$pattern.py"
-                  python ./Demos/pyspark/*$pattern.py
-                  echo "Running ./Demos/snowpark/*$pattern.py"
-                  python ./Demos/snowpark/*$pattern.py
+                  echo "Current directory: $(pwd)" && ls -la $dir
               fi
           done
 
-          RESULTS=$(find . -name "*results.json" -exec ls {} \;)
-          echo "Result Files: $RESULTS"
-          FILE_COUNT=$(echo "$RESULTS" | wc -l)
-          if [ "$FILE_COUNT" -ne 2 ]; then
-              echo "Error creating results files"
-              exit 1
+          echo "Running ./Demos/pyspark/*schema.py"
+          python ./Demos/pyspark/*schema.py
+          echo "Running ./Demos/snowpark/*schema.py"
+          python ./Demos/snowpark/*schema.py
+
+          RESULTS=$(find "$DEMO_DIR" -name "*results.json" -print)
+          FILE_COUNT=$(echo "$RESULTS" | wc -w)
+          if [ "$FILE_COUNT" -eq 2 ]; then
+              echo "Result Files OK: $RESULTS"
           fi
-          COLLECT_RESULT_FILE=$(find . -name "checkpoint_collection_results.json")
-          VALIDATE_RESULT_FILE=$(find . -name "checkpoint_validation_results.json")
+
+          COLLECT_RESULT_FILE=$(find "$DEMO_DIR" -type f -name "checkpoint_collection_results.json")
+          VALIDATE_RESULT_FILE=$(find "$DEMO_DIR" -type f -name "checkpoint_validation_results.json")
           if [ -z "$COLLECT_RESULT_FILE" ] || [ -z "$VALIDATE_RESULT_FILE" ]; then
               echo "files checkpoint_results.json does not exist"
               exit 1
           fi
-
+          echo "checkpoint_collection_results.json: $COLLECT_RESULT_FILE"
           COLLECT_PASS_COUNT=$(jq '[.results[] | select(.result == "PASS")] | length' "$COLLECT_RESULT_FILE")
+          echo "checkpoint_validation_results.json: $VALIDATE_RESULT_FILE"
           VALIDATE_PASS_COUNT=$(jq '[.results[] | select(.result == "PASS")] | length' "$VALIDATE_RESULT_FILE")
 
-          echo "Number of PASS results: $COLLECT_PASS_COUNT"
           if [ "$COLLECT_PASS_COUNT" -eq 2 ]; then
-              echo "PASS: Demo Checkpoints for Collection $pattern"
+              echo "PASS: Demo for Collection schema"
           else
-              echo "Error: Demo Checkpoints for Collection $pattern"
-              exit 1
-          fi
-          echo "Number of PASS results: $VALIDATE_PASS_COUNT"
-          if [ "$VALIDATE_PASS_COUNT" -eq 3 ]; then
-              echo "PASS: Demo Checkpoints for Validation $pattern"
-          else
-              echo "Error: Demo Checkpoints for Validation $pattern"
+              echo "Number of PASS results: $COLLECT_PASS_COUNT"
+              echo "ERROR: Demo for Collection schema"
               exit 1
           fi
 
-        env:
-          pattern: schema
-        shell: bash
+          if [ "$VALIDATE_PASS_COUNT" -eq 3 ]; then
+              echo "PASS: Demo for Validation schema"
+          else
+              echo "Number of PASS results: $VALIDATE_PASS_COUNT"
+              echo "ERROR: Demo for Validation schema"
+              exit 1
+          fi
         working-directory: ${{ github.workspace }}
 
-      - name: Get Checkpoints Results
+      - name: Get Checkpoints Results [schema]
         if: always()
         run: |
           echo "Current directory: $(pwd)"
           find . -name "*results.json" -exec ls {} \;
-          find . -name "*results.json" -exec cat {} \;
+
+          for file in $(find . -name "*results.json"); do
+            cat "$file"
+          done
         working-directory: ${{ github.workspace }}/Demos
 
       - name: Clean up output
+        if: always()
         run: |
           echo "Current directory: $(pwd)" && ls -laR
           find . -name "*results.json" -exec rm -f {} \;
+        working-directory: ${{ github.workspace }}/Demos
+
+      - name: Run Demos [dataframe]
+        if: always()
+        shell: bash
+        run: |
+          set -e
+          echo "Current directory: $(pwd)"
+          DEMO_DIR="${{ github.workspace }}/Demos"
+          PYSPARK_DIR="$DEMO_DIR/pyspark"
+          SNOWPARK_DIR="$DEMO_DIR/snowpark"
+
+          for dir in "$PYSPARK_DIR" "$SNOWPARK_DIR"; do
+              if [ ! -d "$dir" ]; then
+                  echo "Directory $dir does not exist"
+                  exit 1
+              else
+                  echo "Current directory: $(pwd)" && ls -la $dir
+              fi
+          done
+
+          echo "Running ./Demos/pyspark/*dataframe.py"
+          python ./Demos/pyspark/*dataframe.py
+          echo "Running ./Demos/snowpark/*dataframe.py"
+          python ./Demos/snowpark/*dataframe.py
+
+          RESULTS=$(find "$DEMO_DIR" -name "*results.json" -print)
+          FILE_COUNT=$(echo "$RESULTS" | wc -w)
+          if [ "$FILE_COUNT" -eq 2 ]; then
+              echo "Result Files OK: $RESULTS"
+          fi
+
+          COLLECT_RESULT_FILE=$(find "$DEMO_DIR" -type f -name "checkpoint_collection_results.json")
+          VALIDATE_RESULT_FILE=$(find "$DEMO_DIR" -type f -name "checkpoint_validation_results.json")
+          if [ -z "$COLLECT_RESULT_FILE" ] || [ -z "$VALIDATE_RESULT_FILE" ]; then
+              echo "files checkpoint_results.json does not exist"
+              exit 1
+          fi
+          echo "checkpoint_collection_results.json: $COLLECT_RESULT_FILE"
+          COLLECT_PASS_COUNT=$(jq '[.results[] | select(.result == "PASS")] | length' "$COLLECT_RESULT_FILE")
+          echo "checkpoint_validation_results.json: $VALIDATE_RESULT_FILE"
+          VALIDATE_PASS_COUNT=$(jq '[.results[] | select(.result == "PASS")] | length' "$VALIDATE_RESULT_FILE")
+
+          if [ "$COLLECT_PASS_COUNT" -eq 2 ]; then
+              echo "PASS: Demo for Collection dataframe"
+          else
+              echo "Number of PASS results: $COLLECT_PASS_COUNT"
+              echo "ERROR: Demo for Collection dataframe"
+              exit 1
+          fi
+
+          if [ "$VALIDATE_PASS_COUNT" -eq 3 ]; then
+              echo "PASS: Demo for Validation dataframe"
+          else
+              echo "Number of PASS results: $VALIDATE_PASS_COUNT"
+              echo "ERROR: Demo for Validation dataframe"
+              exit 1
+          fi
+        working-directory: ${{ github.workspace }}
+
+      - name: Get Checkpoints Results [dataframe]
+        if: always()
+        run: |
+          echo "Current directory: $(pwd)"
+          find . -name "*results.json" -exec ls {} \;
+
+          for file in $(find . -name "*results.json"); do
+            cat "$file"
+          done
         working-directory: ${{ github.workspace }}/Demos
 
       - name: Snowflake Schema Cleanup

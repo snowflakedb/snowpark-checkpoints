@@ -1,16 +1,24 @@
+#
+# Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
+#
+
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, when
 from snowflake.snowpark_checkpoints_collector import collect_dataframe_checkpoint
 from snowflake.snowpark_checkpoints_collector.collection_common import CheckpointMode
 import pandas as pd
+from tests.src.utils.constants import E2E_INPUT_CSV_PATH
 
-def input_E2E_test_Pyspark(execution_mode, temp_path):
+CHECKPOINT_NAME = "test_E2E_initial_checkpoint"
+APP_NAME = "E2E_Test"
 
-    columns_names = ['INTEGER_TYPE', 'STRING_TYPE', 'SHORT_TYPE', 'LONG_TYPE', 'FLOAT_TYPE', 'DOUBLE_TYPE', 'BOOLEAN_TYPE', 'DATE_TYPE', 'TIMESTAMP_TYPE']
-    spark = SparkSession.builder.appName("E2E_Test").getOrCreate()
 
-    data = pd.read_csv("tests/src/utils/source_in/e2e_input/dataE2Etest_datatypes.csv",header=None, names=columns_names)
+def input_e2e_test_pyspark(execution_mode: CheckpointMode, temp_path: str) -> None:
+
+    spark = SparkSession.builder.appName(APP_NAME).getOrCreate()
+
+    data = pd.read_csv(E2E_INPUT_CSV_PATH)
     df = spark.createDataFrame(data)
-    checkpoint_mode = CheckpointMode.DATAFRAME if str(execution_mode).casefold() == "dataframe" else CheckpointMode.SCHEMA
 
-    collect_dataframe_checkpoint(df, "test_E2E_initial_checkpoint" ,mode=checkpoint_mode, output_path=temp_path)
+    collect_dataframe_checkpoint(
+        df, CHECKPOINT_NAME, mode=execution_mode, output_path=temp_path
+    )

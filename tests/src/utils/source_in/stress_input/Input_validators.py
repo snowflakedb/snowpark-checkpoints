@@ -1,3 +1,7 @@
+#
+# Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
+#
+
 import time
 import pandas as pd
 import psutil
@@ -6,27 +10,32 @@ from snowflake.snowpark_checkpoints.checkpoint import validate_dataframe_checkpo
 from snowflake.snowpark_checkpoints.utils.constants import CheckpointMode
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from snowflake.snowpark import Session
+from tests.src.utils.constants import STRESS_INPUT_CSV_PATH
+
+CHECKPOINT_NAME = "test_input_collectors_initial_checkpoint"
+JOB_NAME = "stress_tests"
 
 
-def Input_validators(execution_mode, temp_path):
+def input_validators(execution_mode: CheckpointMode, sample: float, temp_path: str) -> None:
 
     session = Session.builder.getOrCreate()
     job_context = SnowparkJobContext(
-        session, SparkSession.builder.getOrCreate(), "stress_tests", True
+        session, SparkSession.builder.getOrCreate(), JOB_NAME, True
     )
-    
-    df = pd.read_csv("tests/src/utils/source_in/stress_input/data_input_medium.csv")
-    dfSnowpark = session.create_dataframe(df)
-    checkpoint_mode = CheckpointMode.DATAFRAME if str(execution_mode).casefold() == "dataframe" else CheckpointMode.SCHEMA
+
+    df = pd.read_csv(STRESS_INPUT_CSV_PATH)
+    snowpark_df = session.create_dataframe(df)
     start_time = time.time()
-    validate_dataframe_checkpoint(dfSnowpark, "test_input_collectors_initial_checkpoint", job_context, mode=checkpoint_mode, output_path=temp_path)
-    
+    validate_dataframe_checkpoint(
+        snowpark_df,
+        CHECKPOINT_NAME,
+        job_context,
+        mode=execution_mode,
+        output_path=temp_path,
+    )
+
     process = psutil.Process()
     memory = process.memory_info().rss / 1024 / 1024
     final_time = time.time() - start_time
-    print("Memory: {} Time: {}".format(memory, final_time))
     session.close()
-    return [round(memory,2), round(final_time,2)]
-
-if __name__ == "__main__":
-    Input_validators()
+    return [round(memory, 2), round(final_time, 2)]

@@ -516,6 +516,7 @@ def check_dataframe_schema_event(
         tuple: A tuple containing the event name and telemetry data.
 
     """
+    telemetry_data[MODE_KEY] = CheckpointMode.SCHEMA.value
     try:
         telemetry_data[STATUS_KEY] = param_data.get(STATUS_KEY)
         pandera_schema = param_data.get(PANDERA_SCHEMA_PARAM_NAME)
@@ -579,8 +580,8 @@ def collect_dataframe_checkpoint_mode_schema_event(
         tuple: A tuple containing the event name and telemetry data.
 
     """
+    telemetry_data[MODE_KEY] = CheckpointMode.SCHEMA.value
     try:
-        telemetry_data[MODE_KEY] = CheckpointMode.SCHEMA.value
         schema_types = param_data.get("column_type_dict")
         telemetry_data[SCHEMA_TYPES_KEY] = [
             schema_types[schema_type].dataType.typeName()
@@ -588,7 +589,6 @@ def collect_dataframe_checkpoint_mode_schema_event(
         ]
         return DATAFRAME_COLLECTION_SCHEMA, telemetry_data
     except Exception:
-        telemetry_data[MODE_KEY] = CheckpointMode.SCHEMA.value
         return DATAFRAME_COLLECTION_ERROR, telemetry_data
 
 

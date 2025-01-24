@@ -38,6 +38,12 @@ def validate_telemetry_file_output(
     )
 
     assert diff_telemetry == {}
+    assert isinstance(
+        telemetry_output_obj.get("message")
+        .get("metadata")
+        .get("snowpark_checkpoints_version"),
+        str,
+    )
 
 
 def get_expected(file_name: str, telemetry_expected_folder: str) -> str:

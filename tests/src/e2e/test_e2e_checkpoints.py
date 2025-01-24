@@ -7,7 +7,8 @@ from pathlib import Path
 import tempfile
 import pytest
 from snowflake.snowpark_checkpoints.utils.constants import CheckpointMode
-from snowflake.snowpark_checkpoints_collector.singleton import Singleton
+from snowflake.snowpark_checkpoints_collector.singleton import Singleton as SingletonCollector
+from snowflake.snowpark_checkpoints.singleton import Singleton as SingletonValidator
 from tests.src.utils.constants import TESTS_FOLDER_NAME
 
 
@@ -32,7 +33,8 @@ execution_mode_name = {"1": "Schema", "2": "Dataframe"}
 
 @pytest.fixture(autouse=True)
 def singleton():
-    Singleton._instances = {}
+    SingletonCollector._instances = {}
+    SingletonValidator._instances = {}
 
 
 @pytest.fixture

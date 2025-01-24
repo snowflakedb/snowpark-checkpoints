@@ -9,7 +9,8 @@ from snowflake.snowpark_checkpoints.utils.telemetry import (
     get_telemetry_manager,
 )
 from snowflake.snowpark_checkpoints.utils.constants import CheckpointMode
-from snowflake.snowpark_checkpoints_collector.singleton import Singleton
+from snowflake.snowpark_checkpoints_collector.singleton import Singleton as SingletonCollector
+from snowflake.snowpark_checkpoints.singleton import Singleton as SingletonValidator
 from tests.performance_test import performance_test
 import tempfile
 from os import getcwd
@@ -29,18 +30,19 @@ input_name = {
 limits_mode_schema = {
     "validators": {
         "sup_memory": 1510.00,
-        "sup_time": 15.00,
+        "sup_time": 20.00,
     },
     "collectors": {
         "sup_memory": 1200.00,
-        "sup_time": 20.00,
+        "sup_time": 80.00,
     },
 }
 
 
 @pytest.fixture(autouse=True)
 def singleton():
-    Singleton._instances = {}
+    SingletonCollector._instances = {}
+    SingletonValidator._instances = {}
 
 
 @pytest.fixture

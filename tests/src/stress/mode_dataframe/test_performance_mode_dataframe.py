@@ -9,7 +9,8 @@ from pathlib import Path
 import pytest
 from snowflake.snowpark_checkpoints.utils.constants import CheckpointMode
 from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryManager, get_telemetry_manager
-from snowflake.snowpark_checkpoints_collector.singleton import Singleton
+from snowflake.snowpark_checkpoints_collector.singleton import Singleton as SingletonCollector
+from snowflake.snowpark_checkpoints.singleton import Singleton as SingletonValidator
 from tests.src.utils.constants import TESTS_FOLDER_NAME, PACKAGE_NAME_COLLECTORS, PACKAGE_NAME_VALIDATORS
 from tests.performance_test import performance_test
 
@@ -35,7 +36,8 @@ limits_mode_dataframe = {
 
 @pytest.fixture(autouse=True)
 def singleton():
-    Singleton._instances = {}
+    SingletonCollector._instances = {}
+    SingletonValidator._instances = {}
 
 @pytest.fixture
 def telemetry():

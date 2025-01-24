@@ -3,8 +3,8 @@
 #
 
 from datetime import datetime
-from tests.src.utils.source_in.stress_input.input_validators import input_validators
-from tests.src.utils.source_in.stress_input.input_collectors import input_collectors
+from src.utils.source_in.stress_input.input_validators import input_validators
+from src.utils.source_in.stress_input.input_collectors import input_collectors
 from snowflake.snowpark import Session
 from snowflake.snowpark.functions import col, lit
 from __version__ import __version__ as package_version

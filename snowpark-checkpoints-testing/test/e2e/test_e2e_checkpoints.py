@@ -9,13 +9,13 @@ import pytest
 from snowflake.snowpark_checkpoints.utils.constants import CheckpointMode
 from snowflake.snowpark_checkpoints_collector.singleton import Singleton as SingletonCollector
 from snowflake.snowpark_checkpoints.singleton import Singleton as SingletonValidator
-from tests.src.utils.constants import TESTS_FOLDER_NAME
+from src.utils.constants import TESTS_FOLDER_NAME
 
 
-from tests.src.utils.source_in.e2e_input.input_e2e_test_pyspark import (
+from src.utils.source_in.e2e_input.input_e2e_test_pyspark import (
     input_e2e_test_pyspark,
 )
-from tests.src.utils.source_in.e2e_input.input_e2e_test_snowpark import (
+from src.utils.source_in.e2e_input.input_e2e_test_snowpark import (
     input_e2e_test_snowpark,
 )
 from src.utils.validations import (

@@ -40,7 +40,7 @@ keywords = [
   'Snowpark',
 ]
 license = {file = "LICENSE"}
-name = "tests"
+name = "snowpark-checkpoints-testing"
 readme = "README.md"
 requires-python = '>=3.9,<3.12'
 dynamic = ['version']
@@ -62,22 +62,22 @@ development = [
 "Source code" = "https://github.com/snowflakedb/snowpark-checkpoints/"
 
 [tool.setuptools.packages.find]
-include = ["src"]
-where = ["src/"]
+include = ["snowpark-checkpoints-testing"]
+where = ["snowpark-checkpoints-testing/"]
 
 [tool.hatch.build]
-dev-mode-dirs = ['src']
-directory = 'tests'
+dev-mode-dirs = ['snowpark-checkpoints-testing']
+directory = 'snowpark-checkpoints-testing'
 
 [tool.hatch.build.targets.wheel]
 directory = "dist"
-packages = ["tests/src"]
+packages = ["snowpark-checkpoints-testing"]
 
 [tool.hatch.build.targets.sdist]
 directory = "dist"
 exclude = ["/.github", "/.idea"]
 include = [
-  'src/',
+  'snowpark-checkpoints-testing/',
   'pyproject.toml',
   'README.md',
 ]
@@ -87,14 +87,14 @@ features = ["development"]
 python = "3.10"
 
 [tool.hatch.envs.test_all]
-template = 'test'
+template = 'snowpark-checkpoints-testing'
 
 [tool.hatch.envs.test]
 python = '3.10'
 
 [tool.coverage.paths]
-src = ["src"]
-tests = ["test"]
+src = ["snowpark-checkpoints-testing"]
+tests = ["snowpark-checkpoints-testing"]
 
 [tool.coverage.report]
 exclude_lines = [
@@ -120,5 +120,5 @@ coverage = [
 
 [tool.pytest.ini_options]
 pythonpath = [
-  ".", "src",
+  ".", "snowpark-checkpoints-testing",
 ]

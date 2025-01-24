@@ -9,7 +9,7 @@ from snowflake.snowpark.functions import col, lit
 from snowflake.snowpark_checkpoints.utils.constants import (
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
 )
-from tests.src.utils.constants import (
+from src.utils.constants import (
     SNOWPARK_CHECKPOINTS_REPORT_TABLE_NAME,
     JOB_COLUMN_NAME,
     STATUS_COLUMN_NAME,

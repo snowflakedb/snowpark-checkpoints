@@ -10,7 +10,7 @@ from snowflake.snowpark_checkpoints.checkpoint import validate_dataframe_checkpo
 from snowflake.snowpark_checkpoints.utils.constants import CheckpointMode
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from snowflake.snowpark import Session
-from tests.src.utils.constants import STRESS_INPUT_CSV_PATH
+from src.utils.constants import STRESS_INPUT_CSV_PATH
 
 CHECKPOINT_NAME = "test_input_collectors_initial_checkpoint"
 JOB_NAME = "stress_tests"

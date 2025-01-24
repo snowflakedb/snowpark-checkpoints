@@ -6,7 +6,7 @@ from pyspark.sql import SparkSession
 from snowflake.snowpark_checkpoints_collector import collect_dataframe_checkpoint
 from snowflake.snowpark_checkpoints_collector.collection_common import CheckpointMode
 import pandas as pd
-from tests.src.utils.constants import E2E_INPUT_CSV_PATH
+from src.utils.constants import E2E_INPUT_CSV_PATH
 
 CHECKPOINT_NAME = "test_E2E_initial_checkpoint"
 APP_NAME = "E2E_Test"

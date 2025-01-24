@@ -3,7 +3,7 @@ import psutil
 from pyspark.sql import SparkSession
 from snowflake.snowpark_checkpoints_collector import collect_dataframe_checkpoint
 from snowflake.snowpark_checkpoints_collector.collection_common import CheckpointMode
-from tests.src.utils.constants import STRESS_INPUT_CSV_PATH
+from src.utils.constants import STRESS_INPUT_CSV_PATH
 
 APP_NAME = "stress_tests"
 CHECKPOINT_NAME = "test_input_collectors_initial_checkpoint"

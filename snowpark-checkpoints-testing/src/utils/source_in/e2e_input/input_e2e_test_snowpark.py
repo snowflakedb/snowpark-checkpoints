@@ -9,7 +9,7 @@ from snowflake.snowpark_checkpoints.utils.constants import CheckpointMode
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from snowflake.snowpark_checkpoints.checkpoint import validate_dataframe_checkpoint
 from snowflake.snowpark_checkpoints.spark_migration import check_with_spark
-from tests.src.utils.constants import E2E_INPUT_CSV_PATH, RESULT_COLUMN_NAME
+from src.utils.constants import E2E_INPUT_CSV_PATH, RESULT_COLUMN_NAME
 
 CHECKPOINT_NAME = "test_E2E_initial_checkpoint"
 JOB_NAME = "E2E_Test"

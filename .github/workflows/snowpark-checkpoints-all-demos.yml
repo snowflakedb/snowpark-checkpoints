@@ -1,4 +1,4 @@
-name: Run All Unit Tests
+name: Run Demos on Snowpark Checkpoints
 
 on:
   push:
@@ -6,19 +6,17 @@ on:
       - main
     paths:
       - "**"
-      - "!Demos/**"
       - "!docs/**"
   pull_request:
     branches:
       - main
     paths:
       - "**"
-      - "!Demos/**"
       - "!docs/**"
 
 jobs:
   test:
-    name: Unit Tests ${{ matrix.download_name }}-${{ matrix.python-version }}-snowcli-${{ matrix.snow_cli_version }}
+    name: Demo Test ${{ matrix.download_name }}-${{ matrix.python-version }}-snowcli-${{ matrix.snow_cli_version }}
     runs-on: ${{ matrix.os }}
     env:
       SNOWFLAKE_CONNECTIONS_MYCONNECTION_AUTHENTICATOR: SNOWFLAKE_JWT
@@ -72,6 +70,11 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           check-latest: true
       - run: java --version
+
+      - name: Install jq
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq
+          jq --version
 
       - name: Generate timestamp
         id: timestamp
@@ -170,7 +173,6 @@ jobs:
         env:
           SNOWFLAKE_CONNECTIONS_MYCONNECTION_SCHEMA_ID: ${{ env.SNOWFLAKE_CONNECTIONS_MYCONNECTION_SCHEMA_ID }}
 
-
       - name: Set up Default Snowflake CLI
         if: runner.os == 'Linux'
         shell: bash
@@ -190,78 +192,157 @@ jobs:
           DATABASE: "${{ env.SNOWFLAKE_CONNECTIONS_MYCONNECTION_DATABASE }}"
           SNOWFLAKE_CONNECTIONS_MYCONNECTION_SCHEMA_ID: ${{ env.SNOWFLAKE_CONNECTIONS_MYCONNECTION_SCHEMA_ID }}
 
-      - name: Install required tools [collectors]
+      - name: Install required tools
         run: |
           python -m pip install ".[development]"
           pip install hatch pyyaml frictionless requests -q
           pip list
-        working-directory: ./snowpark-checkpoints-collectors
+        working-directory: ${{ github.workspace }}
 
-      - name: Install required tools [configuration]
-        run: |
-          python -m pip install ".[development]"
-          pip install hatch pyyaml frictionless requests -q
-          pip list
-        working-directory: ./snowpark-checkpoints-configuration
-
-      - name: Install required tools [hypothesis]
-        run: |
-          python -m pip install ".[development]"
-          pip install hatch pyyaml frictionless requests -q
-          pip list
-        working-directory: ./snowpark-checkpoints-hypothesis
-
-      - name: Install required tools [validators]
-        run: |
-          python -m pip install ".[development]"
-          pip install hatch pyyaml frictionless requests -q
-          pip list
+      - name: Run Demos [schema]
+        if: always()
         shell: bash
-        working-directory: ./snowpark-checkpoints-validators
-
-      - name: Run tests [collectors]
         run: |
-          echo "Current directory: $(pwd)" && ls -la
-          hatch run test:check
-          hatch run test:coverage
-        env:
-          PYTHON_VERSION: ${{ matrix.python-version }}
-          PYTEST_ADDOPTS: --color=yes --tb=short -v
-        shell: bash
-        working-directory: ./snowpark-checkpoints-collectors
+          set -e
+          echo "Current directory: $(pwd)"
+          DEMO_DIR="${{ github.workspace }}/Demos"
+          PYSPARK_DIR="$DEMO_DIR/pyspark"
+          SNOWPARK_DIR="$DEMO_DIR/snowpark"
 
-      - name: Run tests [configuration]
-        run: |
-          echo "Current directory: $(pwd)" && ls -la
-          hatch run test:check
-          hatch run test:coverage
-        env:
-          PYTHON_VERSION: ${{ matrix.python-version }}
-          PYTEST_ADDOPTS: --color=yes --tb=short -v
-        shell: bash
-        working-directory: ./snowpark-checkpoints-configuration
+          for dir in "$PYSPARK_DIR" "$SNOWPARK_DIR"; do
+              if [ ! -d "$dir" ]; then
+                  echo "Directory $dir does not exist"
+                  exit 1
+              else
+                  echo "Current directory: $(pwd)" && ls -la $dir
+              fi
+          done
 
-      - name: Run tests [hypothesis]
-        run: |
-          echo "Current directory: $(pwd)" && ls -la
-          hatch run test:check
-          hatch run test:coverage
-        env:
-          PYTHON_VERSION: ${{ matrix.python-version }}
-          PYTEST_ADDOPTS: --color=yes --tb=short -v
-        shell: bash
-        working-directory: ./snowpark-checkpoints-hypothesis
+          echo "Running ./Demos/pyspark/*schema.py"
+          python ./Demos/pyspark/*schema.py
+          echo "Running ./Demos/snowpark/*schema.py"
+          python ./Demos/snowpark/*schema.py
 
-      - name: Run tests [validators]
+          RESULTS=$(find "$DEMO_DIR" -name "*results.json" -print)
+          FILE_COUNT=$(echo "$RESULTS" | wc -w)
+          if [ "$FILE_COUNT" -eq 2 ]; then
+              echo "Result Files OK: $RESULTS"
+          fi
+
+          COLLECT_RESULT_FILE=$(find "$DEMO_DIR" -type f -name "checkpoint_collection_results.json")
+          VALIDATE_RESULT_FILE=$(find "$DEMO_DIR" -type f -name "checkpoint_validation_results.json")
+          if [ -z "$COLLECT_RESULT_FILE" ] || [ -z "$VALIDATE_RESULT_FILE" ]; then
+              echo "files checkpoint_results.json does not exist"
+              exit 1
+          fi
+          echo "checkpoint_collection_results.json: $COLLECT_RESULT_FILE"
+          COLLECT_PASS_COUNT=$(jq '[.results[] | select(.result == "PASS")] | length' "$COLLECT_RESULT_FILE")
+          echo "checkpoint_validation_results.json: $VALIDATE_RESULT_FILE"
+          VALIDATE_PASS_COUNT=$(jq '[.results[] | select(.result == "PASS")] | length' "$VALIDATE_RESULT_FILE")
+
+          if [ "$COLLECT_PASS_COUNT" -eq 2 ]; then
+              echo "PASS: Demo for Collection schema"
+          else
+              echo "Number of PASS results: $COLLECT_PASS_COUNT"
+              echo "ERROR: Demo for Collection schema"
+              exit 1
+          fi
+
+          if [ "$VALIDATE_PASS_COUNT" -eq 3 ]; then
+              echo "PASS: Demo for Validation schema"
+          else
+              echo "Number of PASS results: $VALIDATE_PASS_COUNT"
+              echo "ERROR: Demo for Validation schema"
+              exit 1
+          fi
+        working-directory: ${{ github.workspace }}
+
+      - name: Get Checkpoints Results [schema]
+        if: always()
         run: |
-          echo "Current directory: $(pwd)" && ls -la
-          hatch run test:check
-          hatch run test:coverage
-        env:
-          PYTHON_VERSION: ${{ matrix.python-version }}
-          PYTEST_ADDOPTS: --color=yes --tb=short -v
+          echo "Current directory: $(pwd)"
+          find . -name "*results.json" -exec ls {} \;
+
+          for file in $(find . -name "*results.json"); do
+            cat "$file"
+          done
+        working-directory: ${{ github.workspace }}/Demos
+
+      - name: Clean up output
+        if: always()
+        run: |
+          echo "Current directory: $(pwd)" && ls -laR
+          find . -name "*results.json" -exec rm -f {} \;
+        working-directory: ${{ github.workspace }}/Demos
+
+      - name: Run Demos [dataframe]
+        if: always()
         shell: bash
-        working-directory: ./snowpark-checkpoints-validators
+        run: |
+          set -e
+          echo "Current directory: $(pwd)"
+          DEMO_DIR="${{ github.workspace }}/Demos"
+          PYSPARK_DIR="$DEMO_DIR/pyspark"
+          SNOWPARK_DIR="$DEMO_DIR/snowpark"
+
+          for dir in "$PYSPARK_DIR" "$SNOWPARK_DIR"; do
+              if [ ! -d "$dir" ]; then
+                  echo "Directory $dir does not exist"
+                  exit 1
+              else
+                  echo "Current directory: $(pwd)" && ls -la $dir
+              fi
+          done
+
+          echo "Running ./Demos/pyspark/*dataframe.py"
+          python ./Demos/pyspark/*dataframe.py
+          echo "Running ./Demos/snowpark/*dataframe.py"
+          python ./Demos/snowpark/*dataframe.py
+
+          RESULTS=$(find "$DEMO_DIR" -name "*results.json" -print)
+          FILE_COUNT=$(echo "$RESULTS" | wc -w)
+          if [ "$FILE_COUNT" -eq 2 ]; then
+              echo "Result Files OK: $RESULTS"
+          fi
+
+          COLLECT_RESULT_FILE=$(find "$DEMO_DIR" -type f -name "checkpoint_collection_results.json")
+          VALIDATE_RESULT_FILE=$(find "$DEMO_DIR" -type f -name "checkpoint_validation_results.json")
+          if [ -z "$COLLECT_RESULT_FILE" ] || [ -z "$VALIDATE_RESULT_FILE" ]; then
+              echo "files checkpoint_results.json does not exist"
+              exit 1
+          fi
+          echo "checkpoint_collection_results.json: $COLLECT_RESULT_FILE"
+          COLLECT_PASS_COUNT=$(jq '[.results[] | select(.result == "PASS")] | length' "$COLLECT_RESULT_FILE")
+          echo "checkpoint_validation_results.json: $VALIDATE_RESULT_FILE"
+          VALIDATE_PASS_COUNT=$(jq '[.results[] | select(.result == "PASS")] | length' "$VALIDATE_RESULT_FILE")
+
+          if [ "$COLLECT_PASS_COUNT" -eq 2 ]; then
+              echo "PASS: Demo for Collection dataframe"
+          else
+              echo "Number of PASS results: $COLLECT_PASS_COUNT"
+              echo "ERROR: Demo for Collection dataframe"
+              exit 1
+          fi
+
+          if [ "$VALIDATE_PASS_COUNT" -eq 3 ]; then
+              echo "PASS: Demo for Validation dataframe"
+          else
+              echo "Number of PASS results: $VALIDATE_PASS_COUNT"
+              echo "ERROR: Demo for Validation dataframe"
+              exit 1
+          fi
+        working-directory: ${{ github.workspace }}
+
+      - name: Get Checkpoints Results [dataframe]
+        if: always()
+        run: |
+          echo "Current directory: $(pwd)"
+          find . -name "*results.json" -exec ls {} \;
+
+          for file in $(find . -name "*results.json"); do
+            cat "$file"
+          done
+        working-directory: ${{ github.workspace }}/Demos
 
       - name: Snowflake Schema Cleanup
         if: always()

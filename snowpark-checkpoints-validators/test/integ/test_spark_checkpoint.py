@@ -20,7 +20,7 @@ from snowflake.snowpark_checkpoints.utils.telemetry import (
 )
 from telemetry_compare_utils import validate_telemetry_file_output
 
-telemetry_folder = "telemetry"
+TELEMETRY_FOLDER = "telemetry"
 
 
 @pytest.fixture(scope="function")
@@ -28,7 +28,7 @@ def telemetry_output_path():
     folder = os.urandom(8).hex()
     directory = Path(tempfile.gettempdir()).resolve() / folder
     os.makedirs(directory)
-    telemetry_dir = directory / telemetry_folder
+    telemetry_dir = directory / TELEMETRY_FOLDER
 
     telemetry_manager = get_telemetry_manager()
     telemetry_manager.set_sc_output_path(telemetry_dir)

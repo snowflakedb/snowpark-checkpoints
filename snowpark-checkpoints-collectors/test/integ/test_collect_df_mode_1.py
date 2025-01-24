@@ -63,9 +63,10 @@ import tempfile
 from snowflake.snowpark_checkpoints_collector.utils.telemetry import (
     get_telemetry_manager,
 )
+from telemetry_compare_utils import validate_telemetry_file_output
 
 TEST_COLLECT_DF_MODE_1_EXPECTED_DIRECTORY_NAME = "test_collect_df_mode_1_expected"
-telemetry_folder = "telemetry"
+TELEMETRY_FOLDER = "telemetry"
 
 
 @pytest.fixture(scope="function")
@@ -73,7 +74,7 @@ def output_path():
     folder = os.urandom(8).hex()
     directory = Path(tempfile.gettempdir()).resolve() / folder
     os.makedirs(directory)
-    telemetry_dir = directory / telemetry_folder
+    telemetry_dir = directory / TELEMETRY_FOLDER
 
     telemetry_manager = get_telemetry_manager()
     telemetry_manager.set_sc_output_path(telemetry_dir)
@@ -147,11 +148,11 @@ def test_collect_dataframe_all_column_types(spark_session, singleton, output_pat
             timestamp_data,
             timestamp_ntz_data,
             decimal_data,
-            ["A", "B", "C", "D", "E"],
+            [None, None, "C", "D", "E"],
             bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00]),
             {
-                "C1": "black",
-                "C2": "yellow",
+                "C1": None,
+                "C2": None,
                 "C3": "orange",
                 "C4": "blue",
                 "C5": "brown",
@@ -216,9 +217,9 @@ def test_collect_dataframe_all_column_types(spark_session, singleton, output_pat
             StructField("m", TimestampType(), False),
             StructField("n", TimestampNTZType(), False),
             StructField("o", DecimalType(15, 13), False),
-            StructField("p", ArrayType(StringType(), False), False),
+            StructField("p", ArrayType(StringType(), True), False),
             StructField("q", BinaryType(), False),
-            StructField("r", MapType(StringType(), StringType(), False), False),
+            StructField("r", MapType(StringType(), StringType(), True), False),
             StructField("s", NullType(), True),
             StructField("t", inner_schema, False),
         ]
@@ -496,7 +497,7 @@ def test_collect_dataframe_all_column_types_with_null_values(
             timestamp_data,
             timestamp_ntz_data,
             decimal_data,
-            ["A", "B", "C", "D", "E"],
+            [None, "B", "C", "D", "E"],
             bytes([0x13, 0x00, 0x00, 0x00, 0x08, 0x00]),
             {
                 "C1": "black",
@@ -592,43 +593,32 @@ def validate_checkpoint_file_output(output_path: str, checkpoint_name: str) -> N
     checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
         checkpoint_name
     )
-    telemetry_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
-        checkpoint_name + "_telemetry"
-    )
-
     schema_contract_expected = get_expected(checkpoint_file_name)
     schema_contract_output = get_output(output_path, checkpoint_file_name)
     validate_serializable_schema_contract_output(schema_contract_output)
 
-    telemetry_expected = get_expected(telemetry_file_name)
-    telemetry_output = get_output_telemetry(output_path)
     expected_obj = json.loads(schema_contract_expected)
     actual_obj = json.loads(schema_contract_output)
 
-    telemetry_expected_obj = json.loads(telemetry_expected)
-    telemetry_output_obj = json.loads(telemetry_output)
-
     exclude_paths = "root['pandera_schema']['version']"
-    exclude_telemetry_paths = [
-        "root['timestamp']",
-        "root['message']['metadata']['device_id']",
-        "root['message']['metadata']",
-        "root['message']['driver_version']",
-    ]
 
     diff = DeepDiff(
         expected_obj, actual_obj, ignore_order=True, exclude_paths=[exclude_paths]
     )
-
-    diff_telemetry = DeepDiff(
-        telemetry_expected_obj,
-        telemetry_output_obj,
-        ignore_order=True,
-        exclude_paths=exclude_telemetry_paths,
-    )
-
     assert diff == {}
-    assert diff_telemetry == {}
+    validate_telemetry(checkpoint_name, output_path)
+
+
+def validate_telemetry(checkpoint_name: str, output_path: str) -> None:
+    telemetry_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
+        checkpoint_name + "_telemetry"
+    )
+    telemetry_output_path = Path(output_path) / TELEMETRY_FOLDER
+    validate_telemetry_file_output(
+        telemetry_file_name=telemetry_file_name,
+        output_path=telemetry_output_path,
+        telemetry_expected_folder=TEST_COLLECT_DF_MODE_1_EXPECTED_DIRECTORY_NAME,
+    )
 
 
 def get_output(output_path, file_name) -> str:
@@ -639,16 +629,6 @@ def get_output(output_path, file_name) -> str:
     )
     with open(output_file_path) as f:
         return f.read().strip()
-
-
-def get_output_telemetry(output_path: str) -> str:
-    telemetry_directory_path = os.path.join(output_path, telemetry_folder)
-    for file in os.listdir(telemetry_directory_path):
-        if file.endswith(".json"):
-            output_file_path = os.path.join(telemetry_directory_path, file)
-            with open(output_file_path) as f:
-                return f.read().strip()
-    return "{}"
 
 
 def get_expected(file_name: str) -> str:

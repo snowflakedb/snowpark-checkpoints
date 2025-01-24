@@ -3,7 +3,7 @@
         "data": "{\"function\": \"_collect_dataframe_checkpoint_mode_schema\", \"mode\": 1, \"schema_types\": [\"string\", \"boolean\"]}",
         "driver_type": "PythonConnector",
         "driver_version": "3.12.3",
-        "event_name": "DataFrame_Collection",
+        "event_name": "DataFrame_Collection_Schema",
         "metadata": {
             "device_id": "0471186eb1a6ba58c82e97d19006a08b163bc0056c05e6f770090eade2c3a809",
             "os_version": "darwin",

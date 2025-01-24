@@ -3,33 +3,23 @@
 #
 
 import copy
-import datetime
 import json
 
 from typing import Optional, Union
 
 import pandera as pa
 
-from dateutil.parser import parse
 from hypothesis.strategies import DrawFn, SearchStrategy, composite
 
-from snowflake.hypothesis_snowpark.checks.date_check import (
-    dates_in_range,  # noqa: F401 Import required to register the custom checks
-)
 from snowflake.hypothesis_snowpark.constants import (
     CUSTOM_DATA_COLUMNS_KEY,
-    CUSTOM_DATA_FORMAT_KEY,
     CUSTOM_DATA_KEY,
     CUSTOM_DATA_NAME_KEY,
     CUSTOM_DATA_TYPE_KEY,
-    PANDERA_IN_RANGE_CHECK,
-    PANDERA_INCLUDE_MAX_KEY,
-    PANDERA_INCLUDE_MIN_KEY,
-    PANDERA_MAX_VALUE_KEY,
-    PANDERA_MIN_VALUE_KEY,
     PANDERA_SCHEMA_KEY,
     PYSPARK_ARRAY_TYPE,
     PYSPARK_BINARY_TYPE,
+    PYSPARK_DATE_TYPE,
     PYSPARK_STRING_TYPE,
     PYSPARK_TO_SNOWPARK_SUPPORTED_TYPES,
 )
@@ -208,9 +198,9 @@ def _dataframe_strategy_from_json_schema(
         dtype = column.get(CUSTOM_DATA_TYPE_KEY)
         if dtype not in PYSPARK_TO_SNOWPARK_SUPPORTED_TYPES:
             not_supported_columns.append(column)
-        elif dtype in (PYSPARK_ARRAY_TYPE, PYSPARK_BINARY_TYPE):
+        elif dtype in (PYSPARK_ARRAY_TYPE, PYSPARK_BINARY_TYPE, PYSPARK_DATE_TYPE):
             columns_with_custom_strategy.append(column)
-        elif dtype is PYSPARK_STRING_TYPE:
+        elif dtype == PYSPARK_STRING_TYPE:
             str_columns.append(column.get(CUSTOM_DATA_NAME_KEY))
 
     if not_supported_columns:
@@ -220,7 +210,7 @@ def _dataframe_strategy_from_json_schema(
         )
 
     df_schema = pa.DataFrameSchema.from_json(json.dumps(pandera_schema))
-    df_schema = _process_dataframe_schema(df_schema, custom_data)
+    df_schema = _process_dataframe_schema(df_schema)
 
     @composite
     def _dataframe_strategy(draw: DrawFn) -> DataFrame:
@@ -238,62 +228,14 @@ def _dataframe_strategy_from_json_schema(
     return _dataframe_strategy()
 
 
-def _process_dataframe_schema(
-    df_schema: pa.DataFrameSchema, custom_data: dict
-) -> pa.DataFrameSchema:
+def _process_dataframe_schema(df_schema: pa.DataFrameSchema) -> pa.DataFrameSchema:
     df_schema_copy = copy.copy(df_schema)
 
-    for column_name, column_obj in df_schema_copy.columns.items():
-        if type(column_obj.dtype) is pa.engines.pandas_engine.Date:
-            # Data generation for date type is currently unsupported by Pandera. As a workaround, we can change the data
-            # type to pa.DateTime to avoid an exception and manually generate the dates.
+    for column_obj in df_schema_copy.columns.values():
+        if isinstance(column_obj.dtype, pa.engines.pandas_engine.Date):
+            # Data generation for date type is currently unsupported by Pandera. As a workaround,
+            # we can change the data type to any supported type to avoid an exception and manually
+            # generate the dates.
             column_obj.dtype = pa.DateTime
-
-            in_range_check = next(
-                (
-                    check
-                    for check in column_obj.checks
-                    if check.name == PANDERA_IN_RANGE_CHECK
-                ),
-                None,
-            )
-
-            if in_range_check is None:
-                # Generate the values as DateTime and let Snowpark handle the conversion to Date.
-                continue
-
-            min_value = in_range_check.statistics.get(PANDERA_MIN_VALUE_KEY)
-            max_value = in_range_check.statistics.get(PANDERA_MAX_VALUE_KEY)
-            include_min = in_range_check.statistics.get(PANDERA_INCLUDE_MIN_KEY, True)
-            include_max = in_range_check.statistics.get(PANDERA_INCLUDE_MAX_KEY, True)
-            date_format = next(
-                (
-                    column.get(CUSTOM_DATA_FORMAT_KEY)
-                    for column in custom_data.get(CUSTOM_DATA_COLUMNS_KEY, [])
-                    if column.get(CUSTOM_DATA_NAME_KEY) == column_name
-                ),
-                None,
-            )
-
-            if date_format is not None:
-                min_value_obj = datetime.datetime.strptime(
-                    min_value, date_format
-                ).date()
-                max_value_obj = datetime.datetime.strptime(
-                    max_value, date_format
-                ).date()
-            else:
-                min_value_obj = parse(min_value).date()
-                max_value_obj = parse(max_value).date()
-
-            # Replace the previous checks with the new date range check.
-            column_obj.checks = [
-                pa.Check.dates_in_range(
-                    min_value=min_value_obj,
-                    max_value=max_value_obj,
-                    include_min=include_min,
-                    include_max=include_max,
-                )
-            ]
 
     return df_schema_copy

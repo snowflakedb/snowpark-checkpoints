@@ -2,6 +2,10 @@
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
 
+from pyspark.sql import DataFrame as SparkDataFrame
+from pyspark.sql.functions import col as spark_col
+from pyspark.sql.functions import max as spark_max
+from pyspark.sql.functions import min as spark_min
 from pyspark.sql.types import StructField
 
 from snowflake.snowpark_checkpoints_collector.collection_common import (
@@ -25,25 +29,31 @@ class TimestampNTZColumnCollector(ColumnCollectorBase):
         name (str): the name of the column.
         type (str): the type of the column.
         struct_field (pyspark.sql.types.StructField): the struct field of the column type.
-        values (pandas.Series): the column values as Pandas.Series.
+        column_df (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
 
     """
 
-    def __init__(self, clm_name, struct_field: StructField, clm_values) -> None:
+    def __init__(
+        self, clm_name, struct_field: StructField, clm_df: SparkDataFrame
+    ) -> None:
         """Init TimestampNTZColumnCollector.
 
         Args:
             clm_name (str): the name of the column.
             struct_field (pyspark.sql.types.StructField): the struct field of the column type.
-            clm_values (pandas.Series): the column values as Pandas.Series.
+            clm_df (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
 
         """
-        super().__init__(clm_name, struct_field, clm_values)
+        super().__init__(clm_name, struct_field, clm_df)
 
     def get_custom_data(self) -> dict[str, any]:
-        local_values = self.values.dropna()
-        min_value = str(local_values.min())
-        max_value = str(local_values.max())
+        select_result = self.column_df.select(
+            spark_min(spark_col(self.name)).alias(COLUMN_MIN_KEY),
+            spark_max(spark_col(self.name)).alias(COLUMN_MAX_KEY),
+        ).collect()[0]
+
+        min_value = str(select_result[COLUMN_MIN_KEY])
+        max_value = str(select_result[COLUMN_MAX_KEY])
 
         custom_data_dict = {
             COLUMN_MIN_KEY: min_value,

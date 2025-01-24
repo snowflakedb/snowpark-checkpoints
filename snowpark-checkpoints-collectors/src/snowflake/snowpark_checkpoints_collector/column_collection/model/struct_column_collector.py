@@ -1,7 +1,7 @@
 #
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
-from pandas import Series
+from pyspark.sql import DataFrame as SparkDataFrame
 from pyspark.sql.types import StructField
 
 from snowflake.snowpark_checkpoints_collector.collection_common import (
@@ -26,22 +26,22 @@ class StructColumnCollector(ColumnCollectorBase):
         name (str): the name of the column.
         type (str): the type of the column.
         struct_field (pyspark.sql.types.StructField): the struct field of the column type.
-        values (pandas.Series): the column values as Pandas.Series.
+        column_df (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
 
     """
 
     def __init__(
-        self, clm_name: str, struct_field: StructField, clm_values: Series
+        self, clm_name: str, struct_field: StructField, clm_df: SparkDataFrame
     ) -> None:
         """Init StructColumnCollector.
 
         Args:
             clm_name (str): the name of the column.
             struct_field (pyspark.sql.types.StructField): the struct field of the column type.
-            clm_values (pandas.Series): the column values as Pandas.Series.
+            clm_df (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
 
         """
-        super().__init__(clm_name, struct_field, clm_values)
+        super().__init__(clm_name, struct_field, clm_df)
 
     def get_custom_data(self) -> dict[str, any]:
         metadata = self._compute_struct_metadata()
@@ -68,13 +68,15 @@ class StructColumnCollector(ColumnCollectorBase):
         rows_count = 0
         rows_not_null_count = 0
         rows_null_count = 0
-        for row in self.values:
+        row_collection = self.column_df.collect()
+        for row in row_collection:
+            inner_row = row[0]
             rows_count += 1
-            if row is None:
+            if inner_row is None:
                 rows_null_count += 1
                 continue
 
-            row_clm_value = row[clm_name]
+            row_clm_value = inner_row[clm_name]
             if row_clm_value is None:
                 rows_null_count += 1
             else:

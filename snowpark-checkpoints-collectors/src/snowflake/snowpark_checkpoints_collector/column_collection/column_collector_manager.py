@@ -1,7 +1,7 @@
 #
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
-from pandas import Series
+from pyspark.sql import DataFrame as SparkDataFrame
 from pyspark.sql.types import StructField
 
 from snowflake.snowpark_checkpoints_collector.collection_common import (
@@ -88,14 +88,14 @@ class ColumnCollectorManager:
     """Manage class for column collector based on type."""
 
     def collect_column(
-        self, clm_name: str, struct_field: StructField, values: Series
+        self, clm_name: str, struct_field: StructField, values: SparkDataFrame
     ) -> dict[str, any]:
         """Collect the data of the column based on the column type.
 
         Args:
             clm_name (str): the name of the column.
             struct_field (pyspark.sql.types.StructField): the struct field of the column type.
-            values (pandas.Series): the column values as Pandas.Series.
+            values (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
 
         Returns:
             dict[str, any]: The data collected.
@@ -112,7 +112,7 @@ class ColumnCollectorManager:
 
     @column_register(ARRAY_COLUMN_TYPE)
     def _collect_array_type_custom_data(
-        self, clm_name: str, struct_field: StructField, values: Series
+        self, clm_name: str, struct_field: StructField, values: SparkDataFrame
     ) -> dict[str, any]:
         column_collector = ArrayColumnCollector(clm_name, struct_field, values)
         collected_data = column_collector.get_data()
@@ -120,7 +120,7 @@ class ColumnCollectorManager:
 
     @column_register(BINARY_COLUMN_TYPE)
     def _collect_binary_type_custom_data(
-        self, clm_name: str, struct_field: StructField, values: Series
+        self, clm_name: str, struct_field: StructField, values: SparkDataFrame
     ) -> dict[str, any]:
         column_collector = BinaryColumnCollector(clm_name, struct_field, values)
         collected_data = column_collector.get_data()
@@ -128,7 +128,7 @@ class ColumnCollectorManager:
 
     @column_register(BOOLEAN_COLUMN_TYPE)
     def _collect_boolean_type_custom_data(
-        self, clm_name: str, struct_field: StructField, values: Series
+        self, clm_name: str, struct_field: StructField, values: SparkDataFrame
     ) -> dict[str, any]:
         column_collector = BooleanColumnCollector(clm_name, struct_field, values)
         collected_data = column_collector.get_data()
@@ -136,7 +136,7 @@ class ColumnCollectorManager:
 
     @column_register(DATE_COLUMN_TYPE)
     def _collect_date_type_custom_data(
-        self, clm_name: str, struct_field: StructField, values: Series
+        self, clm_name: str, struct_field: StructField, values: SparkDataFrame
     ) -> dict[str, any]:
         column_collector = DateColumnCollector(clm_name, struct_field, values)
         collected_data = column_collector.get_data()
@@ -144,7 +144,7 @@ class ColumnCollectorManager:
 
     @column_register(DAYTIMEINTERVAL_COLUMN_TYPE)
     def _collect_day_time_interval_type_custom_data(
-        self, clm_name: str, struct_field: StructField, values: Series
+        self, clm_name: str, struct_field: StructField, values: SparkDataFrame
     ) -> dict[str, any]:
         column_collector = DayTimeIntervalColumnCollector(
             clm_name, struct_field, values
@@ -154,7 +154,7 @@ class ColumnCollectorManager:
 
     @column_register(DECIMAL_COLUMN_TYPE)
     def _collect_decimal_type_custom_data(
-        self, clm_name: str, struct_field: StructField, values: Series
+        self, clm_name: str, struct_field: StructField, values: SparkDataFrame
     ) -> dict[str, any]:
         column_collector = DecimalColumnCollector(clm_name, struct_field, values)
         collected_data = column_collector.get_data()
@@ -162,7 +162,7 @@ class ColumnCollectorManager:
 
     @column_register(MAP_COLUMN_TYPE)
     def _collect_map_type_custom_data(
-        self, clm_name: str, struct_field: StructField, values: Series
+        self, clm_name: str, struct_field: StructField, values: SparkDataFrame
     ) -> dict[str, any]:
         column_collector = MapColumnCollector(clm_name, struct_field, values)
         collected_data = column_collector.get_data()
@@ -170,7 +170,7 @@ class ColumnCollectorManager:
 
     @column_register(NULL_COLUMN_TYPE)
     def _collect_null_type_custom_data(
-        self, clm_name: str, struct_field: StructField, values: Series
+        self, clm_name: str, struct_field: StructField, values: SparkDataFrame
     ) -> dict[str, any]:
         column_collector = NullColumnCollector(clm_name, struct_field, values)
         collected_data = column_collector.get_data()
@@ -185,7 +185,7 @@ class ColumnCollectorManager:
         DOUBLE_COLUMN_TYPE,
     )
     def _collect_numeric_type_custom_data(
-        self, clm_name: str, struct_field: StructField, values: Series
+        self, clm_name: str, struct_field: StructField, values: SparkDataFrame
     ) -> dict[str, any]:
         column_collector = NumericColumnCollector(clm_name, struct_field, values)
         collected_data = column_collector.get_data()
@@ -193,7 +193,7 @@ class ColumnCollectorManager:
 
     @column_register(STRING_COLUMN_TYPE)
     def _collect_string_type_custom_data(
-        self, clm_name: str, struct_field: StructField, values: Series
+        self, clm_name: str, struct_field: StructField, values: SparkDataFrame
     ) -> dict[str, any]:
         column_collector = StringColumnCollector(clm_name, struct_field, values)
         collected_data = column_collector.get_data()
@@ -201,7 +201,7 @@ class ColumnCollectorManager:
 
     @column_register(STRUCT_COLUMN_TYPE)
     def _collect_struct_type_custom_data(
-        self, clm_name: str, struct_field: StructField, values: Series
+        self, clm_name: str, struct_field: StructField, values: SparkDataFrame
     ) -> dict[str, any]:
         column_collector = StructColumnCollector(clm_name, struct_field, values)
         collected_data = column_collector.get_data()
@@ -209,7 +209,7 @@ class ColumnCollectorManager:
 
     @column_register(TIMESTAMP_COLUMN_TYPE)
     def _collect_timestamp_type_custom_data(
-        self, clm_name: str, struct_field: StructField, values: Series
+        self, clm_name: str, struct_field: StructField, values: SparkDataFrame
     ) -> dict[str, any]:
         column_collector = TimestampColumnCollector(clm_name, struct_field, values)
         collected_data = column_collector.get_data()
@@ -217,21 +217,21 @@ class ColumnCollectorManager:
 
     @column_register(TIMESTAMP_NTZ_COLUMN_TYPE)
     def _collect_timestampntz_type_custom_data(
-        self, clm_name: str, struct_field: StructField, values: Series
+        self, clm_name: str, struct_field: StructField, values: SparkDataFrame
     ) -> dict[str, any]:
         column_collector = TimestampNTZColumnCollector(clm_name, struct_field, values)
         collected_data = column_collector.get_data()
         return collected_data
 
     def collect_empty_custom_data(
-        self, clm_name: str, struct_field: StructField, values: Series
+        self, clm_name: str, struct_field: StructField, values: SparkDataFrame
     ) -> dict[str, any]:
         """Collect the data of a empty column.
 
         Args:
             clm_name (str): the name of the column.
             struct_field (pyspark.sql.types.StructField): the struct field of the column type.
-            values (pandas.Series): the column values as Pandas.Series.
+            values (pyspark.sql.DataFrame): the column values as PySpark DataFrame.
 
         Returns:
             dict[str, any]: The data collected.

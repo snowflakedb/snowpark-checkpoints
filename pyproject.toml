@@ -3,16 +3,16 @@ build-backend = "hatchling.build"
 requires = ["hatchling"]
 
 [project]
-name = "snowpark-checkpoints"
+authors = [
+  {name = "Snowflake, Inc.", email = "snowflake-python-libraries-dl@snowflake.com"},
+]
 description = "Snowflake Snowpark Checkpoints"
 dynamic = ['version']
-authors = [
-  {name = 'Snowflake, Inc.', email = 'snowflake-python-libraries-dl@snowflake.com'},
-]
-license = {text = 'Apache-2.0'}
-readme = "README.md"
-requires-python = '>=3.9,<3.13'
 homepage = "https://www.snowflake.com/"
+license = {text = "Apache License, Version 2.0"}
+name = "snowpark-checkpoints"
+readme = "README.md"
+requires-python = '>=3.9,<3.12'
 
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -77,7 +77,6 @@ development = [
 [project.urls]
 Source = "https://github.com/snowflakedb/snowpark-checkpoints"
 
-
 [tool.hatch.build]
 sources = [
   "snowpark-checkpoints-collectors/src",
@@ -137,7 +136,7 @@ dependencies = [
 [tool.hatch.envs.docs.scripts]
 build = [
   'cd ./docs && make clean',
-  'cd ./docs && make html SPHINXOPTS="-W --keep-going"'
+  'cd ./docs && make html SPHINXOPTS="-W --keep-going"',
 ]
 build_pretty = [
   'cd ./docs && make clean',

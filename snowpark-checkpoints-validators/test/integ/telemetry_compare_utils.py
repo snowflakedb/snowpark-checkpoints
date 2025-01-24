@@ -1,3 +1,7 @@
+#
+# Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
+#
+
 import os
 import json
 from deepdiff import DeepDiff
@@ -5,7 +9,7 @@ from deepdiff import DeepDiff
 TEST_TELEMETRY_VALIDATORS_EXPECTED_DIRECTORY_NAME = "telemetry_expected"
 
 
-def get_output_telemetry(telemetry_directory_path) -> str:
+def get_output_telemetry(telemetry_directory_path: str) -> str:
     for file in os.listdir(telemetry_directory_path):
         if file.endswith(".json"):
             output_file_path = os.path.join(telemetry_directory_path, file)
@@ -15,7 +19,7 @@ def get_output_telemetry(telemetry_directory_path) -> str:
 
 
 def validate_telemetry_file_output(
-    telemetry_file_name: str, telemetry_directory_path
+    telemetry_file_name: str, telemetry_directory_path: str
 ) -> None:
     telemetry_expected = get_expected(telemetry_file_name)
     telemetry_output = get_output_telemetry(telemetry_directory_path)

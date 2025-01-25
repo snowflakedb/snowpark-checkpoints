@@ -4,8 +4,10 @@
 
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from pydantic.alias_generators import to_camel
+
+from snowflake.snowpark_checkpoints_configuration import checkpoint_name_utils
 
 
 class Checkpoint(BaseModel):
@@ -25,6 +27,21 @@ class Checkpoint(BaseModel):
     file: Optional[str] = None
     location: int = -1
     enabled: bool = True
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def normalize(cls, name: str) -> str:
+        normalized_name = checkpoint_name_utils.normalize_checkpoint_name(name)
+        is_valid_checkpoint_name = checkpoint_name_utils.is_valid_checkpoint_name(
+            normalized_name
+        )
+        if not is_valid_checkpoint_name:
+            raise Exception(
+                f"Invalid checkpoint name: {name}. Checkpoint names must only contain alphanumeric "
+                f"characters and underscores."
+            )
+
+        return normalized_name
 
 
 class Pipeline(BaseModel):

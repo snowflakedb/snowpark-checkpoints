@@ -3,11 +3,12 @@
 #
 
 from datetime import datetime
+import pandas as pd
 from src.utils.source_in.stress_input.input_validators import input_validators
 from src.utils.source_in.stress_input.input_collectors import input_collectors
 from snowflake.snowpark import Session
 from snowflake.snowpark.functions import col, lit
-from __version__ import __version__ as package_version
+from src.utils.utils import get_version
 from snowflake.snowpark_checkpoints_collector.collection_common import CheckpointMode
 from src.utils.constants import (
     SNOWPARK_CHECKPOINTS_PERFORMANCE_TEST_TABLE_NAME,
@@ -17,9 +18,9 @@ from src.utils.constants import (
     SOURCE_IN_COLUMN_NAME,
     EXECUTION_MODE_COLUMN_NAME,
     EXECUTION_DATE_COLUMN_NAME,
-    SQL_QUERY_INSERT_PERFORMANCE_TEST,
     LIMIT_SUP_MEMORY_KEY,
     LIMIT_SUP_TIME_KEY,
+    SQL_CREATE_PERFORMANCE_TABLE,
 )
 
 input_functions = {
@@ -60,6 +61,8 @@ def performance_test(
         execution_mode, sample[str(execution_mode.value)], temp_path
     )
     session = Session.builder.getOrCreate()
+    session.sql(SQL_CREATE_PERFORMANCE_TABLE).collect()
+
     last_record = (
         session.table(SNOWPARK_CHECKPOINTS_PERFORMANCE_TEST_TABLE_NAME)
         .select(MEMORY_COLUMN_NAME, TIME_COLUMN_NAME)
@@ -87,21 +90,24 @@ def performance_test(
             if time > value_last_record_time
             else None
         )
-    sql = SQL_QUERY_INSERT_PERFORMANCE_TEST
-
-    values = [
-        datetime.now(),
-        package_name,
-        package_version,
-        file_name,
-        size_file,
-        execution_mode_name[str(execution_mode.value)],
-        memory,
-        time,
-        error_memory,
-        error_time,
-    ]
-    session.sql(sql, params=values).collect()
+    
+    df = pd.DataFrame(
+        {
+            "EXECUTION_DATE": [datetime.now()],
+            "PACKAGE_NAME": [package_name],
+            "PACKAGE_VERSION": [get_version()],
+            "SOURCE_IN": [file_name],
+            "SOURCE_SIZE": [size_file],
+            "EXECUTION_MODE": [execution_mode_name[str(execution_mode.value)]],
+            "MEMORY": [memory],
+            "TIME": [time],
+            "ERROR_MEMORY": [error_memory],
+            "ERROR_TIME": [error_time],
+        }
+    )
+    
+    performance_df = session.createDataFrame(df)
+    performance_df.write.mode("append").save_as_table("SNOWPARK_CHECKPOINTS_PERFORMANCE_TEST")
     session.close()
     memory_within_limits = memory < limits[package_name][LIMIT_SUP_MEMORY_KEY]
     time_within_limits = time < limits[package_name][LIMIT_SUP_TIME_KEY]

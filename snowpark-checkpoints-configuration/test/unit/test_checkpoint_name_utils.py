@@ -6,7 +6,6 @@ import pytest
 from snowflake.snowpark_checkpoints_configuration.model.checkpoints import (
     Checkpoint,
 )
-from snowflake.snowpark_checkpoints_configuration.singleton import Singleton
 
 
 @pytest.mark.parametrize(

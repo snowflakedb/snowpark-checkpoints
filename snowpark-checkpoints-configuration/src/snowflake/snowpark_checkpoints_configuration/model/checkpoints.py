@@ -37,8 +37,8 @@ class Checkpoint(BaseModel):
         )
         if not is_valid_checkpoint_name:
             raise Exception(
-                f"Invalid checkpoint name: {name}. Checkpoint names must only contain alphanumeric "
-                f"characters and underscores."
+                f"Invalid checkpoint name: {name} in checkpoints.json file. Checkpoint names must only contain "
+                f"alphanumeric characters and underscores."
             )
 
         return normalized_name

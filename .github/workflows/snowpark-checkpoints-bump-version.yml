@@ -79,7 +79,6 @@ jobs:
           set -o pipefail
 
           TEMP_BRANCH="bump-version-${{ steps.get_version.outputs.version }}"
-          TEMP_TAG="v${{ steps.get_version.outputs.version }}"
 
           echo "Checking if branch $TEMP_BRANCH exists..."
           if git ls-remote --heads origin "$TEMP_BRANCH" | grep -q "$TEMP_BRANCH"; then
@@ -90,17 +89,6 @@ jobs:
           if git branch --list | grep -q "$TEMP_BRANCH"; then
             echo "Branch $TEMP_BRANCH exists locally. Deleting..."
             git branch -D "$TEMP_BRANCH" || echo "Branch $TEMP_BRANCH not found locally. Skipping deletion."
-          fi
-
-          echo "Checking if tag $TEMP_TAG exists..."
-          if git ls-remote --tags origin "$TEMP_TAG" | grep -q "$TEMP_TAG"; then
-            echo "Tag $TEMP_TAG exists remotely. Deleting..."
-            git push origin --delete "$TEMP_TAG"
-          fi
-
-          if git tag --list | grep -q "$TEMP_TAG"; then
-            echo "Tag $TEMP_TAG exists locally. Deleting..."
-            git tag -d "$TEMP_TAG"
           fi
 
           echo "Creating new branch: $TEMP_BRANCH"

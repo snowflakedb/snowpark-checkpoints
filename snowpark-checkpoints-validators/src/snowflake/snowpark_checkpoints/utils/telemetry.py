@@ -2,15 +2,17 @@
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
 
+import atexit
 import datetime
 import hashlib
 import inspect
 import json
 import os
+import re
 
+from contextlib import suppress
 from enum import IntEnum
 from functools import wraps
-from os import getcwd, getenv, makedirs
 from pathlib import Path
 from platform import python_version
 from sys import platform
@@ -47,6 +49,10 @@ except Exception:
         pass
 
 
+VERSION_VARIABLE_PATTERN = r"^__version__ = ['\"]([^'\"]*)['\"]"
+VERSION_FILE_NAME = "__version__.py"
+
+
 class TelemetryManager(TelemetryClient):
     def __init__(self, rest: SnowflakeRestful):
         """TelemetryManager class to log telemetry events."""
@@ -62,6 +68,8 @@ class TelemetryManager(TelemetryClient):
         self._sc_upload_local_telemetry()
         self.sc_log_batch = []
         self.sc_hypothesis_input_events = []
+        self.sc_version = _get_version()
+        atexit.register(self._sc_close_at_exit)
 
     def set_sc_output_path(self, path: Path) -> None:
         """Set the output path for testing.
@@ -115,7 +123,9 @@ class TelemetryManager(TelemetryClient):
         """
         if not self.sc_is_enabled:
             return {}
-        event = _generate_event(event_name, event_type, parameters_info)
+        event = _generate_event(
+            event_name, event_type, parameters_info, self.sc_version
+        )
         self._sc_add_log_to_batch(event)
         return event
 
@@ -133,10 +143,10 @@ class TelemetryManager(TelemetryClient):
             return
 
         if len(self.sc_log_batch) >= self.sc_flush_size:
-            self._sc_send_batch(self.sc_log_batch)
+            self.sc_send_batch(self.sc_log_batch)
             self.sc_log_batch = []
 
-    def _sc_send_batch(self, to_sent: list) -> bool:
+    def sc_send_batch(self, to_sent: list) -> bool:
         """Send a request to the API to upload the events. If not have connection, write the events to local folder.
 
         Args:
@@ -176,7 +186,7 @@ class TelemetryManager(TelemetryClient):
 
         """
         try:
-            makedirs(self.sc_folder_path, exist_ok=True)
+            os.makedirs(self.sc_folder_path, exist_ok=True)
             for event in batch:
                 message = event.get("message")
                 if message is not None:
@@ -241,15 +251,15 @@ class TelemetryManager(TelemetryClient):
         """
         if self._sc_is_telemetry_testing():
             return True
-        if getenv("SNOWPARK_CHECKPOINTS_TELEMETRY_ENABLED") == "false":
+        if os.getenv("SNOWPARK_CHECKPOINTS_TELEMETRY_ENABLED") == "false":
             return False
         return self._rest is not None
 
     def _sc_is_telemetry_testing(self) -> bool:
-        is_testing = getenv("SNOWPARK_CHECKPOINTS_TELEMETRY_TESTING") == "true"
+        is_testing = os.getenv("SNOWPARK_CHECKPOINTS_TELEMETRY_TESTING") == "true"
         if is_testing:
             local_telemetry_path = (
-                Path(getcwd()) / "snowpark-checkpoints-output" / "telemetry"
+                Path(os.getcwd()) / "snowpark-checkpoints-output" / "telemetry"
             )
             self.set_sc_output_path(local_telemetry_path)
         return is_testing
@@ -276,11 +286,31 @@ class TelemetryManager(TelemetryClient):
         """
         return event_name in self.sc_hypothesis_input_events
 
+    def _sc_close(self) -> None:
+        """Close the telemetry manager and upload collected events.
+
+        This function closes the telemetry manager, uploads any collected events,
+        and performs any necessary cleanup to ensure no data is lost.
+        """
+        atexit.unregister(self._sc_close_at_exit)
+        if self.sc_log_batch and self.sc_is_enabled and not self.sc_is_testing:
+            self.sc_send_batch(self.sc_log_batch)
+
+    def _sc_close_at_exit(self) -> None:
+        """Close the telemetry manager at exit and upload collected events.
+
+        This function ensures that the telemetry manager is closed and all collected events
+        are uploaded when the program exits, preventing data loss.
+        """
+        with suppress(Exception):
+            self._sc_close()
+
 
 def _generate_event(
     event_name: str,
     event_type: str,
     parameters_info: Optional[dict] = None,
+    sc_version: Optional[str] = None,
 ) -> dict:
     """Generate a telemetry event.
 
@@ -288,12 +318,15 @@ def _generate_event(
         event_name (str): The name of the event.
         event_type (str): The type of the event (e.g., "error", "info").
         parameters_info (dict, optional): Additional parameters for the event. Defaults to None.
+        sc_version (str, optional): The version of the package. Defaults to None.
 
     Returns:
         dict: The generated event.
 
     """
     metadata = _get_metadata()
+    if sc_version is not None:
+        metadata["snowpark_checkpoints_version"] = sc_version
     message = {
         "type": event_type,
         "event_name": event_name,
@@ -322,6 +355,27 @@ def _get_metadata() -> dict:
         "snowpark_version": ".".join(str(x) for x in SNOWPARK_VERSION if x is not None),
         "device_id": _get_unique_id(),
     }
+
+
+def _get_version() -> str:
+    """Get the version of the package.
+
+    Returns:
+        str: The version of the package.
+
+    """
+    try:
+        directory_levels_up = 4
+        project_root = Path(__file__).resolve().parents[directory_levels_up]
+        version_file_path = project_root / VERSION_FILE_NAME
+        with open(version_file_path) as file:
+            content = file.read()
+            version_match = re.search(VERSION_VARIABLE_PATTERN, content, re.MULTILINE)
+            if version_match:
+                return version_match.group(1)
+        return None
+    except Exception:
+        return None
 
 
 def _get_folder_size(folder_path: Path) -> int:
@@ -466,6 +520,7 @@ def check_dataframe_schema_event(
         tuple: A tuple containing the event name and telemetry data.
 
     """
+    telemetry_data[MODE_KEY] = CheckpointMode.SCHEMA.value
     try:
         telemetry_data[STATUS_KEY] = param_data.get(STATUS_KEY)
         pandera_schema = param_data.get(PANDERA_SCHEMA_PARAM_NAME)
@@ -529,8 +584,8 @@ def collect_dataframe_checkpoint_mode_schema_event(
         tuple: A tuple containing the event name and telemetry data.
 
     """
+    telemetry_data[MODE_KEY] = CheckpointMode.SCHEMA.value
     try:
-        telemetry_data[MODE_KEY] = CheckpointMode.SCHEMA.value
         schema_types = param_data.get("column_type_dict")
         telemetry_data[SCHEMA_TYPES_KEY] = [
             schema_types[schema_type].dataType.typeName()
@@ -538,7 +593,6 @@ def collect_dataframe_checkpoint_mode_schema_event(
         ]
         return DATAFRAME_COLLECTION_SCHEMA, telemetry_data
     except Exception:
-        telemetry_data[MODE_KEY] = CheckpointMode.SCHEMA.value
         return DATAFRAME_COLLECTION_ERROR, telemetry_data
 
 
@@ -643,7 +697,7 @@ def dataframe_strategy_event(
                 telemetry_m.sc_log_error(HYPOTHESIS_INPUT_SCHEMA_ERROR, telemetry_data)
             else:
                 telemetry_m.sc_log_info(HYPOTHESIS_INPUT_SCHEMA, telemetry_data)
-            telemetry_m._sc_send_batch(telemetry_m.sc_log_batch)
+            telemetry_m.sc_send_batch(telemetry_m.sc_log_batch)
         return None, None
     except Exception:
         test_function_name = inspect.stack()[2].function
@@ -651,7 +705,7 @@ def dataframe_strategy_event(
         if not is_logged:
             telemetry_m.sc_hypothesis_input_events.append((test_function_name, 0))
             telemetry_m.sc_log_error(HYPOTHESIS_INPUT_SCHEMA_ERROR, telemetry_data)
-            telemetry_m._sc_send_batch(telemetry_m.sc_log_batch)
+            telemetry_m.sc_send_batch(telemetry_m.sc_log_batch)
         return None, None
 
 

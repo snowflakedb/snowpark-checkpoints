@@ -561,3 +561,9 @@ def validate_telemetry_file_output(telemetry_file_name: str) -> None:
     get_telemetry_manager().sc_hypothesis_input_events = []
 
     assert diff_telemetry == {}
+    assert isinstance(
+        telemetry_output_obj.get("message")
+        .get("metadata")
+        .get("snowpark_checkpoints_version"),
+        str,
+    )

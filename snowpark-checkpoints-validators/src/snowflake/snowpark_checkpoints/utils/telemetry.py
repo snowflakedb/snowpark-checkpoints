@@ -49,6 +49,10 @@ except Exception:
         pass
 
 
+VERSION_VARIABLE_PATTERN = r"^__version__ = ['\"]([^'\"]*)['\"]"
+VERSION_FILE_NAME = "__version__.py"
+
+
 class TelemetryManager(TelemetryClient):
     def __init__(self, rest: SnowflakeRestful):
         """TelemetryManager class to log telemetry events."""
@@ -306,7 +310,7 @@ def _generate_event(
     event_name: str,
     event_type: str,
     parameters_info: Optional[dict] = None,
-    sc_version: str = None,
+    sc_version: Optional[str] = None,
 ) -> dict:
     """Generate a telemetry event.
 
@@ -314,7 +318,8 @@ def _generate_event(
         event_name (str): The name of the event.
         event_type (str): The type of the event (e.g., "error", "info").
         parameters_info (dict, optional): Additional parameters for the event. Defaults to None.
-        sc_version (str, optional): The version of the package. Defaults to None. If not provided, the version
+        sc_version (str, optional): The version of the package. Defaults to None.
+
     Returns:
         dict: The generated event.
 
@@ -337,7 +342,7 @@ def _generate_event(
     return event_base
 
 
-def _get_metadata(version: str = None) -> dict:
+def _get_metadata() -> dict:
     """Get metadata for telemetry events.
 
     Returns:
@@ -360,13 +365,12 @@ def _get_version() -> str:
 
     """
     try:
-        folder = os.path.abspath(os.path.join(__file__, "../../../../../"))
-        version_file_path = os.path.join(folder, "__version__.py")
+        directory_levels_up = 4
+        project_root = Path(__file__).resolve().parents[directory_levels_up]
+        version_file_path = project_root / VERSION_FILE_NAME
         with open(version_file_path) as file:
             content = file.read()
-            version_match = re.search(
-                r"^__version__ = ['\"]([^'\"]*)['\"]", content, re.MULTILINE
-            )
+            version_match = re.search(VERSION_VARIABLE_PATTERN, content, re.MULTILINE)
             if version_match:
                 return version_match.group(1)
         return None

@@ -506,7 +506,7 @@ from snowflake.snowpark_checkpoints_configuration import CheckpointMetadata
 
 my_checkpoint_metadata = CheckpointMetadata("path/to/checkpoint.json")
 
-checkpoint_model = my_checkpoint_metadata.get("my_checkpoint_name")
+checkpoint_model = my_checkpoint_metadata.get_checkpoint("my_checkpoint_name")
 ...
 ```
 ---

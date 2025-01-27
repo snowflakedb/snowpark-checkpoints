@@ -9,7 +9,6 @@ import pytest
 from snowflake.snowpark_checkpoints.utils.constants import CheckpointMode
 from snowflake.snowpark_checkpoints_collector.singleton import Singleton as SingletonCollector
 from snowflake.snowpark_checkpoints.singleton import Singleton as SingletonValidator
-from src.utils.constants import TESTS_FOLDER_NAME
 
 
 from src.utils.source_in.e2e_input.input_e2e_test_pyspark import (
@@ -60,7 +59,7 @@ def test_e2e_checkpoints(json_name_list, execution_mode, telemetry) -> None:
         telemetry: The telemetry manager instance.
     """
     with tempfile.TemporaryDirectory(
-        dir=(os.path.join(os.getcwd(), TESTS_FOLDER_NAME))
+        dir=(os.path.join(os.getcwd()))
     ) as temp_dir:
         temp_path = Path(temp_dir)
         telemetry.set_sc_output_path(temp_path)

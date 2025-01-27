@@ -15,7 +15,7 @@ from performance_test import performance_test
 import tempfile
 from os import getcwd
 from pathlib import Path
-from src.utils.constants import PACKAGE_NAME_COLLECTORS, PACKAGE_NAME_VALIDATORS, TESTS_FOLDER_NAME
+from src.utils.constants import PACKAGE_NAME_COLLECTORS, PACKAGE_NAME_VALIDATORS
 
 
 EXECUTION_MODE = CheckpointMode.SCHEMA
@@ -69,7 +69,7 @@ def test_performance_mode_schema(telemetry: TelemetryManager) -> None:
     The temporary directory is automatically cleaned up after the tests are completed.
     """
     with tempfile.TemporaryDirectory(
-        dir=(os.path.join(getcwd(), TESTS_FOLDER_NAME))
+        dir=(os.path.join(getcwd()))
     ) as temp_dir:
         temp_path = Path(temp_dir)
         telemetry.set_sc_output_path(temp_path)

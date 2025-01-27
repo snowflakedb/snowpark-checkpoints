@@ -34,10 +34,9 @@ RESULT_COLUMN_NAME: Final[str] = "RESULT"
 SQL_CREATE_PERFORMANCE_TABLE = f"CREATE OR REPLACE TABLE {SNOWPARK_CHECKPOINTS_PERFORMANCE_TEST_TABLE_NAME} ({EXECUTION_DATE_COLUMN_NAME} TIMESTAMP_TZ, {PACKAGE_COLUMN_NAME} VARCHAR, {PACKAGE_VERSION_COLUMN_NAME} VARCHAR, {SOURCE_IN_COLUMN_NAME} VARCHAR, {SOURCE_SIZE_COLUMN_NAME} VARCHAR, {EXECUTION_MODE_COLUMN_NAME} VARCHAR, {MEMORY_COLUMN_NAME} FLOAT, {TIME_COLUMN_NAME} FLOAT, {ERROR_MEMORY_COLUMN_NAME} VARCHAR, {ERROR_TIME_COLUMN_NAME} VARCHAR);"
 
 #Paths
-STRESS_INPUT_CSV_PATH: Final[str] = "snowpark-checkpoints-testing/src/utils/source_in/stress_input/data_input_medium.csv"
-E2E_INPUT_CSV_PATH: Final[str] = "snowpark-checkpoints-testing/src/utils/source_in/e2e_input/data_e2e_test.csv"
+STRESS_INPUT_CSV_PATH: Final[str] = "src/utils/source_in/stress_input/data_input_medium.csv"
+E2E_INPUT_CSV_PATH: Final[str] = "src/utils/source_in/e2e_input/data_e2e_test.csv"
 SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME: Final[str] = "snowpark-checkpoints-output"
-TESTS_FOLDER_NAME: Final[str] = "snowpark-checkpoints-testing"
 
 #Packages names
 PACKAGE_NAME_COLLECTORS: Final[str] = "collectors"

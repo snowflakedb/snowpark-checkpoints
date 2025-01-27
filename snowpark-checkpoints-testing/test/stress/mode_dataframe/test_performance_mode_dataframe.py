@@ -11,7 +11,7 @@ from snowflake.snowpark_checkpoints.utils.constants import CheckpointMode
 from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryManager, get_telemetry_manager
 from snowflake.snowpark_checkpoints_collector.singleton import Singleton as SingletonCollector
 from snowflake.snowpark_checkpoints.singleton import Singleton as SingletonValidator
-from src.utils.constants import TESTS_FOLDER_NAME, PACKAGE_NAME_COLLECTORS, PACKAGE_NAME_VALIDATORS
+from src.utils.constants import PACKAGE_NAME_COLLECTORS, PACKAGE_NAME_VALIDATORS
 from performance_test import performance_test
 
 EXECUTION_MODE = CheckpointMode.DATAFRAME
@@ -64,7 +64,7 @@ def test_performance_mode_dataframe(telemetry: TelemetryManager) -> None:
 
     The temporary directory is automatically cleaned up after the tests are completed.
     """
-    with tempfile.TemporaryDirectory(dir=(os.path.join(getcwd(),TESTS_FOLDER_NAME))) as temp_dir:
+    with tempfile.TemporaryDirectory(dir=(os.path.join(getcwd()))) as temp_dir:
         temp_path = Path(temp_dir)
         telemetry.set_sc_output_path(temp_path)
         performance_test(PACKAGE_NAME_COLLECTORS,input_name[PACKAGE_NAME_COLLECTORS],SIZE,EXECUTION_MODE, limits_mode_dataframe, temp_path)

@@ -5,7 +5,7 @@
 import re as regx
 
 
-CHECKPOINT_NAME_REGEX_PATTERN = r"^[a-zA-Z_][a-zA-Z0-9_]+"
+CHECKPOINT_NAME_REGEX_PATTERN = r"[a-zA-Z_][a-zA-Z0-9_]+"
 WHITESPACE_TOKEN = " "
 HYPHEN_TOKEN = "-"
 UNDERSCORE_TOKEN = "_"
@@ -45,9 +45,6 @@ def is_valid_checkpoint_name(checkpoint_name: str) -> bool:
         bool: True if the checkpoint name is valid; otherwise, False.
 
     """
-    matched = regx.findall(CHECKPOINT_NAME_REGEX_PATTERN, checkpoint_name)
-    if len(matched) == 0 or len(matched) > 1:
-        return False
-
-    is_valid = matched[0] == checkpoint_name
+    matched = regx.fullmatch(CHECKPOINT_NAME_REGEX_PATTERN, checkpoint_name)
+    is_valid = bool(matched)
     return is_valid

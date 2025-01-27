@@ -79,6 +79,16 @@ class TelemetryManagerTest(unittest.TestCase):
             assert result.get("snowpark_version") == expected_snowpark_version
             assert result.get("device_id") == expected_unique_id
 
+    def test_get_version(self):
+        # Arrange
+        from snowflake.snowpark_checkpoints.utils.telemetry import _get_version
+
+        # Act
+        result = _get_version()
+
+        # Assert
+        assert isinstance(result, str)
+
     def test_get_unique_id(self):
         # Arrange
         with patch(
@@ -145,15 +155,24 @@ class TelemetryManagerTest(unittest.TestCase):
             mock_connection.application = "foo"
             from snowflake.snowpark_checkpoints.utils.telemetry import _generate_event
 
+            snowpark_checkpoints_version = "0.0.0"
+
             # Act
-            result = _generate_event("event_name", "event_type", {"testing": "boo"})
+            result = _generate_event(
+                "event_name",
+                "event_type",
+                {"testing": "boo"},
+                snowpark_checkpoints_version,
+            )
 
             # Assert
             assert result.get("message").get("type") == "event_type"
             assert result.get("message").get("event_name") == "event_name"
             assert result.get("message").get("driver_type") == "PythonConnector"
             assert result.get("message").get("source") == "snowpark-checkpoints"
-            assert result.get("message").get("metadata") == {}
+            assert result.get("message").get("metadata") == {
+                "snowpark_checkpoints_version": snowpark_checkpoints_version
+            }
             assert result.get("message").get("data") == '{"testing": "boo"}'
             assert result.get("timestamp") == "0"
             assert result.get("message").get("driver_version") == "0.0.0"
@@ -242,7 +261,7 @@ class TelemetryManagerTest(unittest.TestCase):
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_upload_local_telemetry",
             return_value=MagicMock(),
         ), patch(
-            "snowflake.snowpark_checkpoints.utils.telemetry.getenv",
+            "snowflake.snowpark_checkpoints.utils.telemetry.os.getenv",
             return_value=None,
         ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.SNOWFLAKE_DIRS", mock_DIRS
@@ -265,7 +284,7 @@ class TelemetryManagerTest(unittest.TestCase):
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_upload_local_telemetry",
             return_value=MagicMock(),
         ), patch(
-            "snowflake.snowpark_checkpoints.utils.telemetry.getenv",
+            "snowflake.snowpark_checkpoints.utils.telemetry.os.getenv",
             return_value=None,
         ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.SNOWFLAKE_DIRS", mock_DIRS
@@ -289,7 +308,7 @@ class TelemetryManagerTest(unittest.TestCase):
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_upload_local_telemetry",
             return_value=MagicMock(),
         ), patch(
-            "snowflake.snowpark_checkpoints.utils.telemetry.getenv",
+            "snowflake.snowpark_checkpoints.utils.telemetry.os.getenv",
             return_value="false",
         ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.SNOWFLAKE_DIRS", mock_DIRS
@@ -326,7 +345,7 @@ class TelemetryManagerTest(unittest.TestCase):
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_upload_local_telemetry",
             return_value=MagicMock(),
         ), patch(
-            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_upload_local_telemetry.makedirs"
+            "snowflake.snowpark_checkpoints.utils.telemetry._get_version"
         ), patch(
             "builtins.open", mock_open()
         ), patch(
@@ -369,7 +388,7 @@ class TelemetryManagerTest(unittest.TestCase):
             telemetry = TelemetryManager(rest_mock)
 
             # Act
-            result = telemetry._sc_send_batch([])
+            result = telemetry.sc_send_batch([])
 
             # Assert
             assert result == False
@@ -399,7 +418,7 @@ class TelemetryManagerTest(unittest.TestCase):
             telemetry = TelemetryManager(rest_mock)
 
             # Act
-            result = telemetry._sc_send_batch([])
+            result = telemetry.sc_send_batch([])
 
             # Assert
             TelemetryManager._sc_write_telemetry.assert_called_once_with([])
@@ -427,7 +446,7 @@ class TelemetryManagerTest(unittest.TestCase):
             batch = [event]
 
             # Act
-            result = telemetry._sc_send_batch(batch)
+            result = telemetry.sc_send_batch(batch)
 
             # Assert
             rest_mock.request.assert_called_with(
@@ -464,7 +483,7 @@ class TelemetryManagerTest(unittest.TestCase):
             batch = [event]
 
             # Act
-            result = telemetry._sc_send_batch(batch)
+            result = telemetry.sc_send_batch(batch)
 
             # Assert
             rest_mock.request.assert_called_with(
@@ -492,7 +511,7 @@ class TelemetryManagerTest(unittest.TestCase):
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_upload_local_telemetry",
             return_value=MagicMock(),
         ), patch(
-            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_send_batch",
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager.sc_send_batch",
             return_value=MagicMock(),
         ):
             from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryManager
@@ -506,7 +525,7 @@ class TelemetryManagerTest(unittest.TestCase):
             telemetry._sc_add_log_to_batch(event)
 
             # Assert
-            telemetry._sc_send_batch.assert_not_called()
+            telemetry.sc_send_batch.assert_not_called()
             assert len(telemetry.sc_log_batch) == 1
             assert telemetry.sc_log_batch[0] == event
 
@@ -525,7 +544,7 @@ class TelemetryManagerTest(unittest.TestCase):
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_upload_local_telemetry",
             return_value=MagicMock(),
         ), patch(
-            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_send_batch",
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager.sc_send_batch",
             return_value=MagicMock(),
         ):
             from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryManager
@@ -539,7 +558,7 @@ class TelemetryManagerTest(unittest.TestCase):
             telemetry._sc_add_log_to_batch(event)
 
             # Assert
-            telemetry._sc_send_batch.assert_called_once_with([event])
+            telemetry.sc_send_batch.assert_called_once_with([event])
             assert len(telemetry.sc_log_batch) == 0
             assert telemetry.sc_log_batch == []
 
@@ -563,6 +582,9 @@ class TelemetryManagerTest(unittest.TestCase):
         ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry._generate_event",
             return_value={"foo": "boo"},
+        ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry._get_version",
+            return_value="0.0.0",
         ):
             from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryManager
             from snowflake.snowpark_checkpoints.utils.telemetry import _generate_event
@@ -579,9 +601,7 @@ class TelemetryManagerTest(unittest.TestCase):
                 {"foo": "boo"}
             )
             _generate_event.assert_called_once_with(
-                "event_name",
-                "event_type",
-                {"testing": "boo"},
+                "event_name", "event_type", {"testing": "boo"}, "0.0.0"
             )
             assert result == {"foo": "boo"}
 
@@ -678,7 +698,6 @@ class TelemetryManagerTest(unittest.TestCase):
         from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryManager
 
         rest_mock, mock_DIRS = mock_before_telemetry_import()
-        type_mock = MagicMock()
 
         with patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.SNOWFLAKE_DIRS", mock_DIRS
@@ -699,6 +718,66 @@ class TelemetryManagerTest(unittest.TestCase):
 
             # Assert
             assert result
+
+    def test_telemetry_manager_sc_close_at_exit(self):
+        # Arrange
+        from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryManager
+
+        rest_mock, mock_DIRS = mock_before_telemetry_import()
+
+        with patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.SNOWFLAKE_DIRS", mock_DIRS
+        ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_enabled",
+            return_value=True,
+        ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_testing",
+            return_value=False,
+        ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_upload_local_telemetry",
+            return_value=MagicMock(),
+        ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager.sc_send_batch"
+        ):
+            telemetry = TelemetryManager(rest_mock)
+            batch = [{"foo": "boo"}]
+
+            # Act
+            telemetry.sc_log_batch = batch
+            telemetry._sc_close_at_exit()
+
+            # Assert
+            TelemetryManager.sc_send_batch.assert_called_once_with(batch)
+
+    def test_telemetry_manager_sc_close_at_exit_is_testing_enabled(self):
+        # Arrange
+        from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryManager
+
+        rest_mock, mock_DIRS = mock_before_telemetry_import()
+
+        with patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.SNOWFLAKE_DIRS", mock_DIRS
+        ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_enabled",
+            return_value=True,
+        ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_testing",
+            return_value=True,
+        ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_upload_local_telemetry",
+            return_value=MagicMock(),
+        ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager.sc_send_batch"
+        ):
+            telemetry = TelemetryManager(rest_mock)
+            batch = [{"foo": "boo"}]
+
+            # Act
+            telemetry.sc_log_batch = batch
+            telemetry._sc_close_at_exit()
+
+            # Assert
+            TelemetryManager.sc_send_batch.assert_not_called()
 
     def test_get_snowflake_schema_types(self):
         # Arrange

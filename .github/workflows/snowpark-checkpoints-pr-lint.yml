@@ -40,7 +40,7 @@ jobs:
           echo "Fetching diff between the base and head commits..."
           git fetch --no-tags --prune --depth=2 origin ${{ github.event.pull_request.base.ref }} || true
 
-          CHANGED_PYFILES=$(git diff --name-only --diff-filter=d ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} | grep '\.py$' | grep -v '^test/' || true)
+          CHANGED_PYFILES=$(git diff --name-only --diff-filter=d ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} | grep '\.py$' | grep -v '/test/' || true)
           echo "Changed Python files:" $CHANGED_PYFILES
 
           if [ -z "$CHANGED_PYFILES" ]; then

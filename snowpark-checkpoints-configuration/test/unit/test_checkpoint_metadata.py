@@ -36,7 +36,7 @@ def test_checkpoint_metadata_loading(singleton):
         enabled=True,
     )
     expected_checkpoint_2 = Checkpoint(
-        name="demo_pyspark_pipeline.df1.123HDK",
+        name="demo_pyspark_pipeline_df1_123HDK",
         df="df1",
         mode=1,
         sample=0.5,

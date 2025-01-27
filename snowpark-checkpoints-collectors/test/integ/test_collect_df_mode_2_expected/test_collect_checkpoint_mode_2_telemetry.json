@@ -1,17 +1,18 @@
 {
     "message": {
-        "data": "{\"function\": \"_collect_dataframe_checkpoint_mode_dataframe\", \"mode\": 2, \"spark_schema_types\": [\"ByteType()\", \"ShortType()\", \"IntegerType()\", \"LongType()\", \"FloatType()\", \"DoubleType()\", \"StringType()\", \"BooleanType()\", \"DateType()\"]}",
+        "data": "{\"function\": \"_collect_dataframe_checkpoint_mode_dataframe\", \"mode\": 2, \"spark_schema_types\": [\"StringType()\", \"StringType()\"]}",
         "driver_type": "PythonConnector",
-        "driver_version": "3.12.3",
+        "driver_version": "3.12.4",
         "event_name": "DataFrame_Collection_DF",
         "metadata": {
             "device_id": "0471186eb1a6ba58c82e97d19006a08b163bc0056c05e6f770090eade2c3a809",
             "os_version": "darwin",
-            "python_version": "3.11.2",
-            "snowpark_version": "1.25.0"
+            "python_version": "3.11.11",
+            "snowpark_checkpoints_version": "0.1.0rc2",
+            "snowpark_version": "1.26.0"
         },
         "source": "snowpark-checkpoints",
         "type": "info"
     },
-    "timestamp": "1737580128520"
+    "timestamp": "1737734354099"
 }

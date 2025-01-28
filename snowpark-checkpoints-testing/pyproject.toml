@@ -3,7 +3,9 @@ build-backend = "hatchling.build"
 requires = ["hatchling"]
 
 [project]
-authors = [{name = "Snowflake Inc."}]
+authors = [
+  {name = "Snowflake, Inc.", email = "snowflake-python-libraries-dl@snowflake.com"},
+]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Environment :: Console",
@@ -24,13 +26,10 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Information Analysis",
 ]
 dependencies = [
-  "snowflake-snowpark-python",
-  "snowflake-connector-python",
-  "pyspark",
-  "pandera[io]==0.20.4",
-  "pandera-report==0.1.2",
+  "snowflake-connector-python[pandas]",
 ]
-description = "Migration tools for Snowpark"
+description = "Testing tools for Snowpark Checkpoints framework"
+dynamic = ['version']
 keywords = [
   'Snowflake',
   'analytics',
@@ -38,23 +37,21 @@ keywords = [
   'database',
   'db',
   'Snowpark',
+  'testing',
 ]
-license = {file = "LICENSE"}
+license = {text = "Apache License, Version 2.0"}
 name = "snowpark-checkpoints-testing"
 readme = "README.md"
 requires-python = '>=3.9,<3.12'
-dynamic = ['version']
 
 [project.optional-dependencies]
 development = [
   "pytest>=8.3.3",
   "pytest-cov>=6.0.0",
   "coverage>=7.6.7",
-  "twine==5.1.1",
+  "psutil>=6.1.1",
   "hatchling==1.25.0",
   "pre-commit>=4.0.1",
-  "setuptools>=70.0.0",
-  "pyarrow>=18.0.0",
 ]
 
 [project.urls]
@@ -107,18 +104,22 @@ check = [
 ]
 
 [tool.hatch.envs.test.scripts]
-check = [
-  "pip install -e ../snowpark-checkpoints-validators",
+e2e = [
   "pip install -e ../snowpark-checkpoints-collectors",
-  'pytest -v --junitxml=test/outcome/test-results.xml --cov=. --cov-config=test/.coveragerc --cov-report=xml:test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.xml {args:test} --cov-report=term --cov-report=json:test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.json',
+  "pip install -e ../snowpark-checkpoints-validators",
+  'pwd && ls -la',
+  'pytest -v --junitxml=test/e2e/outcome/test-results.xml test/e2e/test_e2e_checkpoints.py',
 ]
-
-coverage = [
-  'cd test/outcome && pwd && ls -la',
-  'python ../.github/scripts/test_get_coverage.py test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.json --threshold={env:COVERAGE_THRESHOLD:85}',
+stress = [
+  "pip install -e ../snowpark-checkpoints-collectors",
+  "pip install -e ../snowpark-checkpoints-validators",
+  'pwd && ls -la',
+  'pytest -v --junitxml=test/stress/outcome/test-results.xml test/stress/mode_dataframe/test_performance_mode_dataframe.py',
+  'pytest -v --junitxml=test/stress/outcome/test-results.xml test/stress/mode_schema/test_performance_mode_schema.py',
 ]
 
 [tool.pytest.ini_options]
 pythonpath = [
-  ".", "snowpark-checkpoints-testing",
+  ".",
+  "snowpark-checkpoints-testing",
 ]

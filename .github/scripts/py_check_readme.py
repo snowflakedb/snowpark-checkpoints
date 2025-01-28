@@ -35,7 +35,13 @@ def check_readme_changes():
         if root == ".":
             continue
 
-        if "dist" in root or ".git" in root or "/docs" in root:
+        if (
+            "dist" in root
+            or ".git" in root
+            or "/docs" in root
+            or "/.github" in root
+            or "/snowpark-checkpoints-testing" in root
+        ):
             continue
         if "README.md" in files:
             subdir_readme = Path(root) / "README.md"

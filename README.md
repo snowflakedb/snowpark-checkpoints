@@ -2,6 +2,7 @@
 
 Snowpark Python / Spark Migration Testing Tools
 
+
 ---
 
 The **snowpark-checkpoints**  package is a testing library that will help you validate your migrated Snowpark code and discover any behavioral differences with the original Apache PySpark code.

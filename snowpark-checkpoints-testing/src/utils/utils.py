@@ -2,9 +2,11 @@
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
 
-import os
+from pathlib import Path
 import re
 
+VERSION_VARIABLE_PATTERN = r"^__version__ = ['\"]([^'\"]*)['\"]"
+VERSION_FILE_NAME = "__version__.py"
 
 def get_version() -> str:
     """Get the version of the package.
@@ -12,15 +14,18 @@ def get_version() -> str:
         str: The version of the package.
     """
     try:
-        folder = os.path.abspath(os.path.join(__file__, "../../../../"))
-        version_file_path = os.path.join(folder, "__version__.py")
+        directory_levels_up = 3
+        project_root = Path(__file__).resolve().parents[directory_levels_up]
+        version_file_path = project_root / VERSION_FILE_NAME
         with open(version_file_path) as file:
             content = file.read()
             version_match = re.search(
-                r"^__version__ = ['\"]([^'\"]*)['\"]", content, re.MULTILINE
+                VERSION_VARIABLE_PATTERN, content, re.MULTILINE
             )
             if version_match:
                 return version_match.group(1)
         return None
     except Exception:
         return None
+    
+get_version()

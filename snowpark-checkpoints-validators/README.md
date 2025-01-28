@@ -1,11 +1,6 @@
 # snowpark-checkpoints-validators
 
 ---
-**NOTE**
-
-This package is on Private Preview.
-
----
 
 **snowpark-checkpoints-validators** is a package designed to validate Snowpark DataFrames against predefined schemas and checkpoints. This package ensures data integrity and consistency by performing schema and data validation checks at various stages of a Snowpark pipeline.
 

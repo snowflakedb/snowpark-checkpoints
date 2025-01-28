@@ -447,6 +447,9 @@ class TelemetryManagerTest(unittest.TestCase):
         with patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.SNOWFLAKE_DIRS", mock_DIRS
         ), patch(
+            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_testing",
+            return_value=False,
+        ), patch(
             "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_upload_local_telemetry",
             return_value=MagicMock(),
         ):

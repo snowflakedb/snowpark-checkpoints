@@ -3,11 +3,6 @@
 Snowpark Python / Spark Migration Testing Tools
 
 ---
-**NOTE**
-
-This package is on Private Preview.
-
----
 
 The **snowpark-checkpoints**  package is a testing library that will help you validate your migrated Snowpark code and discover any behavioral differences with the original Apache PySpark code.
 
@@ -537,11 +532,4 @@ python3 -m build
    python demo_pyspark_pipeline.py
    This will generate the JSON schema files. Then, run the Snowpark demo:
    python demo_snowpark_pipeline.py
-
-## References
-
-- #spark-lift-and-shift
-- #snowpark-migration-discussion
-- One-Pager [Checkpoints for Spark / Snowpark](https://docs.google.com/document/d/1obeiwm2qjIA2CCCjP_2U4gaZ6wXe0NkJoLIyMFAhnOM/edit)
-
 ------

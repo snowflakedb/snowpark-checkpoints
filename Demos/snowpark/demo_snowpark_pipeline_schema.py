@@ -48,7 +48,7 @@ schema = StructType(
         # ShortType: Represents 2-byte signed integer numbers. The range of numbers is from -32768 to 32767.
         StructField("short", ShortType(), True),
         # IntegerType: Represents 4-byte signed integer numbers. The range of numbers is from -2147483648 to 2147483647.
-        StructField("interger", IntegerType(), True),
+        StructField("integer", IntegerType(), True),
         # LongType: Represents 8-byte signed integer numbers. The range of numbers is from -9223372036854775808 to 9223372036854775807.
         StructField("long", LongType(), True),
         # FloatType: Represents 4-byte single-precision floating point numbers.

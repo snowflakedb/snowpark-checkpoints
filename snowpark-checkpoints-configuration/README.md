@@ -1,11 +1,6 @@
 # snowpark-checkpoints-configuration
 
 ---
-**NOTE**
-
-This package is on Private Preview.
-
----
 
 **snowpark-checkpoints-configuration** is a module for loading `checkpoint.json` and provides a model. 
 This module will work automatically with *snowpark-checkpoints-collector*  and *snowpark-checkpoints-validators*. This will try to read the configuration file from the current working directory.

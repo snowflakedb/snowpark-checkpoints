@@ -54,7 +54,9 @@ VERSION_FILE_NAME = "__version__.py"
 
 
 class TelemetryManager(TelemetryClient):
-    def __init__(self, rest: SnowflakeRestful):
+    def __init__(
+        self, rest: Optional[SnowflakeRestful] = None, is_telemetry_enabled: bool = True
+    ):
         """TelemetryManager class to log telemetry events."""
         super().__init__(rest)
         self.sc_folder_path = (
@@ -62,14 +64,15 @@ class TelemetryManager(TelemetryClient):
         )
         self.sc_sf_path_telemetry = "/telemetry/send"
         self.sc_flush_size = 25
-        self.sc_is_enabled = self._sc_is_telemetry_enabled()
+        self.sc_is_enabled = is_telemetry_enabled
         self.sc_is_testing = self._sc_is_telemetry_testing()
         self.sc_memory_limit = 5 * 1024 * 1024
         self._sc_upload_local_telemetry()
         self.sc_log_batch = []
         self.sc_hypothesis_input_events = []
         self.sc_version = _get_version()
-        atexit.register(self._sc_close_at_exit)
+        if rest:
+            atexit.register(self._sc_close_at_exit)
 
     def set_sc_output_path(self, path: Path) -> None:
         """Set the output path for testing.
@@ -221,7 +224,7 @@ class TelemetryManager(TelemetryClient):
 
     def _sc_upload_local_telemetry(self) -> None:
         """Send a request to the API to upload the local telemetry events."""
-        if not self.is_enabled() or self.sc_is_testing:
+        if not self.sc_is_enabled or self.sc_is_testing or not self._rest:
             return
         batch = []
         for file in self.sc_folder_path.glob("*.json"):
@@ -242,19 +245,6 @@ class TelemetryManager(TelemetryClient):
             for file in self.sc_folder_path.glob("*.json"):
                 file.unlink()
 
-    def _sc_is_telemetry_enabled(self) -> bool:
-        """Check if telemetry is enabled.
-
-        Returns:
-            bool: True if telemetry is enabled, False otherwise.
-
-        """
-        if self._sc_is_telemetry_testing():
-            return True
-        if os.getenv("SNOWPARK_CHECKPOINTS_TELEMETRY_ENABLED") == "false":
-            return False
-        return self._rest is not None
-
     def _sc_is_telemetry_testing(self) -> bool:
         is_testing = os.getenv("SNOWPARK_CHECKPOINTS_TELEMETRY_TESTING") == "true"
         if is_testing:
@@ -262,6 +252,7 @@ class TelemetryManager(TelemetryClient):
                 Path(os.getcwd()) / "snowpark-checkpoints-output" / "telemetry"
             )
             self.set_sc_output_path(local_telemetry_path)
+            self.sc_is_enabled = True
         return is_testing
 
     def _sc_is_telemetry_manager(self) -> bool:
@@ -427,10 +418,17 @@ def get_telemetry_manager() -> TelemetryManager:
         TelemetryManager: The telemetry manager.
 
     """
-    connection = Session.builder.getOrCreate().connection
-    if not hasattr(connection._telemetry, "_sc_is_telemetry_manager"):
-        connection._telemetry = TelemetryManager(connection._rest)
-    return connection._telemetry
+    try:
+        connection = Session.builder.getOrCreate().connection
+        if not hasattr(connection._telemetry, "_sc_is_telemetry_manager"):
+            connection._telemetry = TelemetryManager(
+                connection._rest, connection.telemetry_enabled
+            )
+        return connection._telemetry
+    except Exception:
+        telemetry_manager = TelemetryManager(None, is_telemetry_enabled=True)
+        telemetry_manager.sc_flush_size = 1
+        return telemetry_manager
 
 
 def get_snowflake_schema_types(df: snowpark_dataframe.DataFrame) -> list[str]:
@@ -826,6 +824,8 @@ def report_telemetry(
             except Exception as err:
                 func_exception = err
 
+            if os.getenv("SNOWPARK_CHECKPOINTS_TELEMETRY_ENABLED") == "false":
+                return result
             telemetry_event = None
             data = None
             telemetry_m = None

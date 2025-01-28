@@ -2,10 +2,6 @@
 
 Snowpark Python / Spark Migration Testing Tools
 
----
-**NOTE**
-
-This package is on Private Preview.
 
 ---
 
@@ -537,11 +533,4 @@ python3 -m build
    python demo_pyspark_pipeline.py
    This will generate the JSON schema files. Then, run the Snowpark demo:
    python demo_snowpark_pipeline.py
-
-## References
-
-- #spark-lift-and-shift
-- #snowpark-migration-discussion
-- One-Pager [Checkpoints for Spark / Snowpark](https://docs.google.com/document/d/1obeiwm2qjIA2CCCjP_2U4gaZ6wXe0NkJoLIyMFAhnOM/edit)
-
 ------

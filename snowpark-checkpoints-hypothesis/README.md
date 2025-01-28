@@ -1,6 +1,9 @@
 # snowpark-checkpoints-hypothesis
 
 ---
+**NOTE**
+This package is on Public Preview.
+---
 
 **snowpark-checkpoints-hypothesis** is a [Hypothesis](https://hypothesis.readthedocs.io/en/latest/) extension for generating Snowpark DataFrames. This project provides strategies to facilitate testing and data generation for Snowpark DataFrames using the Hypothesis library.
 

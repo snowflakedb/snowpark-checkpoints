@@ -15,7 +15,7 @@ from performance_test import performance_test
 import tempfile
 from os import getcwd
 from pathlib import Path
-from src.utils.constants import PACKAGE_NAME_COLLECTORS, PACKAGE_NAME_VALIDATORS
+from src.utils.constants import LIMIT_SUP_MEMORY_KEY, LIMIT_SUP_TIME_KEY, PACKAGE_NAME_COLLECTORS, PACKAGE_NAME_VALIDATORS
 
 
 EXECUTION_MODE = CheckpointMode.SCHEMA
@@ -23,18 +23,18 @@ SIZE = "medium"
 
 
 input_name = {
-    "collectors": "input_collectors",
-    "validators": "input_validators",
+    PACKAGE_NAME_COLLECTORS: "input_collectors",
+    PACKAGE_NAME_VALIDATORS: "input_validators",
 }
 
 limits_mode_schema = {
-    "validators": {
-        "sup_memory": 1510.00,
-        "sup_time": 20.00,
+    PACKAGE_NAME_VALIDATORS: {
+        LIMIT_SUP_MEMORY_KEY : 1510.00,
+        LIMIT_SUP_TIME_KEY: 20.00,
     },
-    "collectors": {
-        "sup_memory": 1200.00,
-        "sup_time": 80.00,
+    PACKAGE_NAME_COLLECTORS: {
+        LIMIT_SUP_MEMORY_KEY : 1200.00,
+        LIMIT_SUP_TIME_KEY: 80.00,
     },
 }
 

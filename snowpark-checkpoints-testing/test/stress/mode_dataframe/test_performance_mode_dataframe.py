@@ -11,7 +11,7 @@ from snowflake.snowpark_checkpoints.utils.constants import CheckpointMode
 from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryManager, get_telemetry_manager
 from snowflake.snowpark_checkpoints_collector.singleton import Singleton as SingletonCollector
 from snowflake.snowpark_checkpoints.singleton import Singleton as SingletonValidator
-from src.utils.constants import PACKAGE_NAME_COLLECTORS, PACKAGE_NAME_VALIDATORS
+from src.utils.constants import LIMIT_SUP_MEMORY_KEY, LIMIT_SUP_TIME_KEY, PACKAGE_NAME_COLLECTORS, PACKAGE_NAME_VALIDATORS
 from performance_test import performance_test
 
 EXECUTION_MODE = CheckpointMode.DATAFRAME
@@ -19,18 +19,18 @@ SIZE = "medium"
 
 
 input_name = {
-    "collectors": "input_collectors",
-    "validators": "input_validators",
+    PACKAGE_NAME_COLLECTORS: "input_collectors",
+    PACKAGE_NAME_VALIDATORS: "input_validators",
 }
 
 limits_mode_dataframe = {
-    "validators": {
-        "sup_memory": 900.00,
-        "sup_time": 20.00,
+    PACKAGE_NAME_VALIDATORS: {
+        LIMIT_SUP_MEMORY_KEY : 900.00,
+        LIMIT_SUP_TIME_KEY: 20.00,
     },
-    "collectors": {
-        "sup_memory": 520.00,
-        "sup_time": 45.00,
+    PACKAGE_NAME_COLLECTORS: {
+        LIMIT_SUP_MEMORY_KEY: 520.00,
+        LIMIT_SUP_TIME_KEY: 45.00,
     },
 }
 

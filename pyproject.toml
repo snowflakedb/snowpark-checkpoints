@@ -71,7 +71,6 @@ development = [
   "setuptools>=70.0.0",
   "pyarrow>=18.0.0",
   "deepdiff>=8.0.0",
-  "psutil>=6.1.1",
 ]
 
 [project.urls]

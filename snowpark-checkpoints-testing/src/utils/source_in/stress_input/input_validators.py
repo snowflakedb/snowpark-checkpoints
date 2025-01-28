@@ -16,7 +16,7 @@ CHECKPOINT_NAME = "test_input_collectors_initial_checkpoint"
 JOB_NAME = "stress_tests"
 
 
-def input_validators(execution_mode: CheckpointMode, sample: float, temp_path: str) -> None:
+def input_validators(execution_mode: CheckpointMode, sample: float, temp_path: str) -> list:
 
     session = Session.builder.getOrCreate()
     job_context = SnowparkJobContext(

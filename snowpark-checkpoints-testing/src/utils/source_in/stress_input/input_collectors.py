@@ -1,3 +1,7 @@
+#
+# Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
+#
+
 import time
 import psutil
 from pyspark.sql import SparkSession
@@ -8,7 +12,7 @@ from src.utils.constants import STRESS_INPUT_CSV_PATH
 APP_NAME = "stress_tests"
 CHECKPOINT_NAME = "test_input_collectors_initial_checkpoint"
 
-def input_collectors(execution_mode: CheckpointMode, sample: float, temp_path: str) -> None:
+def input_collectors(execution_mode: CheckpointMode, sample: float, temp_path: str) -> list:
 
     spark = SparkSession.builder.appName(APP_NAME).getOrCreate()
     df = spark.read.csv(STRESS_INPUT_CSV_PATH, header=True, inferSchema=True)

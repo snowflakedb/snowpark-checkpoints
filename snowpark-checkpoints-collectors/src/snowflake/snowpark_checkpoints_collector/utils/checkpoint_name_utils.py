@@ -6,10 +6,7 @@ import re as regx
 
 
 CHECKPOINT_NAME_REGEX_PATTERN = r"[a-zA-Z_][a-zA-Z0-9_]+"
-WHITESPACE_TOKEN = " "
-HYPHEN_TOKEN = "-"
-UNDERSCORE_TOKEN = "_"
-TOKEN_TO_REPLACE_COLLECTION = [WHITESPACE_TOKEN, HYPHEN_TOKEN]
+TRANSLATION_TABLE = str.maketrans({" ": "_", "-": "_"})
 
 
 def normalize_checkpoint_name(checkpoint_name: str) -> str:
@@ -22,12 +19,7 @@ def normalize_checkpoint_name(checkpoint_name: str) -> str:
         str: the checkpoint name normalized.
 
     """
-    normalized_checkpoint_name = checkpoint_name
-    for token in TOKEN_TO_REPLACE_COLLECTION:
-        normalized_checkpoint_name = normalized_checkpoint_name.replace(
-            token, UNDERSCORE_TOKEN
-        )
-
+    normalized_checkpoint_name = checkpoint_name.translate(TRANSLATION_TABLE)
     return normalized_checkpoint_name
 
 

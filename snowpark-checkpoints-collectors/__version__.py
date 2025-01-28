@@ -2,4 +2,4 @@
 # Copyright (c) 2012-2025 Snowflake Computing Inc. All rights reserved.
 #
 
-__version__ = "0.1.0rc3"
+__version__ = "0.1.0"

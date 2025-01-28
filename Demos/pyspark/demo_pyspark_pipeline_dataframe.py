@@ -43,7 +43,7 @@ schema = StructType(
         # ShortType: Represents 2-byte signed integer numbers. The range of numbers is from -32768 to 32767.
         StructField("short", ShortType(), True),
         # IntegerType: Represents 4-byte signed integer numbers. The range of numbers is from -2147483648 to 2147483647.
-        StructField("interger", IntegerType(), True),
+        StructField("integer", IntegerType(), True),
         # LongType: Represents 8-byte signed integer numbers. The range of numbers is from -9223372036854775808 to 9223372036854775807.
         StructField("long", LongType(), True),
         # ! CORNER CASE
@@ -81,7 +81,7 @@ data = [
     Row(
         byte=3,
         short=789,
-        interger=13579,
+        integer=13579,
         long=1231231231,
         # float=7.8,
         double=2.345678,
@@ -96,7 +96,7 @@ data = [
     Row(
         byte=4,
         short=101,
-        interger=24680,
+        integer=24680,
         long=3213213210,
         # float=0.12,
         double=3.456789,
@@ -111,7 +111,7 @@ data = [
     Row(
         byte=5,
         short=202,
-        interger=36912,
+        integer=36912,
         long=4564564560,
         # float=3.45,
         double=4.567890,
@@ -126,7 +126,7 @@ data = [
     Row(
         byte=6,
         short=303,
-        interger=48123,
+        integer=48123,
         long=7897897890,
         # float=6.78,
         double=5.678901,
@@ -141,7 +141,7 @@ data = [
     Row(
         byte=7,
         short=404,
-        interger=59234,
+        integer=59234,
         long=9879879870,
         # float=9.01,
         double=6.789012,
@@ -156,7 +156,7 @@ data = [
     Row(
         byte=8,
         short=505,
-        interger=70345,
+        integer=70345,
         long=1231231234,
         # float=1.23,
         double=7.890123,
@@ -171,7 +171,7 @@ data = [
     Row(
         byte=9,
         short=606,
-        interger=81456,
+        integer=81456,
         long=3213213214,
         # float=4.56,
         double=8.901234,
@@ -186,7 +186,7 @@ data = [
     Row(
         byte=10,
         short=707,
-        interger=92567,
+        integer=92567,
         long=4564564564,
         # float=7.8,
         double=9.012345,
@@ -201,7 +201,7 @@ data = [
     Row(
         byte=11,
         short=808,
-        interger=103678,
+        integer=103678,
         long=7897897894,
         # float=0.12,
         double=0.123456,
@@ -216,7 +216,7 @@ data = [
     Row(
         byte=12,
         short=909,
-        interger=114789,
+        integer=114789,
         long=9879879874,
         # float=3.45,
         double=1.234567,
@@ -231,7 +231,7 @@ data = [
     Row(
         byte=1,
         short=123,
-        interger=12345,
+        integer=12345,
         long=1234567890,
         # float=1.23,
         double=1.234567,
@@ -246,7 +246,7 @@ data = [
     Row(
         byte=2,
         short=456,
-        interger=67890,
+        integer=67890,
         long=9876543210,
         # float=4.56,
         double=7.890123,

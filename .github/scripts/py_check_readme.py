@@ -41,6 +41,8 @@ def check_readme_changes():
             or "/docs" in root
             or "/.github" in root
             or "/snowpark-checkpoints-testing" in root
+            or "/.pytest_cache" in root
+            or "/.hatch/" in root
         ):
             continue
         if "README.md" in files:

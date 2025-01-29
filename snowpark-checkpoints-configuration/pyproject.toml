@@ -25,7 +25,7 @@ classifiers = [
 
 dependencies = [
   "pydantic>=1.8.2",
-  "snowflake-snowpark-python",
+  "snowflake-snowpark-python==1.26.0",
 ]
 
 authors = [
@@ -75,15 +75,22 @@ where = ["src/"]
 dev-mode-dirs = ['src']
 directory = 'snowpark-checkpoints-configuration'
 
+[[tool.hatch.sources]]
+dir = "src/snowflake/snowpark_checkpoints_configuration"
+name = "snowpark-checkpoints-configuration"
+type = "package"
+
 [tool.hatch.build.targets.wheel]
 directory = "dist"
-packages = ["snowpark-checkpoints-configuration/src/snowflake/snowpark_checkpoints_configuration"]
+packages = [
+  "src/snowflake",
+]
 
 [tool.hatch.build.targets.sdist]
 directory = "dist"
 exclude = ["/.github", "/.idea"]
 include = [
-  'snowpark-checkpoints-configuration/src',
+  'src/**',
   'README.md',
   'LICENSE',
   'test/',

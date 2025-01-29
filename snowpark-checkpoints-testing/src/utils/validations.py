@@ -23,7 +23,11 @@ from src.utils.constants import (
     EXECUTION_MODE_COLUMN_NAME,
     DATE_COLUMN_NAME,
 )
-
+MESSAGE_VALUE= "message"
+EVENT_NAME_VALUE = "event_name"
+TYPE_VALUE = "type"
+METADATA_VALUE = "metadata"
+DATA_VALUE = "data"
 JOB_NAME = "E2E_Test"
 REGEX_JSON_TELEMETRY = r"^(.*)(telemetry_info)(.*)(json)$"
 expected_data = {
@@ -223,29 +227,29 @@ def validate_telemetry_data(execution_mode: CheckpointMode) -> None:
     5. Iterates through each telemetry file and compares its contents with the expected data.
     6. Asserts that the event name, snowpark checkpoints version, event type, and event data match the expected values.
     """
-    ruta = os.getcwd()
-    pat = re.compile(REGEX_JSON_TELEMETRY, re.I)
-    resultado = []
-    for dir, _, archivos in os.walk(ruta):
-        resultado.extend(
-            [os.path.join(dir, arch) for arch in filter(pat.search, archivos)]
+    path = os.getcwd()
+    pattern = re.compile(REGEX_JSON_TELEMETRY, re.I)
+    resul = []
+    for dir, _, files in os.walk(path):
+        resul.extend(
+            [os.path.join(dir, file) for file in filter(pattern.search, files)]
         )
-    resultado.sort()
-    for cont in range(len(resultado)):
-        file = resultado[cont]
-        data_expected = data_expected_telemetry[execution_mode.value][cont]
+    resul.sort()
+    for count in range(len(resul)):
+        file = resul[count]
+        data_expected = data_expected_telemetry[execution_mode.value][count]
         with open(file, "r") as file:
             data = json.load(file)
             assert (
-                data["message"]["event_name"] == data_expected["event_name"]
+                data[MESSAGE_VALUE][EVENT_NAME_VALUE] == data_expected[EVENT_NAME_VALUE]
             ), "Telemetry: The event name is not correct"
             assert (
-                data["message"]["metadata"]["snowpark_checkpoints_version"]
+                data[MESSAGE_VALUE][METADATA_VALUE]["snowpark_checkpoints_version"]
                 == get_version()
             ), "Telemetry: The snowpark checkpoints version is not correct"
             assert (
-                data["message"]["type"] == data_expected["type"]
+                data[MESSAGE_VALUE][TYPE_VALUE] == data_expected[TYPE_VALUE]
             ), "Telemetry: The event type is not correct"
             assert (
-                data["message"]["data"] == data_expected["data"]
+                data[MESSAGE_VALUE][DATA_VALUE] == data_expected[DATA_VALUE]
             ), "Telemetry: The event data is not correct"

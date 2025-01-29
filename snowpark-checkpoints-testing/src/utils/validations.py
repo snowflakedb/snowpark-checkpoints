@@ -2,12 +2,16 @@
 # Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
 #
 
+import json
 import os
+import re
 import pandas as pd
 from snowflake.snowpark import Session
 from snowflake.snowpark.functions import col, lit
+from src.utils.utils import get_version
 from snowflake.snowpark_checkpoints.utils.constants import (
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
+    CheckpointMode,
 )
 from src.utils.constants import (
     SNOWPARK_CHECKPOINTS_REPORT_TABLE_NAME,
@@ -21,7 +25,7 @@ from src.utils.constants import (
 )
 
 JOB_NAME = "E2E_Test"
-
+REGEX_JSON_TELEMETRY = r"^(.*)(telemetry_info)(.*)(json)$"
 expected_data = {
     "Schema": [
         ["E2E_Test", "pass", "snowpark_function", "", "", "Schema"],
@@ -30,6 +34,49 @@ expected_data = {
     "Dataframe": [
         ["E2E_Test", "pass", "snowpark_function", "", "", "Schema"],
         ["E2E_Test", "pass", "test_E2E_initial_checkpoint", "", "", "Dataframe"],
+    ],
+}
+
+data_expected_telemetry = {
+    1: [
+        {
+            "event_name": "DataFrame_Collection_Schema",
+            "snowpark_checkpoints_version": "0.1.0rc3",
+            "type": "info",
+            "data": '{"function": "_collect_dataframe_checkpoint_mode_schema", "mode": 1, "schema_types": ["long", "string", "long", "long", "double", "double", "boolean", "string", "string"]}',
+        },
+        {
+            "event_name": "DataFrame_Validator_Schema",
+            "snowpark_checkpoints_version": "0.1.0rc3",
+            "type": "info",
+            "data": '{"function": "_check_dataframe_schema", "mode": 1, "status": true, "schema_types": ["int64", "object", "int64", "int64", "float64", "float64", "bool", "object", "object"]}',
+        },
+        {
+            "event_name": "DataFrame_Validator_Mirror",
+            "snowpark_checkpoints_version": "0.1.0rc3",
+            "type": "info",
+            "data": '{"function": "_assert_return", "status": true, "snowflake_schema_types": ["LongType()", "StringType()", "LongType()", "LongType()", "DoubleType()", "DoubleType()", "BooleanType()", "StringType()", "StringType()", "StringType(8)"], "spark_schema_types": ["LongType()", "StringType()", "LongType()", "LongType()", "DoubleType()", "DoubleType()", "BooleanType()", "StringType()", "StringType()", "StringType()"]}',
+        },
+    ],
+    2: [
+        {
+            "event_name": "DataFrame_Collection_DF",
+            "snowpark_checkpoints_version": "0.1.0rc3",
+            "type": "info",
+            "data": '{"function": "_collect_dataframe_checkpoint_mode_dataframe", "mode": 2, "spark_schema_types": ["LongType()", "StringType()", "LongType()", "LongType()", "DoubleType()", "DoubleType()", "BooleanType()", "StringType()", "StringType()"]}',
+        },
+        {
+            "event_name": "DataFrame_Validator_DF",
+            "snowpark_checkpoints_version": "0.1.0rc3",
+            "type": "info",
+            "data": '{"function": "_compare_data", "mode": 2, "status": true, "schema_types": ["LongType()", "StringType()", "LongType()", "LongType()", "DoubleType()", "DoubleType()", "BooleanType()", "StringType()", "StringType()"]}',
+        },
+        {
+            "event_name": "DataFrame_Validator_Mirror",
+            "snowpark_checkpoints_version": "0.1.0rc3",
+            "type": "info",
+            "data": '{"function": "_assert_return", "status": true, "snowflake_schema_types": ["LongType()", "StringType()", "LongType()", "LongType()", "DoubleType()", "DoubleType()", "BooleanType()", "StringType()", "StringType()", "StringType(8)"], "spark_schema_types": ["LongType()", "StringType()", "LongType()", "LongType()", "DoubleType()", "DoubleType()", "BooleanType()", "StringType()", "StringType()", "StringType()"]}',
+        },
     ],
 }
 
@@ -130,7 +177,9 @@ def validate_checkpoints_results_table_generated() -> pd.DataFrame:
         return df_output
 
 
-def validate_output_checkpoints_results_table(df: pd.DataFrame, execution_mode: str) -> None:
+def validate_output_checkpoints_results_table(
+    df: pd.DataFrame, execution_mode: str
+) -> None:
     """
     Validates that the given DataFrame matches the expected output checkpoints results table.
 
@@ -154,3 +203,49 @@ def validate_output_checkpoints_results_table(df: pd.DataFrame, execution_mode: 
         ],
     )
     assert df_expected.equals(df), "The output table does not match the expected data"
+
+
+def validate_telemetry_data(execution_mode: CheckpointMode) -> None:
+    """
+    Validates telemetry data files against expected data for a given execution mode.
+
+    Args:
+        execution_mode (CheckpointMode): The mode of execution to validate telemetry data for.
+
+    Raises:
+        AssertionError: If any of the telemetry data does not match the expected values.
+
+    This function performs the following steps:
+    1. Constructs the path to the telemetry data directory.
+    2. Compiles a regex pattern to match JSON telemetry files.
+    3. Walks through the directory to find all telemetry files matching the pattern.
+    4. Sorts the list of telemetry files.
+    5. Iterates through each telemetry file and compares its contents with the expected data.
+    6. Asserts that the event name, snowpark checkpoints version, event type, and event data match the expected values.
+    """
+    ruta = os.getcwd()
+    pat = re.compile(REGEX_JSON_TELEMETRY, re.I)
+    resultado = []
+    for dir, _, archivos in os.walk(ruta):
+        resultado.extend(
+            [os.path.join(dir, arch) for arch in filter(pat.search, archivos)]
+        )
+    resultado.sort()
+    for cont in range(len(resultado)):
+        file = resultado[cont]
+        data_expected = data_expected_telemetry[execution_mode.value][cont]
+        with open(file, "r") as file:
+            data = json.load(file)
+            assert (
+                data["message"]["event_name"] == data_expected["event_name"]
+            ), "Telemetry: The event name is not correct"
+            assert (
+                data["message"]["metadata"]["snowpark_checkpoints_version"]
+                == get_version()
+            ), "Telemetry: The snowpark checkpoints version is not correct"
+            assert (
+                data["message"]["type"] == data_expected["type"]
+            ), "Telemetry: The event type is not correct"
+            assert (
+                data["message"]["data"] == data_expected["data"]
+            ), "Telemetry: The event data is not correct"

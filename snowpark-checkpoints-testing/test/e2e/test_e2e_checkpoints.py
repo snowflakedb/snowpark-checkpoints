@@ -21,6 +21,7 @@ from src.utils.validations import (
     validate_json_file_generated,
     validate_output_checkpoints_results_table,
     validate_checkpoints_results_table_generated,
+    validate_telemetry_data,
 )
 from snowflake.snowpark_checkpoints.utils.telemetry import get_telemetry_manager
 
@@ -44,22 +45,23 @@ def telemetry():
 @pytest.mark.parametrize("json_name_list, execution_mode", testdata)
 def test_e2e_checkpoints(json_name_list, execution_mode, telemetry) -> None:
     """
-    End-to-end test for collectors and validators in mode Dataframe and Schema.
+    End-to-end test for collectors and validators in both Dataframe and Schema modes.
 
     This test function performs the following steps:
-    1. Executes the input_e2e_test_pyspark function.
-    2. Executes the input_e2e_test_snowpark function.
-    3. Validates that the specified JSON files are generated.
+    1. Executes the input_e2e_test_pyspark function to simulate PySpark checkpointing.
+    2. Executes the input_e2e_test_snowpark function to simulate Snowpark checkpointing.
+    3. Validates that the specified JSON files are generated in the temporary directory.
     4. Validates that the checkpoints results table is generated and returns the DataFrame.
     5. Validates the output checkpoints results table using the returned DataFrame.
+    6. Validates the telemetry data for the given execution mode.
 
     Args:
         json_name_list (list): A list of JSON file names to validate.
-        execution_mode (CheckpointMode): The mode of execution for the test.
+        execution_mode (CheckpointMode): The mode of execution for the test (Schema or Dataframe).
         telemetry: The telemetry manager instance.
     """
     with tempfile.TemporaryDirectory(
-        dir=(os.path.join(os.getcwd()))
+        dir=os.getcwd()
     ) as temp_dir:
         temp_path = Path(temp_dir)
         telemetry.set_sc_output_path(temp_path)
@@ -68,3 +70,4 @@ def test_e2e_checkpoints(json_name_list, execution_mode, telemetry) -> None:
         validate_json_file_generated(json_name_list, temp_path)
         df = validate_checkpoints_results_table_generated()
         validate_output_checkpoints_results_table(df, execution_mode_name[str(execution_mode.value)])
+        validate_telemetry_data(execution_mode)

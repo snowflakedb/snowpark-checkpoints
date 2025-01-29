@@ -1,0 +1,63 @@
+name: PR Lint
+on:
+  pull_request_target:
+    types: [edited, opened, reopened, synchronize]
+  pull_request:
+    types: [ready_for_review]
+    branches: [main]
+jobs:
+  pr-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: morrisoncole/pr-lint-action@51f3cfabaf5d46f94e54524214e45685f0401b2a
+        with:
+          title-regex: "^[a-zA-Z]+-[0-9]+"
+          on-failed-regex-fail-action: true
+          on-failed-regex-request-changes: false
+          on-failed-regex-create-review: false
+          on-failed-regex-comment: "Please prefix your PR title with a JIRA ticket number. e.g SNOW-123456: <Title>"
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Check PR Description
+        run: |
+          if [ -z "${{ github.event.pull_request.body }}" ]; then
+            echo "PR description is empty. Please provide a description."
+            exit 1
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check PR Size
+        run: |
+          echo "Base SHA: ${{ github.event.pull_request.base.sha }}"
+          echo "Head SHA: ${{ github.event.pull_request.head.sha }}"
+
+          echo "Fetching diff between the base and head commits..."
+          git fetch --no-tags --prune --depth=2 origin ${{ github.event.pull_request.base.ref }} || true
+
+          CHANGED_PYFILES=$(git diff --name-only --diff-filter=d ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} | grep '\.py$' | grep -v '/test/' || true)
+          echo "Changed Python files:" $CHANGED_PYFILES
+
+          if [ -z "$CHANGED_PYFILES" ]; then
+              echo "No Python files changed."
+              FILE_COUNT=0
+          else
+              echo "Changed Python files: $CHANGED_PYFILES"
+              FILE_COUNT=$(echo "$CHANGED_PYFILES" | wc -l)
+          fi
+
+          echo "Total Python files changed: $FILE_COUNT"
+
+          if [ "$FILE_COUNT" -gt 20 ]; then
+              echo "PR includes too many Python files ($FILE_COUNT > 20). Please split it into smaller PRs."
+              exit 1
+          fi
+
+          echo "PR size check passed successfully."
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

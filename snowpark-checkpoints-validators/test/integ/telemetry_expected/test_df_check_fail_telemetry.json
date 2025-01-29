@@ -1,0 +1,18 @@
+{
+    "message": {
+        "data": "{\"function\": \"_check_dataframe_schema\", \"mode\": 1, \"status\": null, \"schema_types\": [\"int8\", \"float64\"]}",
+        "driver_type": "PythonConnector",
+        "driver_version": "3.12.4",
+        "event_name": "DataFrame_Validator_Schema",
+        "metadata": {
+            "device_id": "0471186eb1a6ba58c82e97d19006a08b163bc0056c05e6f770090eade2c3a809",
+            "os_version": "darwin",
+            "python_version": "3.11.11",
+            "snowpark_checkpoints_version": "0.1.0rc2",
+            "snowpark_version": "1.26.0"
+        },
+        "source": "snowpark-checkpoints",
+        "type": "error"
+    },
+    "timestamp": "1737735293272"
+}

@@ -1,0 +1,234 @@
+name: Conda Package
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  PYTHON_VERSION: "3.11"
+  CONDA_ENV_NAME: "snow_3_11"
+
+jobs:
+  build:
+    name: Build Conda Packages
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch tags
+        run: git fetch --tags
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+            VERSION=${VERSION#v}
+            echo "version=$VERSION"
+          else
+            echo "GIT REF is not a tag"
+            VERSION=$(git describe --tags $(git rev-list --tags --max-count=1))
+            VERSION=${VERSION#v}
+            echo "version=$VERSION"
+          fi
+
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(rc[0-9]+)?$ ]]; then
+            echo "version=$VERSION"
+            echo "Error: No version found"
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update version file
+        run: |
+          echo "Current directory: $PWD" && ls -l
+          echo "Updating conda meta files ${FILE_NAME} with version: ${NEW_VERSION}"
+          find . -name "${FILE_NAME}" -exec sh -c 'sed -i "s/{% set version = \".*\" %}/{% set version = \"${NEW_VERSION}\" %}/" "$1"' _ {} \;
+        env:
+          NEW_VERSION: ${{ steps.get_version.outputs.version }}
+          FILE_NAME: meta.yaml
+        working-directory: ${{ github.workspace }}
+
+      - name: Get Conda files version
+        run: |
+          echo "Displaying updated meta.yaml files:"
+          find . -name "${FILE_NAME}" -exec sh -c 'echo "File: $1" && grep "{% set version = \"" $1' _ {} \;
+        env:
+          FILE_NAME: meta.yaml
+        working-directory: ${{ github.workspace }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ env.PYTHON_VERSION }}"
+
+      - name: Set up Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-update-conda: true
+          channels: conda-forge,defaults,anaconda
+          python-version: "${{ env.PYTHON_VERSION }}"
+
+      - name: Initialize Conda
+        run: |
+          conda init bash
+          source ~/.bashrc
+
+      - name: Conda Create environment
+        run: |
+          conda create --name ${{ env.CONDA_ENV_NAME }} -c https://repo.anaconda.com/pkgs/snowflake python=${{ env.PYTHON_VERSION }} -y
+          source ~/.bashrc
+          conda activate ${{ env.CONDA_ENV_NAME }}
+          conda info --envs
+          conda info
+
+      - name: Conda Setup environment
+        run: |
+          source ~/.bashrc
+          conda activate ${{ env.CONDA_ENV_NAME }}
+          conda config --add channels conda-forge
+          conda install -c conda-forge pytest conda-build conda-verify -y
+          conda list
+
+      - name: Build Conda Package v2 [snowpark-configuration]
+        run: |
+          source ~/.bashrc
+          conda activate ${{ env.CONDA_ENV_NAME }}
+          echo "Current directory: $PWD" && ls -la
+          conda config --set conda_build.pkg_format 2
+          conda build recipe/ -c conda-forge --python=3.11 --numpy=1.23 --output-folder recipe/dist/conda
+          ls -lR recipe/dist/conda
+        working-directory: ./snowpark-checkpoints-configuration
+
+      - name: Verify Conda package v2 [snowpark-configuration]
+        run: |
+          source ~/.bashrc
+          conda activate ${{ env.CONDA_ENV_NAME }}
+          conda-verify --ignore C1115 recipe/dist/conda/**/*.conda
+        working-directory: ./snowpark-checkpoints-configuration
+
+      - name: Build Conda Package v2 [snowpark-hypothesis]
+        run: |
+          source ~/.bashrc
+          conda activate ${{ env.CONDA_ENV_NAME }}
+          echo "Current directory: $PWD" && ls -la
+          conda config --set conda_build.pkg_format 2
+          conda build recipe/ -c conda-forge --python=3.11 --numpy=1.23 --output-folder recipe/dist/conda
+          ls -lR recipe/dist/conda
+        working-directory: ./snowpark-checkpoints-hypothesis
+
+      - name: Verify Conda package v2 [snowpark-hypothesis]
+        run: |
+          source ~/.bashrc
+          conda activate ${{ env.CONDA_ENV_NAME }}
+          conda-verify --ignore C1115 recipe/dist/conda/**/*.conda
+        working-directory: ./snowpark-checkpoints-hypothesis
+
+      - name: Build Conda Package v2 [snowpark-validators]
+        run: |
+          source ~/.bashrc
+          conda activate ${{ env.CONDA_ENV_NAME }}
+          echo "Current directory: $PWD" && ls -la
+          conda config --set conda_build.pkg_format 2
+          conda build recipe/ -c conda-forge --python=3.11 --numpy=1.23 --output-folder recipe/dist/conda
+          ls -lR recipe/dist/conda
+        working-directory: ./snowpark-checkpoints-validators
+
+      - name: Verify Conda package v2 [snowpark-validators]
+        run: |
+          source ~/.bashrc
+          conda activate ${{ env.CONDA_ENV_NAME }}
+          conda-verify --ignore C1115 recipe/dist/conda/**/*.conda
+        working-directory: ./snowpark-checkpoints-validators
+
+      - name: Build Conda Package v2 [snowpark-collectors]
+        run: |
+          source ~/.bashrc
+          conda activate ${{ env.CONDA_ENV_NAME }}
+          echo "Current directory: $PWD" && ls -la
+          conda config --set conda_build.pkg_format 2
+          conda build recipe/ -c conda-forge --python=3.11 --numpy=1.23 --output-folder recipe/dist/conda
+          ls -lR recipe/dist/conda
+        working-directory: ./snowpark-checkpoints-collectors
+
+      - name: Verify Conda package v2 [snowpark-collectors]
+        run: |
+          source ~/.bashrc
+          conda activate ${{ env.CONDA_ENV_NAME }}
+          conda-verify --ignore C1115 recipe/dist/conda/**/*.conda
+        working-directory: ./snowpark-checkpoints-collectors
+
+      - name: Build Conda Package v2 [snowpark-checkpoints]
+        run: |
+          source ~/.bashrc
+          conda activate ${{ env.CONDA_ENV_NAME }}
+          echo "Current directory: $PWD" && ls -la
+          conda config --set conda_build.pkg_format 2
+          conda build recipe/ -c conda-forge --python=3.11 --numpy=1.23 --output-folder recipe/dist/conda
+          ls -lR recipe/dist/conda
+        working-directory: ${{ github.workspace }}
+
+      - name: Verify Conda package v2 [snowpark-checkpoints]
+        run: |
+          source ~/.bashrc
+          conda activate ${{ env.CONDA_ENV_NAME }}
+          conda-verify --ignore C1115 recipe/dist/conda/**/*.conda
+        working-directory: ${{ github.workspace }}
+
+      - name: Upload Conda Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-conda-snowpark-checkpoints
+          path: |
+            ./recipe/dist/*
+            ./**/recipe/dist/*
+
+  install:
+    name: Install Conda Packages
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Download Conda Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: all-conda-snowpark-checkpoints
+          path: ./dist
+
+      - name: Set up Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-update-conda: true
+          channels: conda-forge,defaults,anaconda
+          python-version: "${{ env.PYTHON_VERSION }}"
+
+      - name: Initialize Conda
+        run: |
+          conda init bash
+          source ~/.bashrc
+
+      - name: Conda Create environment
+        run: |
+          conda create --name ${{ env.CONDA_ENV_NAME }} -c https://repo.anaconda.com/pkgs/snowflake python=${{ env.PYTHON_VERSION }} -y
+          source ~/.bashrc
+          conda activate ${{ env.CONDA_ENV_NAME }}
+          conda info --envs
+          conda info
+
+      - name: Conda Install Packages
+        run: |
+          echo "Current directory: $PWD" && ls -laR
+          source ~/.bashrc
+          conda activate ${{ env.CONDA_ENV_NAME }}
+          find . -name "*.conda" -exec conda install {} -y \;
+          conda install -c conda-forge conda-build conda-verify -y
+          conda list --verbose
+        working-directory: ./dist

@@ -1,0 +1,38 @@
+{
+  "pipelines": [
+    {
+      "entryPoint": "",
+      "checkpoints": [
+        {
+          "name": "demo_initial_creation_checkpoint_dataframe",
+          "function": "df",
+          "file": "Demos/pyspark/demo_pyspark_pipeline_dataframe.py",
+          "location": 1,
+          "enabled": true,
+          "mode": 2
+        },
+        {
+          "name": "demo_add_a_column_dataframe",
+          "function": "df1",
+          "file": "Demos/pyspark/demo_pyspark_pipeline_dataframe.py",
+          "location": 1,
+          "enabled": true,
+          "mode": 2
+        },
+        {
+          "name": "demo_initial_creation_checkpoint",
+          "function": "df",
+          "file": "Demos/pyspark/demo_pyspark_pipeline_schema.py",
+          "location": 0
+        },
+        {
+          "name": "demo_add_a_column",
+          "function": "df1",
+          "file": "Demos/pyspark/demo_pyspark_pipeline_schema.py",
+          "location": 1
+        }
+      ]
+    }
+  ],
+  "type": "Collection"
+}

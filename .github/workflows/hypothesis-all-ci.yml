@@ -1,0 +1,46 @@
+name: Run All workflows [snowpark-checkpoints-hypothesis]
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "**"
+      - "!snowpark-checkpoints-validators/**"
+      - "!snowpark-checkpoints-collectors/**"
+      - "!snowpark-checkpoints-configuration/**"
+      - "!Demos/**"
+  pull_request:
+    branches: "**"
+    paths:
+      - "**"
+      - "!snowpark-checkpoints-validators/**"
+      - "!snowpark-checkpoints-collectors/**"
+      - "!snowpark-checkpoints-configuration/**"
+      - "!Demos/**"
+  workflow_call:
+
+jobs:
+  lint:
+    name: Static analysis and linting hypothesis-snowpark
+    uses: ./.github/workflows/hypothesis-lint.yml
+
+  build:
+    needs: lint
+    name: Build wheels hypothesis-snowpark
+    uses: ./.github/workflows/hypothesis-use-build-wheels.yml
+    secrets: inherit
+
+  test:
+    needs: build
+    name: Run all tests hypothesis-snowpark
+    uses: ./.github/workflows/hypothesis-use-tests_all.yml
+    secrets: inherit
+
+  artifact:
+    needs: test
+    name: Artifact package hypothesis-snowpark
+    uses: ./.github/workflows/hypothesis-use-set-artifacts.yml
+    secrets: inherit
+    with:
+      artifact-name: snowpark-checkpoints-hypothesis

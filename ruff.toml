@@ -1,0 +1,57 @@
+extend-exclude = [
+  "**/test/",
+  "**/tests/",
+  ".github/scripts/",
+  "**/Demos/",
+]
+line-length = 120
+
+exclude = [
+  ".git",
+  ".ipynb",
+  ".ruff_cache",
+  ".venv",
+  "venv",
+  ".vscode",
+  "dist",
+  ".pytest_cache",
+  "__init__.py",
+  "**/_version.py",
+]
+
+[lint]
+ignore = [
+  'D100', # Missing docstring in public class
+  'D101', # Missing docstring in public class
+  'D102', # Missing docstring in public method
+  'D104', # Missing docstring in public package
+  'D105', # Missing docstring in magic method
+  'D107', # Missing docstring in `__init__`
+  'D211', # blank-line-before-class
+]
+select = [
+  'B', # flake8-bugbear
+  'D', # pydocstyle
+  'E', # pycodestyle
+  'F', # pyflakes
+  'I', # isort
+  'N', # pep8-naming
+  'RUF100', # check for valid noqa directives
+  'UP', # pyupgrade
+  'W', # pycodestyle
+  'TID252', # relative-imports
+]
+
+[lint.per-file-ignores]
+"__init__.py" = ["D404"]
+
+fixable = ["ALL"]
+
+[format]
+quote-style = "double"
+
+[lint.isort]
+known-first-party = ['snowflake']
+lines-after-imports = 2
+lines-between-types = 1
+order-by-type = true

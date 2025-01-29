@@ -1,0 +1,42 @@
+{
+  "pipelines": [
+    {
+      "entryPoint": "",
+      "checkpoints": [
+        {
+          "name": "demo_initial_creation_checkpoint_dataframe",
+          "function": "df",
+          "file": "Demos/snowpark/demo_snowpark_pipeline_dataframe.py",
+          "location": 1,
+          "enabled": true,
+          "mode": 2,
+          "job_context": "job_context"
+        },
+        {
+          "name": "demo_add_a_column_dataframe",
+          "function": "df1",
+          "file": "Demos/snowpark/demo_snowpark_pipeline_dataframe.py",
+          "location": 1,
+          "enabled": true,
+          "mode": 2,
+          "job_context": "job_context"
+        },
+        {
+          "name": "demo_initial_creation_checkpoint",
+          "function": "df",
+          "file": "Demos/snowpark/demo_snowpark_pipeline_schema.py",
+          "location": 0,
+          "job_context": "job_context"
+        },
+        {
+          "name": "demo_add_a_column",
+          "function": "df1",
+          "file": "Demos/snowpark/demo_snowpark_pipeline_schema.py",
+          "location": 0,
+          "job_context": "job_context"
+        }
+      ]
+    }
+  ],
+  "type": "Validation"
+}

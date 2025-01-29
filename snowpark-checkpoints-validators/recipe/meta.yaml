@@ -1,0 +1,47 @@
+{% set name = "snowpark-checkpoints-validators" %}
+{% set version = "0.1.0" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  path: ../
+
+build:
+  noarch: python
+  script: |
+    set -e
+    {{ PYTHON }} -m pip install . --no-deps -vvv
+
+requirements:
+  host:
+    - python<3.12,>=3.9
+    - pip
+    - wheel
+    - hatchling
+  run:
+    - python<3.12,>=3.9
+    - hypothesis
+    - snowflake-snowpark-python==1.26.0
+    - snowflake-connector-python==3.13.0
+    - pyspark
+  run_constrained:
+    - pandera ==0.20.4
+
+test:
+  commands:
+    - pip install pandera[io]==0.20.4
+    - pip install pandera-report==0.1.2
+    - pip check
+    - pip list --verbose
+    - python -c "import pandera"
+    - python -c "from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext"
+
+about:
+  summary: A package for snowpark checkpoints validators.
+  home: https://github.com/snowflakedb/snowpark-checkpoints/
+  license: Apache License 2.0
+
+channels:
+  - conda-forge

@@ -1,0 +1,44 @@
+{% set name = "snowpark-checkpoints-hypothesis" %}
+{% set version = "0.1.0" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  path: ../
+
+build:
+  noarch: python
+  script: |
+    set -e
+    {{ PYTHON }} -m pip install . --no-deps -vvv
+
+requirements:
+  host:
+    - python<3.12,>=3.9
+    - pip
+    - wheel
+    - hatchling
+  run:
+    - python<3.12,>=3.9
+    - hypothesis
+    - snowflake-snowpark-python==1.26.0
+  run_constrained:
+    - pandera ==0.20.4
+
+test:
+  commands:
+    - pip install pandera[io]==0.20.4
+    - pip check
+    - pip list --verbose
+    - python -c "import pandera"
+    - python -c "from snowflake.hypothesis_snowpark import dataframe_strategy"
+
+about:
+  summary: A package for snowpark checkpoints hypothesis.
+  home: https://github.com/snowflakedb/snowpark-checkpoints/
+  license: Apache License 2.0
+
+channels:
+  - conda-forge

@@ -1,0 +1,27 @@
+{
+  "type": "Collection",
+  "pipelines": [
+    {
+      "entryPoint": "demo_pyspark_pipeline.py",
+      "checkpoints": [
+        {
+          "mode": 1,
+          "name": "demo-initial-creation-checkpoint",
+          "function": "",
+          "df": "df",
+          "file": "demo_pyspark_pipeline.py",
+          "location": 1,
+          "enabled": true
+        },
+        {
+          "mode": 1,
+          "name": "demo_pyspark_pipeline_df1_123HDK",
+          "df": "df1",
+          "sample": 0.5,
+          "file": "demo_pyspark_pipeline.py",
+          "location": 1
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{% set name = "snowpark-checkpoints" %}
+{% set version = "0.1.0" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  path: ../
+
+build:
+  noarch: python
+  script: |
+    set -e
+    {{ PYTHON }} -m pip install . --no-deps -vvv
+
+requirements:
+  host:
+    - python<3.12,>=3.9
+    - pip
+    - wheel
+    - hatchling
+  run:
+    - python<3.12,>=3.9
+    - snowflake-connector-python==3.13.0
+    - snowflake-snowpark-python
+    - pyspark
+    - pydantic>=1.8.2
+    - hypothesis
+  run_constrained:
+    - pandera ==0.20.4
+
+test:
+  requires:
+    - pip
+    - snowflake-snowpark-python>=1.26.0
+    - snowflake-connector-python==3.13.0
+    - pyspark
+    - pandera
+    - pandas
+    - pydantic
+
+  commands:
+    - pip install pandera[io]==0.20.4 -vvv
+    - pip install pandera-report==0.1.2 -vvv
+    - pip check
+    - pip list --verbose
+    - python -c "import pandera"
+    - python -c "import pydantic"
+    - python -c "import pandas"
+    - python -c "import snowflake.snowpark"
+    - python -c "from snowflake.snowpark_checkpoints_collector.collection_common import CheckpointMode"
+    - python -c "from snowflake.hypothesis_snowpark import dataframe_strategy"
+    - python -c "from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext"
+    - python -c "from snowflake.snowpark_checkpoints_configuration import CheckpointMetadata"
+
+about:
+  summary: A package for all snowpark checkpoints.
+  home: https://github.com/snowflakedb/snowpark-checkpoints/
+  license: Apache License 2.0
+
+channels:
+  - conda-forge

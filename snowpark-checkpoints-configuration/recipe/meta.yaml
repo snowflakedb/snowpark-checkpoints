@@ -38,6 +38,7 @@ test:
     - python -c "import pydantic"
     - python -c "import pandas"
     - python -c "import snowflake.snowpark"
+    - python -c "from snowflake.snowpark_checkpoints_configuration import CheckpointMetadata"
 
 about:
   summary: A package for snowpark checkpoints configuration

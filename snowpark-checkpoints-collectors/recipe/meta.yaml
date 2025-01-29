@@ -22,8 +22,8 @@ requirements:
     - hatchling
   run:
     - python<3.12,>=3.9
-    - snowflake-connector-python
-    - snowflake-snowpark-python
+    - snowflake-connector-python==3.13.0
+    - snowflake-snowpark-python==1.26.0
     - pyspark
   run_constrained:
     - pandera ==0.20.4
@@ -31,8 +31,8 @@ requirements:
 test:
   requires:
     - pip
-    - snowflake-snowpark-python>=1.26.0
-    - snowflake-connector-python
+    - snowflake-snowpark-python==1.26.0
+    - snowflake-connector-python==3.13.0
     - pyspark
     - pandera
 
@@ -41,6 +41,7 @@ test:
     - pip check
     - pip list --verbose
     - python -c "import pandera"
+    - python -c "from snowflake.snowpark_checkpoints_collector.collection_common import CheckpointMode"
 
 about:
   summary: A package for snowpark checkpoints collectors.

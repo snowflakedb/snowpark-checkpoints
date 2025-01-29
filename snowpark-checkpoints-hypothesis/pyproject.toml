@@ -75,15 +75,22 @@ where = ["src/"]
 dev-mode-dirs = ['src']
 directory = 'snowpark-checkpoints-hypothesis'
 
+[[tool.hatch.sources]]
+dir = "src/snowflake/hypothesis_snowpark"
+name = "snowpark-checkpoints-hypothesis"
+type = "package"
+
 [tool.hatch.build.targets.wheel]
 directory = "dist"
-packages = ["snowpark-checkpoints-hypothesis/src/snowflake"]
+packages = [
+  "src/snowflake",
+]
 
 [tool.hatch.build.targets.sdist]
 directory = "dist"
 exclude = ["/.github", "/.idea"]
 include = [
-  'src/',
+  'src/**',
   'README.md',
   'LICENSE',
   'test/',

@@ -23,7 +23,7 @@ requirements:
   run:
     - python<3.12,>=3.9
     - hypothesis
-    - snowflake-snowpark-python
+    - snowflake-snowpark-python==1.26.0
   run_constrained:
     - pandera ==0.20.4
 
@@ -33,6 +33,7 @@ test:
     - pip check
     - pip list --verbose
     - python -c "import pandera"
+    - python -c "from snowflake.hypothesis_snowpark import dataframe_strategy"
 
 about:
   summary: A package for snowpark checkpoints hypothesis.

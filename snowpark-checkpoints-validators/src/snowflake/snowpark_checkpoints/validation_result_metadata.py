@@ -88,6 +88,15 @@ class ValidationResultsMetadata(metaclass=Singleton):
                         f"Error reading validation results file: {self.validation_results_file} \n {e}"
                     ) from None
 
+    def clean(self):
+        """Clean the validation results list.
+
+        This method empties the validation results list.
+
+        """
+        if not os.path.exists(self.validation_results_file):
+            self.validation_results.results = []
+
     def add_validation_result(self, validation_result: ValidationResult):
         """Add a validation result to the pipeline result list.
 

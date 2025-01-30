@@ -359,6 +359,8 @@ def _update_validation_result(
 
     pipeline_result_metadata = ValidationResultsMetadata(output_path)
 
+    pipeline_result_metadata.clean()
+
     pipeline_result_metadata.add_validation_result(
         ValidationResult(
             timestamp=datetime.now().isoformat(),

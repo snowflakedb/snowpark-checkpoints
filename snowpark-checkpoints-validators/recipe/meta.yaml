@@ -24,7 +24,7 @@ requirements:
     - python<3.12,>=3.9
     - hypothesis
     - snowflake-snowpark-python==1.26.0
-    - snowflake-connector-python==3.13.0
+    - snowflake-connector-python
     - pyspark
   run_constrained:
     - pandera ==0.20.4

@@ -3,11 +3,20 @@
 Snowpark Python / Spark Migration Testing Tools
 
 
----
-**NOTE**
-This package is on Public Preview.
----
+[![Build and Test](https://github.com/snowflakedb/snowpark-checkpoints/actions/workflows/snowpark-checkpoints-all-tests.yml/badge.svg?branch=main)](https://github.com/snowflakedb/snowpark-checkpoints/actions/workflows/snowpark-checkpoints-all-tests.yml)
+[![PyPi](https://img.shields.io/pypi/v/snowpark-checkpoints.svg)](https://pypi.org/project/snowpark-checkpoints)
+[![License Apache-2.0](https://img.shields.io/:license-Apache%202-brightgreen.svg)](http://www.apache.org/licenses/LICENSE-2.0.txt)
+[![Codestyle Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
 The **snowpark-checkpoints**  package is a testing library that will help you validate your migrated Snowpark code and discover any behavioral differences with the original Apache PySpark code.
+
+[Source code][source code] | [Snowpark Checkpoints developer guide][Snowpark Checkpoints developer guide] | [Snowpark Checkpoints API reference][Snowpark Checkpoints api references] 
+
+---
+##### This package is on Public Preview.
+---
+
+## Getting started
 
 This bundle includes:
 - **snowpark-checkpoints-collectors**: Extracts information from PySpark dataframes for validation against Snowpark dataframes.
@@ -535,4 +544,15 @@ python3 -m build
    python demo_pyspark_pipeline.py
    This will generate the JSON schema files. Then, run the Snowpark demo:
    python demo_snowpark_pipeline.py
+
+## Contributing
+Please refer to [CONTRIBUTING.md][contributing].
+
+[add other sample code repo links]: # (Developer advocacy is open-sourcing a repo that has excellent sample code. The link will be added here.)
+
 ------
+
+[source code]: https://github.com/snowflakedb/snowpark-checkpoints
+[Snowpark Checkpoints developer guide]: https://docs.snowflake.com/en/developer-guide/snowpark-checkpoints-library
+[Snowpark Checkpoints api references]: https://docs.snowflake.com/en/developer-guide/snowpark-checkpoints-library/reference/
+[contributing]: https://github.com/snowflakedb/snowpark-checkpoints/blob/main/CONTRIBUTING.md

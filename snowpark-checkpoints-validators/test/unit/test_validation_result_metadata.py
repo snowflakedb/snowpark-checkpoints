@@ -127,3 +127,44 @@ def test_save_creates_directory():
         metadata.save()
 
     mock_makedirs.assert_called_once_with(metadata.validation_results_directory)
+
+
+def test_clean_with_existing_file():
+    test_path = os.path.dirname(os.path.abspath(__file__))
+    result_path = os.path.join(
+        test_path,
+        SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
+        VALIDATION_RESULTS_JSON_FILE_NAME,
+    )
+    with open(result_path) as file:
+        validation_result_json = file.read()
+        mock_validation_results = ValidationResults.model_validate_json(
+            validation_result_json
+        )
+
+    metadata = ValidationResultsMetadata(test_path)
+    metadata.validation_results = mock_validation_results
+
+    with patch("os.path.exists", return_value=True):
+        metadata.clean()
+
+    assert metadata.validation_results == mock_validation_results
+
+
+def test_clean_with_no_file():
+    test_path = os.path.dirname(os.path.abspath(__file__))
+    metadata = ValidationResultsMetadata(test_path)
+
+    new_validation_result = ValidationResult(
+        timestamp="2021-01-01T00:00:00",
+        file="file2",
+        line_of_code=1,
+        result=PASS_STATUS,
+        checkpoint_name="checkpoint2",
+    )
+    metadata.add_validation_result(new_validation_result)
+
+    with patch("os.path.exists", return_value=False):
+        metadata.clean()
+
+    assert metadata.validation_results == ValidationResults(results=[])

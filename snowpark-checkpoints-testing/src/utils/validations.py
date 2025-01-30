@@ -31,7 +31,6 @@ METADATA_VALUE = "metadata"
 DATA_VALUE = "data"
 JOB_NAME = "E2E_Test"
 SNOWPARK_CHECKPOINTS_VERSION_VALUE = "snowpark_checkpoints_version"
-REGEX_JSON_TELEMETRY = r"^(.*)(telemetry_info)(.*)(json)$"
 
 expected_data = {
     "Schema": [
@@ -213,7 +212,7 @@ def validate_output_checkpoints_results_table(
     assert df_expected.equals(df), "The output table does not match the expected data"
 
 
-def validate_telemetry_data(execution_mode: CheckpointMode) -> None:
+def validate_telemetry_data(execution_mode: CheckpointMode, temp_path: str) -> None:
     """
     Validates telemetry data files against expected data for a given execution mode.
     Args:
@@ -228,16 +227,11 @@ def validate_telemetry_data(execution_mode: CheckpointMode) -> None:
     5. Iterates through each telemetry file and compares its contents with the expected data.
     6. Asserts that the event name, snowpark checkpoints version, event type, and event data match the expected values.
     """
-    path = os.getcwd()
-    pattern = re.compile(REGEX_JSON_TELEMETRY, re.I)
-    resul = []
-    for dir, _, files in os.walk(path):
-        resul.extend(
-            [os.path.join(dir, file) for file in filter(pattern.search, files)]
-        )
-    resul.sort()
-    for count in range(len(resul)):
-        file = resul[count]
+    result = temp_path.glob("*.json")
+    result_list = list(result)
+    result_list.sort()
+    for count in range(len(result_list)):
+        file = result_list[count]
         data_expected = data_expected_telemetry[execution_mode.value][count]
         with open(file, "r") as file:
             data = json.load(file)

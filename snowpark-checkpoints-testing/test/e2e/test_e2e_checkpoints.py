@@ -64,10 +64,11 @@ def test_e2e_checkpoints(json_name_list, execution_mode, telemetry) -> None:
         dir = os.getcwd()
     ) as temp_dir:
         temp_path = Path(temp_dir)
-        telemetry.set_sc_output_path(temp_path)
+        telemetry_path = temp_path / "telemetry_data"
+        telemetry.set_sc_output_path(telemetry_path)
         input_e2e_test_pyspark(execution_mode, temp_path)
         input_e2e_test_snowpark(execution_mode, temp_path)
         validate_json_file_generated(json_name_list, temp_path)
         df = validate_checkpoints_results_table_generated()
         validate_output_checkpoints_results_table(df, execution_mode_name[str(execution_mode.value)])
-        validate_telemetry_data(execution_mode)
+        validate_telemetry_data(execution_mode,telemetry_path)

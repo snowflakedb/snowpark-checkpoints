@@ -1,13 +1,27 @@
-#
-# Copyright (c) 2012-2024 Snowflake Computing Inc. All rights reserved.
-#
+# Copyright 2025 Snowflake Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+# http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import os
+import json
+from src.utils.utils import get_version
 import pandas as pd
 from snowflake.snowpark import Session
 from snowflake.snowpark.functions import col, lit
 from snowflake.snowpark_checkpoints.utils.constants import (
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
+    CheckpointMode,
 )
 from src.utils.constants import (
     SNOWPARK_CHECKPOINTS_REPORT_TABLE_NAME,
@@ -20,7 +34,13 @@ from src.utils.constants import (
     DATE_COLUMN_NAME,
 )
 
+MESSAGE_VALUE = "message"
+EVENT_NAME_VALUE = "event_name"
+TYPE_VALUE = "type"
+METADATA_VALUE = "metadata"
+DATA_VALUE = "data"
 JOB_NAME = "E2E_Test"
+SNOWPARK_CHECKPOINTS_VERSION_VALUE = "snowpark_checkpoints_version"
 
 expected_data = {
     "Schema": [
@@ -33,6 +53,49 @@ expected_data = {
     ],
 }
 
+data_expected_telemetry = {
+    1: [
+        {
+            "event_name": "DataFrame_Collection_Schema",
+            "snowpark_checkpoints_version": "0.1.0rc3",
+            "type": "info",
+            "data": '{"function": "_collect_dataframe_checkpoint_mode_schema", "mode": 1, "schema_types": ["long", "string", "long", "long", "double", "double", "boolean", "string", "string"]}',
+        },
+        {
+            "event_name": "DataFrame_Validator_Schema",
+            "snowpark_checkpoints_version": "0.1.0rc3",
+            "type": "info",
+            "data": '{"function": "_check_dataframe_schema", "mode": 1, "status": true, "schema_types": ["int64", "object", "int64", "int64", "float64", "float64", "bool", "object", "object"]}',
+        },
+        {
+            "event_name": "DataFrame_Validator_Mirror",
+            "snowpark_checkpoints_version": "0.1.0rc3",
+            "type": "info",
+            "data": '{"function": "_assert_return", "status": true, "snowflake_schema_types": ["LongType()", "StringType()", "LongType()", "LongType()", "DoubleType()", "DoubleType()", "BooleanType()", "StringType()", "StringType()", "StringType(8)"], "spark_schema_types": ["LongType()", "StringType()", "LongType()", "LongType()", "DoubleType()", "DoubleType()", "BooleanType()", "StringType()", "StringType()", "StringType()"]}',
+        },
+    ],
+    2: [
+        {
+            "event_name": "DataFrame_Collection_DF",
+            "snowpark_checkpoints_version": "0.1.0rc3",
+            "type": "info",
+            "data": '{"function": "_collect_dataframe_checkpoint_mode_dataframe", "mode": 2, "spark_schema_types": ["LongType()", "StringType()", "LongType()", "LongType()", "DoubleType()", "DoubleType()", "BooleanType()", "StringType()", "StringType()"]}',
+        },
+        {
+            "event_name": "DataFrame_Validator_DF",
+            "snowpark_checkpoints_version": "0.1.0rc3",
+            "type": "info",
+            "data": '{"function": "_compare_data", "mode": 2, "status": true, "schema_types": ["LongType()", "StringType()", "LongType()", "LongType()", "DoubleType()", "DoubleType()", "BooleanType()", "StringType()", "StringType()"]}',
+        },
+        {
+            "event_name": "DataFrame_Validator_Mirror",
+            "snowpark_checkpoints_version": "0.1.0rc3",
+            "type": "info",
+            "data": '{"function": "_assert_return", "status": true, "snowflake_schema_types": ["LongType()", "StringType()", "LongType()", "LongType()", "DoubleType()", "DoubleType()", "BooleanType()", "StringType()", "StringType()", "StringType(8)"], "spark_schema_types": ["LongType()", "StringType()", "LongType()", "LongType()", "DoubleType()", "DoubleType()", "BooleanType()", "StringType()", "StringType()", "StringType()"]}',
+        },
+    ],
+}
+
 expected_columns = [
     DATE_COLUMN_NAME,
     JOB_COLUMN_NAME,
@@ -42,6 +105,7 @@ expected_columns = [
     DATA_COLUMN_NAME,
     EXECUTION_MODE_COLUMN_NAME,
 ]
+
 
 def validate_json_file_generated(json_name_list: list, temp_path: str) -> None:
     """
@@ -130,7 +194,9 @@ def validate_checkpoints_results_table_generated() -> pd.DataFrame:
         return df_output
 
 
-def validate_output_checkpoints_results_table(df: pd.DataFrame, execution_mode: str) -> None:
+def validate_output_checkpoints_results_table(
+    df: pd.DataFrame, execution_mode: str
+) -> None:
     """
     Validates that the given DataFrame matches the expected output checkpoints results table.
 
@@ -154,3 +220,43 @@ def validate_output_checkpoints_results_table(df: pd.DataFrame, execution_mode: 
         ],
     )
     assert df_expected.equals(df), "The output table does not match the expected data"
+
+
+def validate_telemetry_data(execution_mode: CheckpointMode, temp_path: Path) -> None:
+    """Validate telemetry data files against expected data for a given execution mode.
+
+    This function performs the following steps:
+        1. Retrieves the JSON files from the temporary directory.
+        2. Compares the telemetry data in each file with the expected data for the given execution mode.
+        3. Raises an assertion error if any of the telemetry data does not match the expected values.
+
+    Args:
+        execution_mode (CheckpointMode): The mode of execution to validate telemetry data for.
+        temp_path (Path): The path to the temporary directory containing the telemetry data.
+
+    Raises:
+        AssertionError: If any of the telemetry data does not match the expected values.
+
+    """
+    json_files_generator = temp_path.glob("*.json")
+    json_files = sorted(json_files_generator)
+
+    for index, json_file in enumerate(json_files):
+        data_expected = data_expected_telemetry[execution_mode.value][index]
+        with open(json_file, encoding="utf-8") as f:
+            json_content = json.load(f)
+            message_dict = json_content[MESSAGE_VALUE]
+
+            assert (
+                message_dict[EVENT_NAME_VALUE] == data_expected[EVENT_NAME_VALUE]
+            ), "Telemetry: The event name is not correct"
+            assert (
+                message_dict[METADATA_VALUE][SNOWPARK_CHECKPOINTS_VERSION_VALUE]
+                == get_version()
+            ), "Telemetry: The snowpark checkpoints version is not correct"
+            assert (
+                message_dict[TYPE_VALUE] == data_expected[TYPE_VALUE]
+            ), "Telemetry: The event type is not correct"
+            assert (
+                message_dict[DATA_VALUE] == data_expected[DATA_VALUE]
+            ), "Telemetry: The event data is not correct"

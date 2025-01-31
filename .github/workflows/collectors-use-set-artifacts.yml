@@ -50,12 +50,13 @@ jobs:
 
       - name: Set Version
         run: |
+          set -e
           echo "Current directory: $PWD" && ls -l
           echo "Updating pip file ${FILE_NAME} with version: ${NEW_VERSION}"
           find $(pwd) -name "${FILE_NAME}" -exec sh -c 'sed -i "s/{% set version = \".*\" %}/{% set version = \"${NEW_VERSION}\" %}/" "$1"' _ {} \;
         env:
           NEW_VERSION: ${{ steps.get_version.outputs.version }}
-          FILE_VERSION: __version__.py
+          FILE_NAME: __version__.py
         working-directory: ./snowpark-checkpoints-collectors
 
       - name: Get Version Info

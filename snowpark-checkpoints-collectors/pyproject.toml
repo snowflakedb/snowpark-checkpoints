@@ -63,8 +63,9 @@ development = [
 "Bug Tracker" = "https://github.com/snowflakedb/snowpark-checkpoints/issues"
 "Source code" = "https://github.com/snowflakedb/snowpark-checkpoints/"
 
+
 [tool.hatch.version]
-path = "__version__.py"
+path = "src/snowflake/snowpark_checkpoints_collector/__version__.py"
 pattern = '^__version__ = "(?P<version>.*)"'
 source = "regex"
 

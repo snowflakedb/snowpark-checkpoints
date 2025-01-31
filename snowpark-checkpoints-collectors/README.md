@@ -1,9 +1,10 @@
 # snowpark-checkpoints-collectors
 
+
 ---
-**NOTE**
-This package is on Public Preview.
+##### This package is on Public Preview.
 ---
+
 **snowpark-checkpoints-collector** package offers a function for extracting information from PySpark dataframes. We can then use that data to validate against the converted Snowpark dataframes to ensure that behavioral equivalence has been achieved.
 ## Features
 

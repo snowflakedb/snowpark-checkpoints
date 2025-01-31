@@ -3,11 +3,20 @@
 Snowpark Python / Spark Migration Testing Tools
 
 
----
-**NOTE**
-This package is on Public Preview.
----
+[![Build and Test](https://github.com/snowflakedb/snowpark-checkpoints/actions/workflows/snowpark-checkpoints-all-tests.yml/badge.svg?branch=main)](https://github.com/snowflakedb/snowpark-checkpoints/actions/workflows/snowpark-checkpoints-all-tests.yml)
+[![PyPi](https://img.shields.io/pypi/v/snowpark-checkpoints.svg)](https://pypi.org/project/snowpark-checkpoints)
+[![License Apache-2.0](https://img.shields.io/:license-Apache%202-brightgreen.svg)](http://www.apache.org/licenses/LICENSE-2.0.txt)
+[![Codestyle Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
 The **snowpark-checkpoints**  package is a testing library that will help you validate your migrated Snowpark code and discover any behavioral differences with the original Apache PySpark code.
+
+[Source code][source code] | [Snowpark Checkpoints Developer guide][Snowpark Checkpoints Developer guide] | [Snowpark Checkpoints API references][Snowpark Checkpoints API references] 
+
+---
+##### This package is on Public Preview.
+---
+
+## Getting started
 
 This bundle includes:
 - **snowpark-checkpoints-collectors**: Extracts information from PySpark dataframes for validation against Snowpark dataframes.
@@ -530,9 +539,18 @@ python3 -m build
 ```
 
 3. In Demos dir, run:
-   pip install "snowflake-connector-python[pandas]"
+   pip install "snowpark-checkpoints"
 4. First, run the PySpark demo:
    python demo_pyspark_pipeline.py
    This will generate the JSON schema files. Then, run the Snowpark demo:
    python demo_snowpark_pipeline.py
+
+## Contributing
+Please refer to [CONTRIBUTING.md][contributing].
+
 ------
+
+[source code]: https://github.com/snowflakedb/snowpark-checkpoints
+[Snowpark Checkpoints Developer guide]: https://docs.snowflake.com/en/developer-guide/snowpark/python/snowpark-checkpoints-library
+[Snowpark Checkpoints API references]: https://docs.snowflake.com/en/developer-guide/snowpark-checkpoints-api/reference/latest/index
+[contributing]: https://github.com/snowflakedb/snowpark-checkpoints/blob/main/CONTRIBUTING.md

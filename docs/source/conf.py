@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.abspath(VALIDATORS_SRC_DIR))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "Snowpark Checkpoints Framework API Reference"
-copyright = "2024, Snowflake Inc."
+copyright = "2025, Snowflake Inc."
 author = "Snowflake Inc."
 
 VERSION_FILE = os.path.join("..", "..", "__version__.py")

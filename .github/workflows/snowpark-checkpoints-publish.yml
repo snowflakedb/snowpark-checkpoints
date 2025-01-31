@@ -62,49 +62,63 @@ jobs:
 
       - name: Update Version [snowpark-checkpoints]
         run: |
+          set -e
           echo "Current directory: $PWD" && ls -la
-          sed -i "s/^__version__ = \".*\"/__version__ = \"${NEW_VERSION}\"/" ${FILE_VERSION}
-          echo "Package Version updated:" && cat ${FILE_VERSION}
+          echo "NEW_VERSION=${NEW_VERSION}"
+          echo "FILE_NAME=${FILE_NAME}"
+          sed -i "s/^__version__ = \".*\"/__version__ = \"${NEW_VERSION}\"/" ${FILE_NAME}
+          echo "Package Version updated:" && cat ${FILE_NAME}
         env:
           NEW_VERSION: ${{ steps.get_version.outputs.version }}
-          FILE_VERSION: __version__.py
+          FILE_NAME: __version__.py
         working-directory: ${{ github.workspace }}
 
       - name: Update Version [snowpark-configuration]
         run: |
-          echo "Current directory: $PWD" && ls -la
-          sed -i "s/^__version__ = \".*\"/__version__ = \"${NEW_VERSION}\"/" ${FILE_VERSION}
-          echo "Package Version updated:" && cat ${FILE_VERSION}
+          set -e
+          echo "Current directory: $PWD" && ls -l
+          echo "Updating pip file ${FILE_NAME} with version: ${NEW_VERSION}"
+          find $(pwd) -name "${FILE_NAME}" -exec sed -i "s/^__version__ = \".*\"/__version__ = \"${NEW_VERSION}\"/" {} \;
+          echo "Package Version updated:" && cat $(find . -name "${FILE_NAME}")
         env:
           NEW_VERSION: ${{ steps.get_version.outputs.version }}
-          FILE_VERSION: ../snowpark-checkpoints-configuration/__version__.py
+          FILE_NAME: __version__.py
         working-directory: ./snowpark-checkpoints-configuration
 
       - name: Update Version [snowpark-checkpoints-hypothesis]
         run: |
-          sed -i "s/^__version__ = \".*\"/__version__ = \"${NEW_VERSION}\"/" ${FILE_VERSION}
-          echo "Package Version updated:" && cat ${FILE_VERSION}
+          set -e
+          echo "Current directory: $PWD" && ls -l
+          echo "Updating pip file ${FILE_NAME} with version: ${NEW_VERSION}"
+          find $(pwd) -name "${FILE_NAME}" -exec sed -i "s/^__version__ = \".*\"/__version__ = \"${NEW_VERSION}\"/" {} \;
+          echo "Package Version updated:" && cat $(find . -name "${FILE_NAME}")
         env:
           NEW_VERSION: ${{ steps.get_version.outputs.version }}
-          FILE_VERSION: ../snowpark-checkpoints-hypothesis/__version__.py
+          FILE_NAME: __version__.py
         working-directory: ./snowpark-checkpoints-hypothesis
 
       - name: Update Version [snowpark-checkpoints-validators]
         run: |
-          sed -i "s/^__version__ = \".*\"/__version__ = \"${NEW_VERSION}\"/" ${FILE_VERSION}
-          echo "Package Version updated:" && cat ${FILE_VERSION}
+          set -e
+          echo "Current directory: $PWD" && ls -l
+          echo "Updating pip file ${FILE_NAME} with version: ${NEW_VERSION}"
+          find $(pwd) -name "${FILE_NAME}" -exec sed -i "s/^__version__ = \".*\"/__version__ = \"${NEW_VERSION}\"/" {} \;
+          echo "Package Version updated:" && cat $(find . -name "${FILE_NAME}")
         env:
           NEW_VERSION: ${{ steps.get_version.outputs.version }}
-          FILE_VERSION: ../snowpark-checkpoints-validators/__version__.py
+          FILE_NAME: __version__.py
         working-directory: ./snowpark-checkpoints-validators
 
       - name: Update Version [snowpark-checkpoints-collector]
         run: |
-          sed -i "s/^__version__ = \".*\"/__version__ = \"${NEW_VERSION}\"/" ${FILE_VERSION}
-          echo "Package Version updated:" && cat ${FILE_VERSION}
+          set -e
+          echo "Current directory: $PWD" && ls -l
+          echo "Updating pip file ${FILE_NAME} with version: ${NEW_VERSION}"
+          find $(pwd) -name "${FILE_NAME}" -exec sed -i "s/^__version__ = \".*\"/__version__ = \"${NEW_VERSION}\"/" {} \;
+          echo "Package Version updated:" && cat $(find . -name "${FILE_NAME}")
         env:
           NEW_VERSION: ${{ steps.get_version.outputs.version }}
-          FILE_VERSION: ../snowpark-checkpoints-collectors/__version__.py
+          FILE_NAME: __version__.py
         working-directory: ./snowpark-checkpoints-collectors
 
       - name: Generate Package [snowpark-checkpoints]

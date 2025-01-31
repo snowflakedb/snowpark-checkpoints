@@ -539,7 +539,7 @@ python3 -m build
 ```
 
 3. In Demos dir, run:
-   pip install "snowflake-connector-python[pandas]"
+   pip install "snowpark-checkpoints"
 4. First, run the PySpark demo:
    python demo_pyspark_pipeline.py
    This will generate the JSON schema files. Then, run the Snowpark demo:

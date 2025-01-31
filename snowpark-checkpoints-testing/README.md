@@ -34,46 +34,34 @@ Follow the steps below to set up the environment and run the tests.
 1. Create a Python environment with Python 3.9 or higher in the root dir.
 2. Install the snowpark-checkpoints-collector package
 
-```cmd
+```bash
 pip install -e ./snowpark-checkpoints-collector
 ```
 
 3. Install the snowpark-checkpoints-validator package
 
-```cmd
+```bash
 pip install -e ./snowpark-checkpoints-validator
 ```
 
-4. Install the pytest module
+4. Install the development dependencies from ./snowpark-checkpoints-testing
 
-```cmd
-pip install pytest==8.3.3
+```bash
+python -m pip install -e ".[development]"
 ```
 
-5. Install the psutil module
+5. Run E2E tests from ./snowpark-checkpoints-testing directory
 
-```cmd
-pip install psutil==6.1.1
-```
-
-6. Install the snowflake-conector-python module
-
-```cmd
-pip install "snowflake-connector-python[pandas]"
-```
-
-3. For run E2E tests in snowpark-checkpoints-testing dir, run:
-
-```cmd
+```bash
 pytest test/e2e/test_e2e_checkpoints.py
 ```
 
-4. For run stress tests in snowpark-checkpoints-testing dir, run:
+6. Run stress tests from ./snowpark-checkpoints-testing directory
 
-```cmd
+```bash
 pytest test/stress/mode_dataframe/test_performance_mode_dataframe.py
 ```
 
-```cmd
+```bash
 pytest test/stress/mode_schema/test_performance_mode_schema.py
 ```

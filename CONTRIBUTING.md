@@ -39,7 +39,7 @@ cd snowpark-checkpoints
 - Create a new Python virtual environment with any Python version that we support.
   - The Snowpark Checkpoints API supports **Python 3.9, Python 3.10, and Python 3.11**.
 
-    In this case you can try using Conda. 
+    You can use Conda to set up the environment.
 
     ```bash
     conda create --name snowpark-dev -c https://repo.anaconda.com/pkgs/snowflake python=3.11 -y
@@ -124,7 +124,7 @@ snowpark-checkpoints
 
 ------
 
-[docs]: https://docs.snowflake.com/en/developer-guide/snowpark-checkpoints-library
+[docs]: https://docs.snowflake.com/en/developer-guide/snowpark/python/snowpark-checkpoints-library
 [issue tracker]: https://github.com/snowflakedb/snowpark-checkpoints/issues
 [open issue]: https://github.com/snowflakedb/snowpark-checkpoints/issues/new/choose
 [config pycharm interpreter]: https://www.jetbrains.com/help/pycharm/configuring-python-interpreter.html

@@ -10,7 +10,7 @@ Snowpark Python / Spark Migration Testing Tools
 
 The **snowpark-checkpoints**  package is a testing library that will help you validate your migrated Snowpark code and discover any behavioral differences with the original Apache PySpark code.
 
-[Source code][source code] | [Snowpark Checkpoints developer guide][Snowpark Checkpoints developer guide] | [Snowpark Checkpoints API reference][Snowpark Checkpoints api references] 
+[Source code][source code] | [Snowpark Checkpoints Developer guide][Snowpark Checkpoints Developer guide] | [Snowpark Checkpoints API references][Snowpark Checkpoints API references] 
 
 ---
 ##### This package is on Public Preview.
@@ -548,11 +548,9 @@ python3 -m build
 ## Contributing
 Please refer to [CONTRIBUTING.md][contributing].
 
-[add other sample code repo links]: # (Developer advocacy is open-sourcing a repo that has excellent sample code. The link will be added here.)
-
 ------
 
 [source code]: https://github.com/snowflakedb/snowpark-checkpoints
-[Snowpark Checkpoints developer guide]: https://docs.snowflake.com/en/developer-guide/snowpark-checkpoints-library
-[Snowpark Checkpoints api references]: https://docs.snowflake.com/en/developer-guide/snowpark-checkpoints-library/reference/
+[Snowpark Checkpoints Developer guide]: https://docs.snowflake.com/en/developer-guide/snowpark/python/snowpark-checkpoints-library
+[Snowpark Checkpoints API references]: https://docs.snowflake.com/en/developer-guide/snowpark-checkpoints-api/reference/latest/index
 [contributing]: https://github.com/snowflakedb/snowpark-checkpoints/blob/main/CONTRIBUTING.md

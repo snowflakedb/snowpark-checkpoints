@@ -29,7 +29,6 @@ dependencies = [
   "snowflake-connector-python[pandas]",
 ]
 description = "Testing tools for Snowpark Checkpoints framework"
-dynamic = ['version']
 keywords = [
   'Snowflake',
   'analytics',
@@ -43,6 +42,7 @@ license = {text = "Apache License, Version 2.0"}
 name = "snowpark-checkpoints-testing"
 readme = "README.md"
 requires-python = '>=3.9,<3.12'
+version = "0.0.0"
 
 [project.optional-dependencies]
 development = [
@@ -82,9 +82,6 @@ include = [
 [tool.hatch.envs.default]
 features = ["development"]
 python = "3.10"
-
-[tool.hatch.envs.test_all]
-template = 'snowpark-checkpoints-testing'
 
 [tool.hatch.envs.test]
 python = '3.10'

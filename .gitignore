@@ -13,6 +13,7 @@ wheelvenv/
 
 # version
 !__version__.py
+!**/__version__.py
 
 #ruff
 .ruff_cache

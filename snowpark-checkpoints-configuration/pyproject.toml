@@ -63,7 +63,7 @@ development = [
 "Source code" = "https://github.com/snowflakedb/snowpark-checkpoints/"
 
 [tool.hatch.version]
-path = "__version__.py"
+path = "src/snowflake/snowpark_checkpoints_configuration/__version__.py"
 pattern = '^__version__ = "(?P<version>.*)"'
 source = "regex"
 

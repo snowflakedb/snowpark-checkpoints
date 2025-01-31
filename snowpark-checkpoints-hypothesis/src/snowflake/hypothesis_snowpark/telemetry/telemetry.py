@@ -356,7 +356,7 @@ def _get_version() -> str:
 
     """
     try:
-        directory_levels_up = 4
+        directory_levels_up = 1
         project_root = Path(__file__).resolve().parents[directory_levels_up]
         version_file_path = project_root / VERSION_FILE_NAME
         with open(version_file_path) as file:

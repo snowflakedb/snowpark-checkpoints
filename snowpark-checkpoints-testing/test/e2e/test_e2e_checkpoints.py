@@ -75,7 +75,7 @@ def test_e2e_checkpoints(json_name_list, execution_mode, telemetry) -> None:
         dir = os.getcwd()
     ) as temp_dir:
         temp_path = Path(temp_dir)
-        telemetry_path = os.path.join(temp_dir, "telemetry_data")
+        telemetry_path = Path(os.path.join(temp_path , "telemetry_data"))
         telemetry.set_sc_output_path(telemetry_path)
         input_e2e_test_pyspark(execution_mode, temp_path)
         input_e2e_test_snowpark(execution_mode, temp_path)

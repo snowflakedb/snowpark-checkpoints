@@ -212,39 +212,41 @@ def validate_output_checkpoints_results_table(
     assert df_expected.equals(df), "The output table does not match the expected data"
 
 
-def validate_telemetry_data(execution_mode: CheckpointMode, temp_path: str) -> None:
-    """
-    Validates telemetry data files against expected data for a given execution mode.
+def validate_telemetry_data(execution_mode: CheckpointMode, temp_path: Path) -> None:
+    """Validate telemetry data files against expected data for a given execution mode.
+
+    This function performs the following steps:
+        1. Retrieves the JSON files from the temporary directory.
+        2. Compares the telemetry data in each file with the expected data for the given execution mode.
+        3. Raises an assertion error if any of the telemetry data does not match the expected values.
+
     Args:
         execution_mode (CheckpointMode): The mode of execution to validate telemetry data for.
+        temp_path (Path): The path to the temporary directory containing the telemetry data.
+
     Raises:
         AssertionError: If any of the telemetry data does not match the expected values.
-    This function performs the following steps:
-    1. Constructs the path to the telemetry data directory.
-    2. Compiles a regex pattern to match JSON telemetry files.
-    3. Walks through the directory to find all telemetry files matching the pattern.
-    4. Sorts the list of telemetry files.
-    5. Iterates through each telemetry file and compares its contents with the expected data.
-    6. Asserts that the event name, snowpark checkpoints version, event type, and event data match the expected values.
+
     """
-    result = temp_path.glob("*.json")
-    result_list = list(result)
-    result_list.sort()
-    for count in range(len(result_list)):
-        file = result_list[count]
-        data_expected = data_expected_telemetry[execution_mode.value][count]
-        with open(file, "r") as file:
-            data = json.load(file)
+    json_files_generator = temp_path.glob("*.json")
+    json_files = sorted(json_files_generator)
+
+    for index, json_file in enumerate(json_files):
+        data_expected = data_expected_telemetry[execution_mode.value][index]
+        with open(json_file, encoding="utf-8") as f:
+            json_content = json.load(f)
+            message_dict = json_content[MESSAGE_VALUE]
+
             assert (
-                data[MESSAGE_VALUE][EVENT_NAME_VALUE] == data_expected[EVENT_NAME_VALUE]
+                message_dict[EVENT_NAME_VALUE] == data_expected[EVENT_NAME_VALUE]
             ), "Telemetry: The event name is not correct"
             assert (
-                data[MESSAGE_VALUE][METADATA_VALUE][SNOWPARK_CHECKPOINTS_VERSION_VALUE]
+                message_dict[METADATA_VALUE][SNOWPARK_CHECKPOINTS_VERSION_VALUE]
                 == get_version()
             ), "Telemetry: The snowpark checkpoints version is not correct"
             assert (
-                data[MESSAGE_VALUE][TYPE_VALUE] == data_expected[TYPE_VALUE]
+                message_dict[TYPE_VALUE] == data_expected[TYPE_VALUE]
             ), "Telemetry: The event type is not correct"
             assert (
-                data[MESSAGE_VALUE][DATA_VALUE] == data_expected[DATA_VALUE]
+                message_dict[DATA_VALUE] == data_expected[DATA_VALUE]
             ), "Telemetry: The event data is not correct"

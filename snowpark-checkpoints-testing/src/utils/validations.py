@@ -4,7 +4,6 @@
 
 import os
 import json
-import re
 from src.utils.utils import get_version
 import pandas as pd
 from snowflake.snowpark import Session

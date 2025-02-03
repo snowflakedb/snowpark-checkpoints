@@ -179,7 +179,7 @@ jobs:
           snow --info && snow --version
           snow connection test -c myconnection
           snow connection set-default myconnection
-          snow sql -q " Select current_organization_name(); select current_account_name(); SELECT CURRENT_DATABASE(), CURRENT_SCHEMA();" -c myconnection
+          snow sql -q " Select current_organization_name(); SELECT CURRENT_DATABASE(), CURRENT_SCHEMA();" -c myconnection
           snow connection list
 
           snow sql -q " CREATE SCHEMA IF NOT EXISTS ${DATABASE}.${SNOWFLAKE_CONNECTIONS_MYCONNECTION_SCHEMA_ID} WITH MANAGED ACCESS; " -c myconnection

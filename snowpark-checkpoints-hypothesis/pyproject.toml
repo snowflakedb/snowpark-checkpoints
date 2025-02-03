@@ -128,7 +128,7 @@ check = [
 
 [tool.hatch.envs.test.scripts]
 check = [
-  'pytest -v --junitxml=test/outcome/test-results.xml --cov=. --cov-config=test/.coveragerc --cov-report=xml:test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.xml {args:test} --cov-report=term --cov-report=json:test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.json',
+  'pytest -vvv --junitxml=test/outcome/test-results.xml --cov=. --cov-branch --cov-branch --cov-config=test/.coveragerc --cov-report=xml:test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.xml {args:test} --cov-report=term --cov-report=html:test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.html --cov-report=json:test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.json',
 ]
 
 coverage = [

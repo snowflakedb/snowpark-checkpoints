@@ -1,6 +1,8 @@
 name: Run All Tests Coverage
 
 on:
+  schedule:
+    - cron: "0 5 * * *"
   push:
     branches:
       - main
@@ -9,6 +11,10 @@ on:
       - "!Demos/**"
       - "!docs/**"
       - "!snowpark-checkpoints-testing/**"
+
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
   test:
@@ -86,7 +92,7 @@ jobs:
         working-directory: ${{ github.workspace }}
 
       - name: Set up Snowflake CLI
-        uses: Snowflake-Labs/snowflake-cli-action@main
+        uses: Snowflake-Labs/snowflake-cli-action@a0d3f3a90914a6a91e6537cc6fde98ebe27e17be
         with:
           cli-version: ${{ matrix.snow_cli_version }}
           default-config-file-path: ".github/config/config.toml"
@@ -283,6 +289,7 @@ jobs:
     needs: test
     env:
       PYTHON_VERSION: "3.11"
+      COVERAGE_THRESHOLD: 92
 
     steps:
       - name: Checkout repository
@@ -328,13 +335,15 @@ jobs:
           coverage xml -o coverage-all.xml
           tree -La 4
           echo "Generating coverage html report"
-          coverage report --show-missing --skip-empty
+          coverage report --show-missing --skip-empty --fail-under=$COVERAGE_THRESHOLD
         working-directory: ./coverage_reports
+        env:
+          COVERAGE_THRESHOLD: ${{ env.COVERAGE_THRESHOLD }}
 
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@13ce06bfc6bbe3ecf90edbbf1bc32fe5978ca1d3
         with:
-          fail_ci_if_error: false
+          fail_ci_if_error: true
           files: ./coverage_reports/coverage-all.xml
           verbose: true
         env:

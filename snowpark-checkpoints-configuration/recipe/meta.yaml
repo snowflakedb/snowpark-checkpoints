@@ -23,12 +23,12 @@ requirements:
   run:
     - python<3.12,>=3.9
     - pydantic>=1.8.2
-    - snowflake-snowpark-python>=1.26.0
+    - snowflake-snowpark-python==1.26.0
 
 test:
   requires:
     - pip
-    - snowflake-snowpark-python>=1.26.0
+    - snowflake-snowpark-python==1.26.0
     - pandas
     - pydantic
     - snowpark-checkpoints-configuration

@@ -130,8 +130,10 @@ check = [
 
 [tool.hatch.envs.test.scripts]
 check = [
-  "pip install -e ../snowpark-checkpoints-configuration",
-  'pytest -v --junitxml=test/outcome/test-results.xml --cov=. --cov-config=test/.coveragerc --cov-report=xml:test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.xml {args:test} --cov-report=term --cov-report=json:test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.json',
+  'python -m pip install --upgrade pip -q',
+  'pip install -q -e ../snowpark-checkpoints-configuration',
+  'pip list',
+  'pytest -vvv --junitxml=test/outcome/test-results.xml --cov=. --cov-branch --cov-config=test/.coveragerc --cov-report=xml:test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.xml {args:test} --cov-report=term --cov-report=html:test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.html --cov-report=json:test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.json',
 ]
 
 coverage = [

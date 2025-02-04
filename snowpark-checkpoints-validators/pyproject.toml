@@ -49,6 +49,7 @@ requires-python = '>=3.9,<3.12'
 
 [project.optional-dependencies]
 development = [
+  "deepdiff==8.1.1",
   "pytest>=8.3.3",
   "pytest-cov>=6.0.0",
   "coverage>=7.6.7",
@@ -63,7 +64,6 @@ development = [
 [project.urls]
 "Bug Tracker" = "https://github.com/snowflakedb/snowpark-checkpoints/issues"
 "Source code" = "https://github.com/snowflakedb/snowpark-checkpoints/"
-
 
 [tool.hatch.version]
 path = "src/snowflake/snowpark_checkpoints/__version__.py"
@@ -128,8 +128,10 @@ check = [
 
 [tool.hatch.envs.test.scripts]
 check = [
-  "pip install -e ../snowpark-checkpoints-configuration",
-  'pytest -v --junitxml=test/outcome/test-results.xml --cov=. --cov-config=test/.coveragerc --cov-report=xml:test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.xml {args:test} --cov-report=term --cov-report=json:test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.json',
+  'python -m pip install --upgrade pip -q',
+  'pip install -q -e ../snowpark-checkpoints-configuration',
+  'pip list',
+  'pytest -vvv --junitxml=test/outcome/test-results.xml --cov=. --cov-branch --cov-config=test/.coveragerc --cov-report=xml:test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.xml {args:test} --cov-report=term --cov-report=html:test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.html --cov-report=json:test/outcome/coverage-{matrix:python:{env:PYTHON_VERSION:unset}}.json',
 ]
 
 coverage = [

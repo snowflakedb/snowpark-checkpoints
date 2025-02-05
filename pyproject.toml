@@ -74,7 +74,7 @@ development = [
 ]
 
 [project.urls]
-"Documentation" = "https://docs.snowflake.com/en/developer-guide/snowpark-checkpoints-library"
+"Documentation" = "https://docs.snowflake.com/en/developer-guide/snowpark/python/snowpark-checkpoints-library"
 "Issues" = "https://github.com/snowflakedb/snowpark-checkpoints/issues"
 "Source" = "https://github.com/snowflakedb/snowpark-checkpoints"
 

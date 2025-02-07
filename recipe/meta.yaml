@@ -27,6 +27,9 @@ requirements:
     - pyspark
     - pydantic>=1.8.2
     - hypothesis
+    - frictionless<=4.40.8
+    - pyyaml>=5.1
+    - black
   run_constrained:
     - pandera ==0.20.4
 

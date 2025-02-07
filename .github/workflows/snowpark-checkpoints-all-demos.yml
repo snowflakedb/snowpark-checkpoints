@@ -199,7 +199,7 @@ jobs:
       - name: Install required tools
         run: |
           python -m pip install ".[development]"
-          pip install hatch -q
+          pip install hatch "pandera[io]==0.20.4" -q
           pip list
         working-directory: ${{ github.workspace }}
 

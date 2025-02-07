@@ -25,6 +25,9 @@ requirements:
     - snowflake-connector-python
     - snowflake-snowpark-python==1.27.0
     - pyspark
+    - frictionless<=4.40.8
+    - pyyaml>=5.1
+    - black
   run_constrained:
     - pandera ==0.20.4
 

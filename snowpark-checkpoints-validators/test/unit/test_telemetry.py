@@ -252,10 +252,10 @@ class TelemetryManagerTest(unittest.TestCase):
             )
 
             # Assert
-            assert result.get("message").get("type") == "event_type"
+            assert result.get("message").get("event_type") == "event_type"
             assert result.get("message").get("event_name") == "event_name"
             assert result.get("message").get("driver_type") == "PythonConnector"
-            assert result.get("message").get("source") == "snowpark-checkpoints"
+            assert result.get("message").get("type") == "snowpark-checkpoints"
             assert result.get("message").get("metadata") == {
                 "snowpark_checkpoints_version": snowpark_checkpoints_version
             }

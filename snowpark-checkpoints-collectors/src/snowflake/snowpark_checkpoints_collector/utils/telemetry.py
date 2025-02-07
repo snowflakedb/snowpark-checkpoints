@@ -319,11 +319,11 @@ def _generate_event(
     if sc_version is not None:
         metadata["snowpark_checkpoints_version"] = sc_version
     message = {
-        "type": event_type,
+        "event_type": event_type,
+        "type": "snowpark-checkpoints",
         "event_name": event_name,
         "driver_type": "PythonConnector",
         "driver_version": SNOWFLAKE_CONNECTOR_VERSION,
-        "source": "snowpark-checkpoints",
         "metadata": metadata,
         "data": json.dumps(parameters_info or {}),
     }

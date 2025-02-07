@@ -23,15 +23,18 @@ requirements:
   run:
     - python<3.12,>=3.9
     - hypothesis
-    - snowflake-snowpark-python==1.26.0
+    - snowflake-snowpark-python==1.27.0
     - snowflake-connector-python
     - pyspark
+    - frictionless<=4.40.8
+    - pyyaml>=5.1
+    - black
   run_constrained:
     - pandera ==0.20.4
 
 test:
   commands:
-    - pip install pandera[io]==0.20.4
+    - pip install pandera==0.20.4
     - pip install pandera-report==0.1.2
     - pip check
     - pip list --verbose

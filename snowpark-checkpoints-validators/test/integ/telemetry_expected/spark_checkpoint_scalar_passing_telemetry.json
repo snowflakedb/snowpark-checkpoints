@@ -4,15 +4,15 @@
         "driver_type": "PythonConnector",
         "driver_version": "3.12.4",
         "event_name": "Value_Validator_Mirror",
+        "event_type": "info",
         "metadata": {
-            "device_id": "0471186eb1a6ba58c82e97d19006a08b163bc0056c05e6f770090eade2c3a809",
+            "device_id": "a16562762b83c9f0b6ffa4649c0b6c20348ccfcf49d1144fc4c6557dd1c683ec",
             "os_version": "darwin",
             "python_version": "3.11.11",
-            "snowpark_checkpoints_version": "0.1.0rc2",
+            "snowpark_checkpoints_version": "0.1.2",
             "snowpark_version": "1.26.0"
         },
-        "source": "snowpark-checkpoints",
-        "type": "info"
+        "type": "snowpark-checkpoints"
     },
-    "timestamp": "1737735338015"
+    "timestamp": "1738949877793"
 }

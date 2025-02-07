@@ -182,14 +182,12 @@ jobs:
       - name: Install required tools [collectors]
         run: |
           pip install hatch "pandera[io]==0.20.4" -q
-          pip install hatch -q
           pip list
         working-directory: ./snowpark-checkpoints-collectors
 
       - name: Install required tools [configuration]
         run: |
           pip install hatch "pandera[io]==0.20.4" -q
-          pip install hatch -q
           pip list
         working-directory: ./snowpark-checkpoints-configuration
 

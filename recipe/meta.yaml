@@ -23,7 +23,7 @@ requirements:
   run:
     - python<3.12,>=3.9
     - snowflake-connector-python
-    - snowflake-snowpark-python==1.26.0
+    - snowflake-snowpark-python==1.27.0
     - pyspark
     - pydantic>=1.8.2
     - hypothesis
@@ -33,7 +33,7 @@ requirements:
 test:
   requires:
     - pip
-    - snowflake-snowpark-python==1.26.0
+    - snowflake-snowpark-python==1.27.0
     - snowflake-connector-python
     - pyspark
     - pandera
@@ -41,8 +41,8 @@ test:
     - pydantic
 
   commands:
-    - pip install pandera[io]==0.20.4 -vvv
-    - pip install pandera-report==0.1.2 -vvv
+    - pip install pandera==0.20.4
+    - pip install pandera-report==0.1.2
     - pip check
     - pip list --verbose
     - python -c "import pandera"

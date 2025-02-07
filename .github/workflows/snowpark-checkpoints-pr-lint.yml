@@ -1,10 +1,16 @@
 name: PR Lint
+
 on:
   pull_request_target:
     types: [edited, opened, reopened, synchronize]
   pull_request:
     types: [ready_for_review]
     branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   pr-lint:
     runs-on: ubuntu-latest
@@ -25,12 +31,13 @@ jobs:
 
       - name: Check PR Description
         run: |
-          if [ -z "${{ github.event.pull_request.body }}" ]; then
+          if [ -z "$PR_BODY" ]; then
             echo "PR description is empty. Please provide a description."
             exit 1
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_BODY: ${{ github.event.pull_request.body }}
 
       - name: Check PR Size
         run: |

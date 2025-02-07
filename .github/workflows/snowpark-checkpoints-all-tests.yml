@@ -16,6 +16,10 @@ on:
       - "!Demos/**"
       - "!docs/**"
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   test:
     name: Unit Tests ${{ matrix.download_name }}-${{ matrix.python-version }}-snowcli-${{ matrix.snow_cli_version }}
@@ -102,7 +106,7 @@ jobs:
         working-directory: ${{ github.workspace }}
 
       - name: Set up Snowflake CLI
-        uses: Snowflake-Labs/snowflake-cli-action@main
+        uses: Snowflake-Labs/snowflake-cli-action@a0d3f3a90914a6a91e6537cc6fde98ebe27e17be
         with:
           cli-version: ${{ matrix.snow_cli_version }}
           default-config-file-path: ".github/config/config.toml"
@@ -179,7 +183,7 @@ jobs:
           snow --info && snow --version
           snow connection test -c myconnection
           snow connection set-default myconnection
-          snow sql -q " Select current_organization_name(); select current_account_name(); SELECT CURRENT_DATABASE(), CURRENT_SCHEMA();" -c myconnection
+          snow sql -q " Select current_organization_name(); SELECT CURRENT_DATABASE(), CURRENT_SCHEMA();" -c myconnection
           snow connection list
 
           snow sql -q " CREATE SCHEMA IF NOT EXISTS ${DATABASE}.${SNOWFLAKE_CONNECTIONS_MYCONNECTION_SCHEMA_ID} WITH MANAGED ACCESS; " -c myconnection

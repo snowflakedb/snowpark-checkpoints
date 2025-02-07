@@ -4,6 +4,7 @@ Snowpark Python / Spark Migration Testing Tools
 
 
 [![Build and Test](https://github.com/snowflakedb/snowpark-checkpoints/actions/workflows/snowpark-checkpoints-all-tests.yml/badge.svg?branch=main)](https://github.com/snowflakedb/snowpark-checkpoints/actions/workflows/snowpark-checkpoints-all-tests.yml)
+[![codecov](https://codecov.io/gh/snowflakedb/snowpark-checkpoints/branch/main/graph/badge.svg)](https://codecov.io/gh/snowflakedb/snowpark-checkpoints)
 [![PyPi](https://img.shields.io/pypi/v/snowpark-checkpoints.svg)](https://pypi.org/project/snowpark-checkpoints)
 [![License Apache-2.0](https://img.shields.io/:license-Apache%202-brightgreen.svg)](http://www.apache.org/licenses/LICENSE-2.0.txt)
 [![Codestyle Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)

@@ -11,6 +11,10 @@ env:
   PYTHON_VERSION: "3.11"
   CONDA_ENV_NAME: "snow_3_11"
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   build:
     name: Build Conda Packages

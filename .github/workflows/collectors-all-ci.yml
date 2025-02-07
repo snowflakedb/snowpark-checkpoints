@@ -20,6 +20,10 @@ on:
       - "!Demos/**"
   workflow_call:
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   lint:
     name: Static analysis and linting snowpark-checkpoints-collector

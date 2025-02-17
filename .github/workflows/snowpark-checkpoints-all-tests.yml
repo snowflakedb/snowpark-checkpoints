@@ -106,7 +106,7 @@ jobs:
         working-directory: ${{ github.workspace }}
 
       - name: Set up Snowflake CLI
-        uses: Snowflake-Labs/snowflake-cli-action@a0d3f3a90914a6a91e6537cc6fde98ebe27e17be
+        uses: Snowflake-Labs/snowflake-cli-action@1f20bcebf4a593aa1fda4ede39b26191d924135b
         with:
           cli-version: ${{ matrix.snow_cli_version }}
           default-config-file-path: ".github/config/config.toml"

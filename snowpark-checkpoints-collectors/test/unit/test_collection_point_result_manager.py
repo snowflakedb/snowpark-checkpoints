@@ -1,7 +1,25 @@
+# Copyright 2025 Snowflake Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+# http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import json
+import logging
+
 from unittest import mock
 
 import pytest
+
 from deepdiff import DeepDiff
 
 from snowflake.snowpark_checkpoints_collector.collection_result.model import (
@@ -9,15 +27,15 @@ from snowflake.snowpark_checkpoints_collector.collection_result.model import (
     CollectionPointResultManager,
 )
 from snowflake.snowpark_checkpoints_collector.collection_result.model.collection_point_result import (
-    TIMESTAMP_KEY,
     FILE_KEY,
+    TIMESTAMP_KEY,
     CollectionResult,
 )
-
-from snowflake.snowpark_checkpoints_collector.singleton import Singleton
 from snowflake.snowpark_checkpoints_collector.collection_result.model.collection_point_result_manager import (
     RESULTS_KEY,
 )
+from snowflake.snowpark_checkpoints_collector.singleton import Singleton
+
 
 EXPECTED_MODEL = (
     '{"timestamp": "2024-12-20 14:50:49", "file": "unit/test_collection_point_result_manager.py", '
@@ -39,11 +57,17 @@ def generate_collection_point_result_object():
     return collection_result
 
 
-def test_add_result(singleton):
+def test_add_result(caplog: pytest.LogCaptureFixture):
     manager = CollectionPointResultManager()
     collection_result = generate_collection_point_result_object()
 
-    with mock.patch("builtins.open") as mock_open:
+    with (
+        mock.patch("builtins.open") as mock_open,
+        caplog.at_level(
+            level=logging.INFO,
+            logger="snowflake.snowpark_checkpoints_collector.collection_result.model.collection_point_result_manager",
+        ),
+    ):
         manager.add_result(collection_result)
         mock_open.assert_called()
 
@@ -64,3 +88,4 @@ def test_add_result(singleton):
     )
 
     assert diff == {}
+    assert f"Saving collection results to '{manager.output_file_path}'" in caplog.text

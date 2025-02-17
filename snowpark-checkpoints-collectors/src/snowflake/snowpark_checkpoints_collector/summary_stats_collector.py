@@ -12,8 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import glob
 import json
+import logging
 import os
 import shutil
 
@@ -67,6 +69,9 @@ from snowflake.snowpark_checkpoints_collector.utils.extra_config import (
 from snowflake.snowpark_checkpoints_collector.utils.telemetry import report_telemetry
 
 
+LOGGER = logging.getLogger(__name__)
+
+
 def collect_dataframe_checkpoint(
     df: SparkDataFrame,
     checkpoint_name: str,
@@ -92,6 +97,18 @@ def collect_dataframe_checkpoint(
 
     """
     try:
+        LOGGER.info("Starting to collect checkpoint '%s'", checkpoint_name)
+        LOGGER.debug(
+            "%s called with: %s, %s, %s, %s",
+            collect_dataframe_checkpoint.__name__,
+            f"{checkpoint_name=}",
+            f"{sample=}",
+            f"{mode=}",
+            f"{output_path=}",
+        )
+        LOGGER.debug("DataFrame size: %s rows", df.count())
+        LOGGER.debug("DataFrame schema: %s", df.schema)
+
         normalized_checkpoint_name = checkpoint_name_utils.normalize_checkpoint_name(
             checkpoint_name
         )
@@ -104,64 +121,70 @@ def collect_dataframe_checkpoint(
                 f"characters and underscores."
             )
 
-        if is_checkpoint_enabled(normalized_checkpoint_name):
-
-            collection_point_file_path = (
-                file_utils.get_collection_point_source_file_path()
+        if not is_checkpoint_enabled(normalized_checkpoint_name):
+            LOGGER.info(
+                "Checkpoint '%s' is disabled. Skipping collection.", checkpoint_name
             )
-            collection_point_line_of_code = (
-                file_utils.get_collection_point_line_of_code()
-            )
-            collection_point_result = CollectionPointResult(
-                collection_point_file_path,
-                collection_point_line_of_code,
-                normalized_checkpoint_name,
-            )
+            return
 
-            try:
+        collection_point_file_path = file_utils.get_collection_point_source_file_path()
+        collection_point_line_of_code = file_utils.get_collection_point_line_of_code()
+        collection_point_result = CollectionPointResult(
+            collection_point_file_path,
+            collection_point_line_of_code,
+            normalized_checkpoint_name,
+        )
 
-                _sample = get_checkpoint_sample(normalized_checkpoint_name, sample)
-
-                if _is_empty_dataframe_without_schema(df):
-                    raise Exception(
-                        "It is not possible to collect an empty DataFrame without schema"
-                    )
-
-                _mode = get_checkpoint_mode(normalized_checkpoint_name, mode)
-
-                if _mode == CheckpointMode.SCHEMA:
-                    column_type_dict = _get_spark_column_types(df)
-                    _collect_dataframe_checkpoint_mode_schema(
-                        normalized_checkpoint_name,
-                        df,
-                        _sample,
-                        column_type_dict,
-                        output_path,
-                    )
-
-                elif _mode == CheckpointMode.DATAFRAME:
-                    snow_connection = SnowConnection()
-                    _collect_dataframe_checkpoint_mode_dataframe(
-                        normalized_checkpoint_name, df, snow_connection, output_path
-                    )
-
-                else:
-                    raise Exception("Invalid mode value.")
-
-                collection_point_result.result = CollectionResult.PASS
-
-            except Exception as err:
-                collection_point_result.result = CollectionResult.FAIL
-                error_message = str(err)
-                raise Exception(error_message) from err
-
-            finally:
-                collection_point_result_manager = CollectionPointResultManager(
-                    output_path
+        try:
+            if _is_empty_dataframe_without_schema(df):
+                raise Exception(
+                    "It is not possible to collect an empty DataFrame without schema"
                 )
-                collection_point_result_manager.add_result(collection_point_result)
+
+            _mode = get_checkpoint_mode(normalized_checkpoint_name, mode)
+
+            if _mode == CheckpointMode.SCHEMA:
+                column_type_dict = _get_spark_column_types(df)
+                _sample = get_checkpoint_sample(normalized_checkpoint_name, sample)
+                LOGGER.info(
+                    "Collecting checkpoint in %s mode using sample value %s",
+                    CheckpointMode.SCHEMA.name,
+                    _sample,
+                )
+                _collect_dataframe_checkpoint_mode_schema(
+                    normalized_checkpoint_name,
+                    df,
+                    _sample,
+                    column_type_dict,
+                    output_path,
+                )
+            elif _mode == CheckpointMode.DATAFRAME:
+                LOGGER.info(
+                    "Collecting checkpoint in %s mode", CheckpointMode.DATAFRAME.name
+                )
+                snow_connection = SnowConnection()
+                _collect_dataframe_checkpoint_mode_dataframe(
+                    normalized_checkpoint_name, df, snow_connection, output_path
+                )
+            else:
+                raise Exception(f"Invalid mode value: {_mode}")
+
+            collection_point_result.result = CollectionResult.PASS
+            LOGGER.info("Checkpoint '%s' collected successfully", checkpoint_name)
+
+        except Exception as err:
+            collection_point_result.result = CollectionResult.FAIL
+            error_message = str(err)
+            raise Exception(error_message) from err
+
+        finally:
+            collection_point_result_manager = CollectionPointResultManager(output_path)
+            collection_point_result_manager.add_result(collection_point_result)
 
     except Exception as err:
+        LOGGER.exception(
+            "An error occurred while collecting the checkpoint '%s'", checkpoint_name
+        )
         error_message = str(err)
         raise Exception(error_message) from err
 
@@ -176,12 +199,19 @@ def _collect_dataframe_checkpoint_mode_schema(
 ) -> None:
     sampled_df = df.sample(sample)
     if sampled_df.isEmpty():
+        LOGGER.warning("Sampled DataFrame is empty. Collecting full DataFrame.")
         sampled_df = df
+
     pandas_df = _to_pandas(sampled_df)
     is_empty_df_with_object_column = _is_empty_dataframe_with_object_column(df)
-    pandera_infer_schema = (
-        pa.infer_schema(pandas_df) if not is_empty_df_with_object_column else {}
-    )
+    if is_empty_df_with_object_column:
+        LOGGER.debug(
+            "DataFrame is empty with object column. Skipping Pandera schema inference."
+        )
+        pandera_infer_schema = {}
+    else:
+        LOGGER.debug("Inferring Pandera schema from DataFrame")
+        pandera_infer_schema = pa.infer_schema(pandas_df)
 
     column_name_collection = df.schema.names
     columns_to_remove_from_pandera_schema_collection = []
@@ -192,19 +222,20 @@ def _collect_dataframe_checkpoint_mode_schema(
     for column_name in column_name_collection:
         struct_field_column = column_type_dict[column_name]
         column_type = struct_field_column.dataType.typeName()
+        LOGGER.info("Collecting column '%s' of type '%s'", column_name, column_type)
         pyspark_column = df.select(col(column_name))
+
+        is_column_to_remove_from_pandera_schema = (
+            _is_column_to_remove_from_pandera_schema(column_type)
+        )
+        if is_column_to_remove_from_pandera_schema:
+            columns_to_remove_from_pandera_schema_collection.append(column_name)
 
         is_empty_column = (
             pyspark_column.dropna().isEmpty() and column_type is not NULL_COLUMN_TYPE
         )
-        is_column_to_remove_from_pandera_schema = (
-            _is_column_to_remove_from_pandera_schema(column_type)
-        )
-
-        if is_column_to_remove_from_pandera_schema:
-            columns_to_remove_from_pandera_schema_collection.append(column_name)
-
         if is_empty_column:
+            LOGGER.debug("Column '%s' is empty.", column_name)
             custom_data = column_collector_manager.collect_empty_custom_data(
                 column_name, struct_field_column, pyspark_column
             )
@@ -280,6 +311,7 @@ def _get_pandera_infer_schema_as_dict(
 
     pandera_infer_schema_dict = json.loads(pandera_infer_schema.to_json())
     for column in columns_to_remove_collection:
+        LOGGER.debug("Removing column '%s' from Pandera schema", column)
         del pandera_infer_schema_dict[COLUMNS_KEY][column]
 
     return pandera_infer_schema_dict
@@ -293,6 +325,7 @@ def _generate_json_checkpoint_file(
     )
     output_directory_path = file_utils.get_output_directory_path(output_path)
     checkpoint_file_path = os.path.join(output_directory_path, checkpoint_file_name)
+    LOGGER.info("Writing DataFrame JSON schema file to '%s'", checkpoint_file_path)
     with open(checkpoint_file_path, "w") as f:
         f.write(dataframe_schema_contract)
 
@@ -339,14 +372,24 @@ def generate_parquet_for_spark_df(spark_df: SparkDataFrame, output_path: str) ->
     converted_df = spark_df.select(new_cols)
 
     if os.path.exists(output_path):
+        LOGGER.warning(
+            "Output directory '%s' already exists. Deleting it...", output_path
+        )
         shutil.rmtree(output_path)
 
+    LOGGER.info("Writing DataFrame to parquet files at '%s'", output_path)
     converted_df.write.parquet(output_path, mode="overwrite")
 
     target_dir = os.path.join(output_path, "**", f"*{DOT_PARQUET_EXTENSION}")
-    files = glob.glob(target_dir, recursive=True)
-    if len(files) == 0:
+    parquet_files = glob.glob(target_dir, recursive=True)
+    parquet_files_count = len(parquet_files)
+    if parquet_files_count == 0:
         raise Exception("No parquet files were generated.")
+    LOGGER.info(
+        "Wrote %s parquet files at '%s'",
+        parquet_files_count,
+        output_path,
+    )
 
 
 def _create_snowflake_table_from_parquet(
@@ -356,11 +399,17 @@ def _create_snowflake_table_from_parquet(
 
 
 def _to_pandas(sampled_df: SparkDataFrame) -> pandas.DataFrame:
+    LOGGER.debug("Converting Spark DataFrame to Pandas DataFrame")
     pandas_df = sampled_df.toPandas()
     for field in sampled_df.schema.fields:
         has_nan = pandas_df[field.name].isna().any()
         is_integer = field.dataType.typeName() in INTEGER_TYPE_COLLECTION
         if has_nan and is_integer:
+            LOGGER.debug(
+                "Converting column '%s' to '%s' type",
+                field.name,
+                PANDAS_LONG_TYPE,
+            )
             pandas_df[field.name] = pandas_df[field.name].astype(PANDAS_LONG_TYPE)
 
     return pandas_df

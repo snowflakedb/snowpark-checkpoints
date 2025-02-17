@@ -12,72 +12,76 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import decimal
 import json
+import logging
 import os
+import tempfile
+
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
+import pandas as pd
+import pytest
+
+from deepdiff import DeepDiff
 from pandera import DataFrameSchema
 from pyspark.sql import SparkSession
-import pytest
-import pandas as pd
-from deepdiff import DeepDiff
 from pyspark.sql.types import (
-    StructType,
-    StructField,
-    LongType,
+    ArrayType,
+    BinaryType,
     BooleanType,
     ByteType,
     DateType,
+    DayTimeIntervalType,
     DecimalType,
     DoubleType,
     FloatType,
     IntegerType,
-    ShortType,
-    StringType,
-    TimestampType,
-    TimestampNTZType,
-    DayTimeIntervalType,
-    ArrayType,
+    LongType,
     MapType,
     NullType,
-    BinaryType,
-)
-
-from snowflake.snowpark_checkpoints_collector import collect_dataframe_checkpoint
-from snowflake.snowpark_checkpoints_collector.collection_common import (
-    DATAFRAME_PANDERA_SCHEMA_KEY,
-    CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT,
-    DATAFRAME_CUSTOM_DATA_KEY,
-    COLUMNS_KEY,
-    COLUMN_TYPE_KEY,
-    PANDERA_COLUMN_TYPE_KEY,
-    STRING_COLUMN_TYPE,
-    LONG_COLUMN_TYPE,
-    DOUBLE_COLUMN_TYPE,
-    TIMESTAMP_COLUMN_TYPE,
-    DAYTIMEINTERVAL_COLUMN_TYPE,
-    PANDAS_OBJECT_DTYPE,
-    PANDAS_INTEGER_DTYPE,
-    PANDAS_FLOAT_DTYPE,
-    PANDAS_DATETIME_DTYPE,
-    PANDAS_BOOLEAN_DTYPE,
-    PANDAS_TIMEDELTA_DTYPE,
-    BOOLEAN_COLUMN_TYPE,
-    SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
-)
-from snowflake.snowpark_checkpoints_collector.singleton import Singleton
-
-import tempfile
-
-from snowflake.snowpark_checkpoints_collector.utils.telemetry import (
-    get_telemetry_manager,
+    ShortType,
+    StringType,
+    StructField,
+    StructType,
+    TimestampNTZType,
+    TimestampType,
 )
 from telemetry_compare_utils import validate_telemetry_file_output
 
+from snowflake.snowpark_checkpoints_collector import collect_dataframe_checkpoint
+from snowflake.snowpark_checkpoints_collector.collection_common import (
+    BOOLEAN_COLUMN_TYPE,
+    CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT,
+    COLUMN_TYPE_KEY,
+    COLUMNS_KEY,
+    DATAFRAME_CUSTOM_DATA_KEY,
+    DATAFRAME_PANDERA_SCHEMA_KEY,
+    DAYTIMEINTERVAL_COLUMN_TYPE,
+    DOUBLE_COLUMN_TYPE,
+    LONG_COLUMN_TYPE,
+    PANDAS_BOOLEAN_DTYPE,
+    PANDAS_DATETIME_DTYPE,
+    PANDAS_FLOAT_DTYPE,
+    PANDAS_INTEGER_DTYPE,
+    PANDAS_OBJECT_DTYPE,
+    PANDAS_TIMEDELTA_DTYPE,
+    PANDERA_COLUMN_TYPE_KEY,
+    SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
+    STRING_COLUMN_TYPE,
+    TIMESTAMP_COLUMN_TYPE,
+)
+from snowflake.snowpark_checkpoints_collector.singleton import Singleton
+from snowflake.snowpark_checkpoints_collector.utils.telemetry import (
+    get_telemetry_manager,
+)
+
+
 TEST_COLLECT_DF_MODE_1_EXPECTED_DIRECTORY_NAME = "test_collect_df_mode_1_expected"
 TELEMETRY_FOLDER = "telemetry"
+TOP_LEVEL_LOGGER_NAME = "snowflake.snowpark_checkpoints_collector"
 
 
 @pytest.fixture(scope="function")
@@ -247,7 +251,9 @@ def test_collect_dataframe_all_column_types(spark_session, singleton, output_pat
     validate_checkpoint_file_output(output_path, checkpoint_name)
 
 
-def test_collect_empty_dataframe_with_schema(spark_session, singleton, output_path):
+def test_collect_empty_dataframe_with_schema(
+    spark_session: SparkSession, output_path: str, caplog: pytest.LogCaptureFixture
+):
     sample_size = 1.0
     checkpoint_name = "test_empty_df_with_schema"
 
@@ -260,18 +266,23 @@ def test_collect_empty_dataframe_with_schema(spark_session, singleton, output_pa
     )
 
     pyspark_df = spark_session.createDataFrame(data=data, schema=columns)
-    collect_dataframe_checkpoint(
-        pyspark_df,
-        checkpoint_name=checkpoint_name,
-        sample=sample_size,
-        output_path=output_path,
-    )
+
+    with caplog.at_level(level=logging.INFO, logger=TOP_LEVEL_LOGGER_NAME):
+        collect_dataframe_checkpoint(
+            pyspark_df,
+            checkpoint_name=checkpoint_name,
+            sample=sample_size,
+            output_path=output_path,
+        )
 
     validate_checkpoint_file_output(output_path, checkpoint_name)
+    assert "Sampled DataFrame is empty. Collecting full DataFrame." in caplog.messages
 
 
 def test_collect_empty_dataframe_with_object_column(
-    spark_session, singleton, output_path
+    spark_session: SparkSession,
+    output_path: str,
+    caplog: pytest.LogCaptureFixture,
 ):
     sample_size = 1.0
     checkpoint_name = "test_empty_df_with_object_column"
@@ -285,14 +296,17 @@ def test_collect_empty_dataframe_with_object_column(
     )
 
     pyspark_df = spark_session.createDataFrame(data=data, schema=columns)
-    collect_dataframe_checkpoint(
-        pyspark_df,
-        checkpoint_name=checkpoint_name,
-        sample=sample_size,
-        output_path=output_path,
-    )
+
+    with caplog.at_level(level=logging.INFO, logger=TOP_LEVEL_LOGGER_NAME):
+        collect_dataframe_checkpoint(
+            pyspark_df,
+            checkpoint_name=checkpoint_name,
+            sample=sample_size,
+            output_path=output_path,
+        )
 
     validate_checkpoint_file_output(output_path, checkpoint_name)
+    assert "Sampled DataFrame is empty. Collecting full DataFrame." in caplog.messages
 
 
 def test_collect_dataframe_with_unsupported_pandera_column_type(
@@ -326,7 +340,9 @@ def test_collect_dataframe_with_unsupported_pandera_column_type(
     validate_checkpoint_file_output(output_path, checkpoint_name)
 
 
-def test_collect_dataframe_with_null_values(spark_session, singleton, output_path):
+def test_collect_dataframe_with_null_values(
+    spark_session: SparkSession, output_path: str, caplog: pytest.LogCaptureFixture
+):
     sample_size = 1.0
     checkpoint_name = "test_df_with_null_values"
 
@@ -341,14 +357,16 @@ def test_collect_dataframe_with_null_values(spark_session, singleton, output_pat
         schema="name string, age integer, active boolean",
     )
 
-    collect_dataframe_checkpoint(
-        pyspark_df,
-        checkpoint_name=checkpoint_name,
-        sample=sample_size,
-        output_path=output_path,
-    )
+    with caplog.at_level(level=logging.DEBUG, logger=TOP_LEVEL_LOGGER_NAME):
+        collect_dataframe_checkpoint(
+            pyspark_df,
+            checkpoint_name=checkpoint_name,
+            sample=sample_size,
+            output_path=output_path,
+        )
 
     validate_checkpoint_file_output(output_path, checkpoint_name)
+    assert "Converting column 'age' to 'Int64' type" in caplog.messages
 
 
 def test_collect_sampled_dataframe(spark_session, singleton, output_path):
@@ -435,18 +453,28 @@ def test_collect_sampled_dataframe(spark_session, singleton, output_path):
     assert collected_column_type_collection == custom_column_type_collection_expected
 
 
-def test_collect_empty_dataframe_without_schema(spark_session, singleton, output_path):
+def test_collect_empty_dataframe_without_schema(
+    spark_session: SparkSession, output_path: str, caplog: pytest.LogCaptureFixture
+):
     checkpoint_name = "test_empty_df_without_schema"
-    data = []
-    columns = StructType()
-    pyspark_df = spark_session.createDataFrame(data=data, schema=columns)
+    pyspark_df = spark_session.createDataFrame(data=[], schema=StructType())
+    expected_error_msg = (
+        "It is not possible to collect an empty DataFrame without schema"
+    )
 
-    with pytest.raises(Exception) as ex_info:
+    with pytest.raises(Exception) as ex_info, caplog.at_level(
+        level=logging.ERROR,
+        logger=TOP_LEVEL_LOGGER_NAME,
+    ):
         collect_dataframe_checkpoint(
             pyspark_df, checkpoint_name=checkpoint_name, output_path=output_path
         )
-    assert "It is not possible to collect an empty DataFrame without schema" == str(
-        ex_info.value
+
+    assert expected_error_msg == str(ex_info.value)
+    assert expected_error_msg in caplog.text
+    assert (
+        f"An error occurred while collecting the checkpoint '{checkpoint_name}'"
+        in caplog.messages
     )
 
 

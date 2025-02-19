@@ -16,8 +16,8 @@
 import logging
 
 
-# Add a NullHandler before importing the snowpark-checkpoints modules to avoid warnings about
-# missing handler when the user has not configured logging.
+# Add a NullHandler to prevent logging messages from being output to
+# sys.stderr if no logging configuration is provided.
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 # ruff: noqa: E402

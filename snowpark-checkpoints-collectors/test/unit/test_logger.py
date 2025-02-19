@@ -16,8 +16,9 @@
 import io
 import logging
 
+from collections.abc import Generator
 from importlib import import_module
-from typing import Union
+from typing import Any, Union
 
 import pytest
 
@@ -25,7 +26,7 @@ import pytest
 TOP_LEVEL_LOGGER_NAME = "snowflake.snowpark_checkpoints_collector"
 
 LoggerDict = dict[str, Union[logging.Logger, logging.PlaceHolder]]
-LoggerType = Union[logging.Logger, logging.PlaceHolder, None]
+LoggerGenerator = Generator[logging.Logger, Any, None]
 
 
 @pytest.fixture(name="registered_loggers", scope="module")
@@ -39,9 +40,24 @@ def fixture_registered_loggers() -> LoggerDict:
 
 
 @pytest.fixture(name="top_level_logger", scope="module")
-def fixture_top_level_logger(registered_loggers: LoggerDict) -> LoggerType:
+def fixture_top_level_logger(registered_loggers: LoggerDict) -> LoggerGenerator:
     """Return the top-level logger of the snowpark-checkpoints-collector package."""
-    return registered_loggers.get(TOP_LEVEL_LOGGER_NAME, None)
+    logger = registered_loggers.get(TOP_LEVEL_LOGGER_NAME, None)
+    assert isinstance(logger, logging.Logger)
+
+    # Save the original state of the logger
+    original_handlers = logger.handlers
+    original_propagate = logger.propagate
+    original_level = logger.level
+    original_filters = logger.filters
+
+    yield logger
+
+    # Restore the original state of the logger
+    logger.handlers = original_handlers
+    logger.propagate = original_propagate
+    logger.setLevel(original_level)
+    logger.filters = original_filters
 
 
 def test_loggers_exists(registered_loggers: LoggerDict):
@@ -62,21 +78,21 @@ def test_loggers_exists(registered_loggers: LoggerDict):
         assert isinstance(logger, logging.Logger)
 
 
-def test_top_level_logger_has_null_handler(top_level_logger: LoggerType):
+def test_top_level_logger_has_null_handler(top_level_logger: LoggerGenerator):
     """Validates that the top-level logger has a single handler and that it is a NullHandler."""
     assert isinstance(top_level_logger, logging.Logger)
     assert len(top_level_logger.handlers) == 1
     assert isinstance(top_level_logger.handlers[0], logging.NullHandler)
 
 
-def test_top_level_logger_default_log_level(top_level_logger: LoggerType):
+def test_top_level_logger_default_log_level(top_level_logger: LoggerGenerator):
     """Validates that the default log level of the top-level logger is logging.WARNING."""
     assert isinstance(top_level_logger, logging.Logger)
     assert top_level_logger.getEffectiveLevel() == logging.WARNING
 
 
 def test_child_logger_inheritance(
-    registered_loggers: LoggerDict, top_level_logger: LoggerType
+    registered_loggers: LoggerDict, top_level_logger: LoggerGenerator
 ):
     """Validates the inheritance of the loggers."""
     child_logger = registered_loggers.get(
@@ -86,7 +102,9 @@ def test_child_logger_inheritance(
     assert child_logger.parent == top_level_logger
 
 
-def test_log_propagation(registered_loggers: LoggerDict, top_level_logger: LoggerType):
+def test_log_propagation(
+    registered_loggers: LoggerDict, top_level_logger: LoggerGenerator
+):
     """Validates that log messages are propagated from a child logger to the top-level logger."""
     assert isinstance(top_level_logger, logging.Logger)
 
@@ -102,4 +120,13 @@ def test_log_propagation(registered_loggers: LoggerDict, top_level_logger: Logge
     child_logger.warning("Test message")
     assert "Test message" in stream_handler.stream.getvalue()
 
-    top_level_logger.removeHandler(stream_handler)
+
+def test_null_handler_supresses_output(
+    capsys: pytest.CaptureFixture[str], top_level_logger: LoggerGenerator
+):
+    """Validates that NullHandler suppresses output to stderr."""
+    assert isinstance(top_level_logger, logging.Logger)
+    top_level_logger.propagate = False
+    top_level_logger.error("This should not appear in stderr")
+    captured = capsys.readouterr()
+    assert captured.err == ""

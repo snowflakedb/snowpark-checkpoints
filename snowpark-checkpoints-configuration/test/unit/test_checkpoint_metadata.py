@@ -12,6 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+import logging
 import os.path
 import tempfile
 
@@ -28,15 +30,21 @@ from snowflake.snowpark_checkpoints_configuration.model.checkpoints import (
 from snowflake.snowpark_checkpoints_configuration.singleton import Singleton
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def singleton():
     Singleton._instances = {}
 
 
-def test_checkpoint_metadata_loading(singleton):
+LOGGER_NAME = "snowflake.snowpark_checkpoints_configuration.checkpoint_metadata"
+
+
+def test_checkpoint_metadata_loading(caplog: pytest.LogCaptureFixture):
     path = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(path, "valid_checkpoint")
-    metadata = CheckpointMetadata(path)
+
+    with caplog.at_level(level=logging.INFO, logger=LOGGER_NAME):
+        metadata = CheckpointMetadata(path)
+
     expected_checkpoint_1 = Checkpoint(
         name="demo_initial_creation_checkpoint",
         df="df",
@@ -62,26 +70,35 @@ def test_checkpoint_metadata_loading(singleton):
 
     expected_checkpoints = Checkpoints(type="Collection", pipelines=[expected_pipeline])
     assert metadata.checkpoint_model == expected_checkpoints
+    assert "Successfully read and validated checkpoints file" in caplog.text
 
 
-def test_checkpoint_metadata_loading_no_file(singleton):
+def test_checkpoint_metadata_loading_no_file(caplog: pytest.LogCaptureFixture):
     path = tempfile.gettempdir()
-    metadata = CheckpointMetadata(path)
+    with caplog.at_level(level=logging.WARNING, logger=LOGGER_NAME):
+        metadata = CheckpointMetadata(path)
     expected_checkpoints = Checkpoints(type="", pipelines=[])
     assert metadata.checkpoint_model == expected_checkpoints
+    assert "Checkpoints file not found" in caplog.text
 
 
-def test_checkpoint_metadata_loading_invalid_file(singleton):
+def test_checkpoint_metadata_loading_invalid_file(caplog: pytest.LogCaptureFixture):
     path = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(path, "invalid_checkpoint")
     checkpoint_file_name = os.path.join(path, "checkpoints.json")
-    expected_exception = f"Error reading checkpoints file: {checkpoint_file_name} \n"
-    with pytest.raises(Exception) as ex_info:
+    expected_error_msg = f"An error occurred while reading the checkpoints file: '{checkpoint_file_name}'"
+    with pytest.raises(Exception) as ex_info, caplog.at_level(
+        logging.ERROR, LOGGER_NAME
+    ):
         CheckpointMetadata(path)
-    assert str(ex_info.value).startswith(expected_exception)
+    assert str(ex_info.value).startswith(expected_error_msg)
+    assert expected_error_msg in caplog.text
+    assert any(
+        record.exc_info is not None for record in caplog.records
+    ), "Log message does not contain the exception details, but it should"
 
 
-def test_checkpoint_metadata_get_checkpoint_exist(singleton):
+def test_checkpoint_metadata_get_checkpoint_exist():
     path = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(path, "valid_checkpoint")
     metadata = CheckpointMetadata(path)
@@ -98,7 +115,7 @@ def test_checkpoint_metadata_get_checkpoint_exist(singleton):
     assert checkpoint == expected_checkpoint
 
 
-def test_checkpoint_metadata_get_checkpoint_not_exist(singleton):
+def test_checkpoint_metadata_get_checkpoint_not_exist():
     path = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(path, "valid_checkpoint")
     metadata = CheckpointMetadata(path)
@@ -107,7 +124,7 @@ def test_checkpoint_metadata_get_checkpoint_not_exist(singleton):
     assert checkpoint == expected_checkpoint
 
 
-def test_checkpoint_metadata_get_checkpoint_no_file(singleton):
+def test_checkpoint_metadata_get_checkpoint_no_file():
     path = tempfile.gettempdir()
     metadata = CheckpointMetadata(path)
     checkpoint = metadata.get_checkpoint("not-exist-checkpoint")

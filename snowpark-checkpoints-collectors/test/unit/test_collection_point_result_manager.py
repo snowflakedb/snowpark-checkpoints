@@ -43,7 +43,7 @@ EXPECTED_MODEL = (
 )
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def singleton():
     Singleton._instances = {}
 

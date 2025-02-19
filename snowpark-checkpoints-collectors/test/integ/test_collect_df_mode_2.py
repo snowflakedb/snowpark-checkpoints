@@ -85,7 +85,7 @@ def spark_session():
     return SparkSession.builder.getOrCreate()
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def singleton():
     Singleton._instances = {}
 
@@ -297,7 +297,6 @@ def test_collect_checkpoint_mode_2_parquet_directory(
     data,
     spark_schema,
     snowpark_schema,
-    singleton,
     test_id,
     telemetry_output,
 ):
@@ -347,7 +346,6 @@ def test_collect_checkpoint_mode_2(
     data,
     spark_schema,
     snowpark_schema,
-    singleton,
     test_id,
     telemetry_output,
 ):

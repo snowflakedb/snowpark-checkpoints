@@ -36,7 +36,7 @@ def spark_session():
     return SparkSession.builder.getOrCreate()
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def singleton():
     Singleton._instances = {}
 

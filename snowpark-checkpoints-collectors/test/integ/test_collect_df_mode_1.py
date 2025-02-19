@@ -101,7 +101,7 @@ def spark_session():
     return SparkSession.builder.getOrCreate()
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def singleton():
     Singleton._instances = {}
 
@@ -113,7 +113,7 @@ def telemetry_testing_mode():
     telemetry_manager.sc_is_enabled = True
 
 
-def test_collect_dataframe(spark_session, singleton, output_path):
+def test_collect_dataframe(spark_session, output_path):
     sample_size = 1.0
     checkpoint_name = "test_full_df"
 
@@ -131,7 +131,7 @@ def test_collect_dataframe(spark_session, singleton, output_path):
     validate_checkpoint_file_output(output_path, checkpoint_name)
 
 
-def test_collect_dataframe_all_column_types(spark_session, singleton, output_path):
+def test_collect_dataframe_all_column_types(spark_session, output_path):
     sample_size = 1.0
     checkpoint_name = "test_full_df_all_column_type"
 
@@ -310,7 +310,7 @@ def test_collect_empty_dataframe_with_object_column(
 
 
 def test_collect_dataframe_with_unsupported_pandera_column_type(
-    spark_session, singleton, output_path
+    spark_session, output_path
 ):
     sample_size = 1.0
     checkpoint_name = "test_dataframe_with_unsupported_pandera_column_type"
@@ -369,7 +369,7 @@ def test_collect_dataframe_with_null_values(
     assert "Converting column 'age' to 'Int64' type" in caplog.messages
 
 
-def test_collect_sampled_dataframe(spark_session, singleton, output_path):
+def test_collect_sampled_dataframe(spark_session, output_path):
     sample_size = 0.1
     checkpoint_name = "test_sampled_df"
 
@@ -478,7 +478,7 @@ def test_collect_empty_dataframe_without_schema(
     )
 
 
-def test_collect_dataframe_with_only_null_values(spark_session, singleton, output_path):
+def test_collect_dataframe_with_only_null_values(spark_session, output_path):
     sample_size = 1.0
     checkpoint_name = "test_df_with_only_null_values"
 
@@ -504,7 +504,7 @@ def test_collect_dataframe_with_only_null_values(spark_session, singleton, outpu
 
 
 def test_collect_dataframe_all_column_types_with_null_values(
-    spark_session, singleton, output_path
+    spark_session, output_path
 ):
     sample_size = 1.0
     checkpoint_name = "test_dataframe_all_column_types_with_null_values"

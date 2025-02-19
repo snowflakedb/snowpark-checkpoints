@@ -52,18 +52,18 @@ def spark_session():
     return SparkSession.builder.getOrCreate()
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def singleton():
     Singleton._instances = {}
 
 
-def test_collect_dataframe_mode_schema(spark_session, singleton, output_path):
+def test_collect_dataframe_mode_schema(spark_session, output_path):
 
     execute_dataframe_collection(spark_session, CheckpointMode.SCHEMA, output_path)
     validate_collection_point_result_file(CollectionResult.PASS, output_path)
 
 
-def test_collect_dataframe_mode_dataframe(spark_session, singleton, output_path):
+def test_collect_dataframe_mode_dataframe(spark_session, output_path):
     execute_dataframe_collection(spark_session, CheckpointMode.DATAFRAME, output_path)
     validate_collection_point_result_file(CollectionResult.PASS, output_path)
 

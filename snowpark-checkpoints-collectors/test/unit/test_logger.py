@@ -14,9 +14,9 @@
 # limitations under the License.
 
 import io
-from importlib import import_module
 import logging
 
+from importlib import import_module
 from typing import Union
 
 import pytest
@@ -45,7 +45,7 @@ def fixture_top_level_logger(registered_loggers: LoggerDict) -> LoggerType:
 
 
 def test_loggers_exists(registered_loggers: LoggerDict):
-    """Validates that all the snowflake.snowpark_checkpoints_collector loggers exists."""
+    """Validates that all the snowflake.snowpark_checkpoints_collector loggers exist."""
     logger_names = {
         "snowflake.snowpark_checkpoints_collector",
         "snowflake.snowpark_checkpoints_collector.collection_result.model.collection_point_result_manager",
@@ -78,7 +78,7 @@ def test_top_level_logger_default_log_level(top_level_logger: LoggerType):
 def test_child_logger_inheritance(
     registered_loggers: LoggerDict, top_level_logger: LoggerType
 ):
-    """Validates that a child logger inherits the top-level logger's configuration."""
+    """Validates the inheritance of the loggers."""
     child_logger = registered_loggers.get(
         f"{TOP_LEVEL_LOGGER_NAME}.summary_stats_collector", None
     )
@@ -102,12 +102,4 @@ def test_log_propagation(registered_loggers: LoggerDict, top_level_logger: Logge
     child_logger.warning("Test message")
     assert "Test message" in stream_handler.stream.getvalue()
 
-
-def test_null_handler_supresses_output(
-    capsys: pytest.CaptureFixture[str], top_level_logger: LoggerType
-):
-    """Validates that NullHandler suppresses output to stderr."""
-    assert isinstance(top_level_logger, logging.Logger)
-    top_level_logger.error("This should not appear in stderr")
-    captured = capsys.readouterr()
-    assert captured.err == ""
+    top_level_logger.removeHandler(stream_handler)

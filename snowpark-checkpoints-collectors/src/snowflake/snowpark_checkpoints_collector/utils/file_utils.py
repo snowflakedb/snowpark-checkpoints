@@ -25,6 +25,9 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
     UNKNOWN_LINE_OF_CODE,
     UNKNOWN_SOURCE_FILE,
 )
+from snowflake.snowpark_checkpoints_collector.io_utils.io_file_manager import (
+    get_io_file_manager,
+)
 
 
 def get_output_file_path(out_path: Optional[str] = None) -> str:
@@ -63,11 +66,13 @@ def get_output_directory_path(output_path: Optional[str] = None) -> str:
         str: returns the output directory path.
 
     """
-    current_working_directory_path = output_path if output_path else os.getcwd()
+    current_working_directory_path = (
+        output_path if output_path else get_io_file_manager().getcwd()
+    )
     checkpoints_output_directory_path = os.path.join(
         current_working_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME
     )
-    os.makedirs(checkpoints_output_directory_path, exist_ok=True)
+    get_io_file_manager().mkdir(checkpoints_output_directory_path, exist_ok=True)
     return checkpoints_output_directory_path
 
 
@@ -120,8 +125,8 @@ def _is_temporal_path(path: str) -> bool:
 
 
 def _get_ipynb_file_path_collection() -> list[str]:
-    current_working_directory_path = os.getcwd()
-    cwd_file_name_collection = os.listdir(current_working_directory_path)
+    current_working_directory_path = get_io_file_manager().getcwd()
+    cwd_file_name_collection = get_io_file_manager().ls(current_working_directory_path)
     ipynb_file_path_collection = []
     for file_name in cwd_file_name_collection:
         is_ipynb_file = file_name.endswith(DOT_IPYNB_EXTENSION)

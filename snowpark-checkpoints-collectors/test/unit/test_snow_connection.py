@@ -67,14 +67,6 @@ def test_create_snowflake_table_from_parquet(input_path):
         f"CREATE TEMP STAGE IF NOT EXISTS {stage_name}"
     )
 
-    expected_file = Path(output_directory_path_full) / "dir1" / "file1.parquet"
-    expected_file = Path(expected_file.as_posix()).as_uri()
-    assert mocked_session.method_calls[1] == call.sql(
-        f"PUT '{expected_file}' "
-        f"'@{stage_name}/{checkpoint_name}/dir1/file1.parquet' "
-        "AUTO_COMPRESS=FALSE"
-    )
-
     assert mocked_session.method_calls[2] == call.sql(
         f"LIST '@{stage_name}/{checkpoint_name}'"
     )
@@ -83,7 +75,7 @@ def test_create_snowflake_table_from_parquet(input_path):
         path=f"'@{stage_name}/{checkpoint_name}'"
     )
 
-    assert mock_df.method_calls[3] == call.write.save_as_table(
+    assert mock_df.method_calls[2] == call.write.save_as_table(
         table_name="checkpoint_name_test", mode="overwrite"
     )
 

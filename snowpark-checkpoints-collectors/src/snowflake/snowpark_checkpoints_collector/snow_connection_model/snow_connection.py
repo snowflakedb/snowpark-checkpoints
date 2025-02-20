@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import glob
 import os.path
 import time
 
@@ -22,6 +21,9 @@ from typing import Callable, Optional
 from snowflake.snowpark import Session
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     DOT_PARQUET_EXTENSION,
+)
+from snowflake.snowpark_checkpoints_collector.io_utils.io_file_manager import (
+    get_io_file_manager,
 )
 
 
@@ -123,10 +125,12 @@ class SnowConnection:
         )
 
         def filter_files(name: str):
-            return os.path.isfile(name) and (filter_func(name) if filter_func else True)
+            return get_io_file_manager().file_exists(name) and (
+                filter_func(name) if filter_func else True
+            )
 
         target_dir = os.path.join(input_path, "**", "*")
-        files_collection = glob.glob(target_dir, recursive=True)
+        files_collection = get_io_file_manager().ls(target_dir, recursive=True)
 
         files = [file for file in files_collection if filter_files(file)]
 
@@ -141,16 +145,11 @@ class SnowConnection:
                 if not os.path.isabs(file)
                 else str(Path(file).resolve())
             )
-            # Snowflake required URI format for input in the put.
-            normalize_file_path = Path(file_full_path).as_uri()
             new_file_path = file_full_path.replace(input_path, folder_name)
-            # as Posix to convert Windows dir to posix
-            new_file_path = Path(new_file_path).as_posix()
             stage_file_path = STAGE_PATH_FORMAT.format(stage_name, new_file_path)
-            put_statement = PUT_FILE_IN_STAGE_STATEMENT_FORMAT.format(
-                normalize_file_path, stage_file_path
-            )
-            self.session.sql(put_statement).collect()
+
+            binary_parquet = get_io_file_manager().read_bytes(file_full_path)
+            self.session.file.put_stream(binary_parquet, stage_file_path)
 
     def create_table_from_parquet(
         self, table_name: str, stage_directory_path: str

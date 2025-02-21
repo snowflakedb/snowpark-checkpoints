@@ -55,7 +55,17 @@ from snowflake.snowpark_checkpoints_collector.summary_stats_collector import (
 from snowflake.snowpark_checkpoints_collector.utils.telemetry import (
     get_telemetry_manager,
 )
+from snowflake.snowpark_checkpoints_collector.io_utils.io_default_strategy import (
+    IODefaultStrategy,
+)
+from snowflake.snowpark_checkpoints_collector.io_utils.io_file_manager import (
+    get_io_file_manager,
+)
+from unittest.mock import patch
+
+import inspect
 from telemetry_compare_utils import validate_telemetry_file_output
+
 
 TEST_COLLECT_DF_MODE_2_EXPECTED_DIRECTORY_NAME = "test_collect_df_mode_2_expected"
 TELEMETRY_FOLDER = "telemetry"
@@ -426,6 +436,79 @@ def test_spark_df_mode_dataframe(
 
     validate_dataframes(checkpoint_name, spark_df, snowpark_schema)
     validate_telemetry("test_spark_df_mode_dataframe", telemetry_output)
+
+
+def test_io_strategy(
+    spark_session,
+    data,
+    spark_schema,
+    snowpark_schema,
+    singleton,
+    test_id,
+    telemetry_output,
+):
+    checkpoint_name = f"test_io_strategy_{test_id}"
+
+    class TestStrategy(IODefaultStrategy):
+        pass
+
+    number_of_methods = inspect.getmembers(
+        IODefaultStrategy, predicate=inspect.isfunction
+    )
+    strategy = TestStrategy()
+    get_io_file_manager().set_strategy(strategy)
+
+    with patch.object(
+        strategy, "getcwd", wraps=strategy.getcwd
+    ) as getcwd_spy, patch.object(
+        strategy, "ls", wraps=strategy.ls
+    ) as ls_spy, patch.object(
+        strategy, "mkdir", wraps=strategy.mkdir
+    ) as mkdir_spy, patch.object(
+        strategy, "write", wraps=strategy.write
+    ) as write_spy, patch.object(
+        strategy, "read", wraps=strategy.read
+    ) as read_spy, patch.object(
+        strategy, "read_bytes", wraps=strategy.read_bytes
+    ) as read_bytes_spy, patch.object(
+        strategy, "file_exists", wraps=strategy.file_exists
+    ) as file_exists_spy, patch.object(
+        strategy, "folder_exists", wraps=strategy.folder_exists
+    ) as folder_exists_spy:
+
+        pyspark_df = spark_session.createDataFrame(data, schema=spark_schema).orderBy(
+            "INTEGER"
+        )
+
+        temp_dir = tempfile.gettempdir()
+        output_path = os.path.join(temp_dir, checkpoint_name)
+
+        collect_dataframe_checkpoint(
+            pyspark_df,
+            checkpoint_name=checkpoint_name,
+            mode=CheckpointMode.DATAFRAME,
+            output_path=output_path,
+        )
+
+        # Assert
+        assert len(number_of_methods) == 8
+        getcwd_spy.assert_called()
+        mkdir_spy.assert_called()
+        write_spy.assert_called()
+        read_bytes_spy.assert_called()
+        file_exists_spy.assert_called()
+        ls_spy.assert_called()
+        folder_exists_spy.assert_not_called()
+        read_spy.assert_not_called()
+
+        assert getcwd_spy.call_count == 3
+        assert mkdir_spy.call_count == 3
+        assert write_spy.call_count == 2
+        assert read_bytes_spy.call_count == 1
+        assert file_exists_spy.call_count == 2
+        assert ls_spy.call_count == 2
+
+        validate_dataframes(checkpoint_name, pyspark_df, snowpark_schema)
 
 
 def validate_dataframes(

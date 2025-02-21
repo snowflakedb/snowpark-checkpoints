@@ -20,7 +20,9 @@ from pathlib import Path
 
 
 def get_output_telemetry(telemetry_directory_path: Path) -> str:
-    for file in os.listdir(telemetry_directory_path):
+    files = os.listdir(telemetry_directory_path)
+    files.sort(reverse=True)
+    for file in files:
         if file.endswith(".json"):
             output_file_path = os.path.join(telemetry_directory_path, file)
             with open(output_file_path) as f:

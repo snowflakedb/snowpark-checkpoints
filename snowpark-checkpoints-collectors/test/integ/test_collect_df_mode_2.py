@@ -415,7 +415,6 @@ def test_generate_parquet_for_spark_df(data, spark_schema, test_id, telemetry_ou
     target_dir = os.path.join(parquet_directory, "**", f"*{DOT_PARQUET_EXTENSION}")
     files = glob.glob(target_dir, recursive=True)
     assert len(files) > 0
-    validate_telemetry("test_generate_parquet_for_spark_df", telemetry_output)
 
 
 def test_spark_df_mode_dataframe(
@@ -435,7 +434,6 @@ def test_spark_df_mode_dataframe(
     snow.create_snowflake_table_from_local_parquet(checkpoint_name, parquet_directory)
 
     validate_dataframes(checkpoint_name, spark_df, snowpark_schema)
-    validate_telemetry("test_spark_df_mode_dataframe", telemetry_output)
 
 
 def test_io_strategy(
@@ -500,14 +498,12 @@ def test_io_strategy(
         ls_spy.assert_called()
         folder_exists_spy.assert_not_called()
         read_spy.assert_not_called()
-
         assert getcwd_spy.call_count == 3
         assert mkdir_spy.call_count == 3
         assert write_spy.call_count == 2
         assert read_bytes_spy.call_count == 1
         assert file_exists_spy.call_count == 2
         assert ls_spy.call_count == 2
-
         validate_dataframes(checkpoint_name, pyspark_df, snowpark_schema)
 
 

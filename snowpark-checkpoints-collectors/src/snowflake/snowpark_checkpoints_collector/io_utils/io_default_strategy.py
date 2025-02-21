@@ -16,7 +16,7 @@
 import glob
 import os
 
-from typing import BinaryIO, Optional
+from typing import Optional
 
 from snowflake.snowpark_checkpoints_collector.io_utils import EnvStrategy
 
@@ -59,9 +59,10 @@ class IODefaultStrategy(EnvStrategy):
         except Exception:
             return None
 
-    def read_bytes(self, file_path: str) -> Optional[BinaryIO]:
+    def read_bytes(self, file_path: str) -> Optional[bytes]:
         try:
-            return open(file_path, mode="rb")
+            with open(file_path, mode="rb") as f:
+                return f.read()
         except Exception:
             return None
 

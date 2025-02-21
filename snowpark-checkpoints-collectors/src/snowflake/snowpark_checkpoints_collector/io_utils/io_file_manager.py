@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import BinaryIO, Optional
+from typing import Optional
 
 from snowflake.snowpark_checkpoints_collector.io_utils import (
     EnvStrategy,
@@ -43,7 +43,7 @@ class IOFileManager(metaclass=Singleton):
     ) -> Optional[str]:
         return self.strategy.read(file_path, mode, encoding)
 
-    def read_bytes(self, file_path: str) -> Optional[BinaryIO]:
+    def read_bytes(self, file_path: str) -> Optional[bytes]:
         return self.strategy.read_bytes(file_path)
 
     def ls(self, path: str, recursive: bool = False) -> list[str]:

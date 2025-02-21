@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import io
 import os.path
 import time
 
@@ -148,7 +149,8 @@ class SnowConnection:
             new_file_path = file_full_path.replace(input_path, folder_name)
             stage_file_path = STAGE_PATH_FORMAT.format(stage_name, new_file_path)
 
-            binary_parquet = get_io_file_manager().read_bytes(file_full_path)
+            parquet_file = get_io_file_manager().read_bytes(file_full_path)
+            binary_parquet = io.BytesIO(parquet_file)
             self.session.file.put_stream(binary_parquet, stage_file_path)
 
     def create_table_from_parquet(

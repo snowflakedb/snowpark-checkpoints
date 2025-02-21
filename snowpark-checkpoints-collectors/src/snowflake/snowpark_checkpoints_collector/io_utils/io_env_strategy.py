@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from typing import BinaryIO, Optional
+from typing import Optional
 
 
 class EnvStrategy(ABC):
@@ -36,7 +36,6 @@ class EnvStrategy(ABC):
             bool: True if the directory was created successfully, False otherwise.
 
         """
-        pass
 
     @abstractmethod
     def folder_exists(self, path: str) -> bool:
@@ -49,7 +48,6 @@ class EnvStrategy(ABC):
             bool: True if the folder exists, False otherwise.
 
         """
-        pass
 
     @abstractmethod
     def file_exists(self, path: str) -> bool:
@@ -62,7 +60,6 @@ class EnvStrategy(ABC):
             bool: True if the file exists, False otherwise.
 
         """
-        pass
 
     @abstractmethod
     def write(self, file_path: str, file_content: str, overwrite: bool = True) -> bool:
@@ -77,7 +74,6 @@ class EnvStrategy(ABC):
             bool: True if the file was written successfully, False otherwise.
 
         """
-        pass
 
     @abstractmethod
     def read(
@@ -94,10 +90,9 @@ class EnvStrategy(ABC):
             Optional[str]: The content of the file, or None if an error occurred.
 
         """
-        pass
 
     @abstractmethod
-    def read_bytes(self, file_path: str) -> Optional[BinaryIO]:
+    def read_bytes(self, file_path: str) -> Optional[bytes]:
         """Read binary content from a file.
 
         Args:
@@ -107,7 +102,6 @@ class EnvStrategy(ABC):
             Optional[BinaryIO]: The binary content of the file, or None if an error occurred.
 
         """
-        pass
 
     @abstractmethod
     def ls(self, path: str, recursive: bool = False) -> list[str]:
@@ -121,7 +115,6 @@ class EnvStrategy(ABC):
             list[str]: A list of the contents of the directory.
 
         """
-        pass
 
     @abstractmethod
     def getcwd(self) -> str:
@@ -131,4 +124,3 @@ class EnvStrategy(ABC):
             str: The current working directory.
 
         """
-        pass

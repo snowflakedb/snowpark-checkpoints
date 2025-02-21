@@ -71,11 +71,8 @@ def test_default_folder_exists(io_file_manager):
 
 def test_default_folder_exists_fail(io_file_manager):
     with tempfile.TemporaryDirectory(dir=os.getcwd()) as temp_dir:
-        # Arrange
-        path_not_exist = os.path.join(temp_dir, "test_dir")
-
         # Act
-        result_not_exist = io_file_manager.folder_exists(path_not_exist)
+        result_not_exist = io_file_manager.folder_exists(None)
 
         # Assert
         assert result_not_exist is False
@@ -111,11 +108,8 @@ def test_default_file_exists(io_file_manager):
 
 def test_default_file_exists_fail(io_file_manager):
     with tempfile.TemporaryDirectory(dir=os.getcwd()) as temp_dir:
-        # Arrange
-        path = os.path.join(temp_dir, "test_file.txt")
-
         # Act
-        result_not_exists = io_file_manager.file_exists(path)
+        result_not_exists = io_file_manager.file_exists(None)
 
         # Assert
         assert result_not_exists is False

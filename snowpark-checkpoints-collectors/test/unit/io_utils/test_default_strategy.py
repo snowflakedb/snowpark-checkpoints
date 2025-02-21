@@ -195,7 +195,7 @@ def test_default_read_bytes(io_file_manager):
         result = io_file_manager.read_bytes(path)
 
         # Assert
-        assert result.read().decode() == content
+        assert result.decode() == content
 
 
 def test_default_read_bytes_fail(io_file_manager):

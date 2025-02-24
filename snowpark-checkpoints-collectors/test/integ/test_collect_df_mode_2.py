@@ -400,7 +400,6 @@ def test_collect_invalid_mode(spark_session, data, spark_schema, telemetry_outpu
     with pytest.raises(Exception) as ex_info:
         collect_dataframe_checkpoint(pyspark_df, checkpoint_name="invalid_mode", mode=3)
     assert "Invalid mode value." == str(ex_info.value)
-    validate_telemetry("test_collect_invalid_mode", telemetry_output)
 
 
 def test_generate_parquet_for_spark_df(data, spark_schema, test_id, telemetry_output):

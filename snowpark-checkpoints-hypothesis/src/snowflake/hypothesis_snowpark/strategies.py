@@ -52,7 +52,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 @report_telemetry(params_list=["schema"])
-@log()
+@log
 def dataframe_strategy(
     schema: Union[str, pa.DataFrameSchema], session: Session, size: Optional[int] = None
 ) -> SearchStrategy[DataFrame]:
@@ -181,7 +181,7 @@ def _dataframe_strategy_from_object_schema(
             str_columns.append(column.name)
 
     @composite
-    @log()
+    @log
     def _dataframe_strategy(draw: DrawFn) -> DataFrame:
         pandas_strategy = schema.strategy(size=size)
         pandas_df = draw(pandas_strategy)
@@ -247,7 +247,7 @@ def _dataframe_strategy_from_json_schema(
     df_schema = _process_dataframe_schema(df_schema)
 
     @composite
-    @log()
+    @log
     def _dataframe_strategy(draw: DrawFn) -> DataFrame:
         pandas_strategy = df_schema.strategy(size=size)
         pandas_df = draw(pandas_strategy)

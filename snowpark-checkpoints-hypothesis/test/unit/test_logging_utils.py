@@ -25,7 +25,7 @@ from snowflake.hypothesis_snowpark.logging_utils import log
 def test_log_decorator_logs_function_call_with_args(caplog: pytest.LogCaptureFixture):
     """Test that the log decorator logs the function call with the arguments."""
 
-    @log()
+    @log
     def sample_function(a: int, b: int = 2):
         return a + b
 
@@ -41,7 +41,7 @@ def test_log_decorator_logs_function_call_without_args(
 ):
     """Test that the log decorator logs the function call without the arguments."""
 
-    @log()
+    @log
     def sample_function():
         return 1
 
@@ -56,7 +56,7 @@ def test_log_decorator_logs_exceptions(caplog: pytest.LogCaptureFixture):
     """Test that the log decorator logs exceptions."""
     exception_msg = "An error occurred"
 
-    @log()
+    @log
     def sample_function():
         raise ValueError(exception_msg)
 
@@ -108,11 +108,11 @@ def test_log_decorator_with_other_decorators(caplog: pytest.LogCaptureFixture):
         return wrapper
 
     @dummy_decorator
-    @log()
+    @log
     def sample_function_1():
         return 1
 
-    @log()
+    @log
     @dummy_decorator
     def sample_function_2():
         return 2

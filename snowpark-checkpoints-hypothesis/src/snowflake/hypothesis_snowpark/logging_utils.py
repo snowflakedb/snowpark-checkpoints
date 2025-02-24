@@ -16,7 +16,7 @@
 import logging
 
 from functools import wraps
-from typing import Callable, ParamSpec, TypeVar
+from typing import Callable, Optional, ParamSpec, TypeVar
 
 
 P = ParamSpec("P")
@@ -24,11 +24,15 @@ R = TypeVar("R")
 
 
 def log(
-    *, logger: logging.Logger = None, log_args: bool = True
+    _func: Optional[Callable[P, R]] = None,
+    *,
+    logger: Optional[logging.Logger] = None,
+    log_args: bool = True,
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Log the function call and any exceptions that occur.
 
     Args:
+        _func: The function to log.
         logger: The logger to use for logging.
         log_args: Whether to log the arguments passed to the function.
 
@@ -54,4 +58,7 @@ def log(
 
         return wrapper
 
-    return decorator
+    # Handle the case where the decorator is used without parentheses
+    if _func is None:
+        return decorator
+    return decorator(_func)

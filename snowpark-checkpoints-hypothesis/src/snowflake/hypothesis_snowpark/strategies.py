@@ -15,6 +15,7 @@
 
 import copy
 import json
+import logging
 
 from typing import Optional, Union
 
@@ -35,6 +36,7 @@ from snowflake.hypothesis_snowpark.constants import (
     PYSPARK_TO_SNOWPARK_SUPPORTED_TYPES,
 )
 from snowflake.hypothesis_snowpark.custom_strategies import update_pandas_df_strategy
+from snowflake.hypothesis_snowpark.logging_utils import log
 from snowflake.hypothesis_snowpark.strategies_utils import (
     apply_custom_null_values,
     generate_snowpark_dataframe,
@@ -46,7 +48,11 @@ from snowflake.hypothesis_snowpark.telemetry.telemetry import report_telemetry
 from snowflake.snowpark import DataFrame, Session
 
 
+LOGGER = logging.getLogger(__name__)
+
+
 @report_telemetry(params_list=["schema"])
+@log()
 def dataframe_strategy(
     schema: Union[str, pa.DataFrameSchema], session: Session, size: Optional[int] = None
 ) -> SearchStrategy[DataFrame]:
@@ -155,6 +161,9 @@ def _dataframe_strategy_from_object_schema(
         A Hypothesis strategy that generates Snowpark DataFrames.
 
     """
+    LOGGER.info(
+        "Starting to create a Hypothesis strategy from the given Pandera DataFrameSchema object"
+    )
     original_schema = copy.deepcopy(schema)
     str_columns = []
 
@@ -163,19 +172,28 @@ def _dataframe_strategy_from_object_schema(
             # Data generation for date type is currently unsupported by Pandera.
             # As a workaround, we can change the data type to pa.DateTime to
             # avoid an exception and let Snowpark handle the conversion to Date.
+            LOGGER.warning(
+                "Data generation for Date type is not supported; converting column '%s' to Timestamp",
+                column.name,
+            )
             column.dtype = pa.DateTime
         elif isinstance(column.dtype, pa.String):
             str_columns.append(column.name)
 
     @composite
+    @log()
     def _dataframe_strategy(draw: DrawFn) -> DataFrame:
         pandas_strategy = schema.strategy(size=size)
         pandas_df = draw(pandas_strategy)
+        LOGGER.info("Generated a Pandas DataFrame with shape: %s", pandas_df.shape)
         pandas_df = replace_surrogate_chars(pandas_df, str_columns)
         snowpark_schema = generate_snowpark_schema(original_schema)
         snowpark_df = generate_snowpark_dataframe(pandas_df, snowpark_schema, session)
         return snowpark_df
 
+    LOGGER.info(
+        "Successfully created a Hypothesis strategy from the given Pandera DataFrameSchema object"
+    )
     return _dataframe_strategy()
 
 
@@ -193,6 +211,9 @@ def _dataframe_strategy_from_json_schema(
         A Hypothesis strategy that generates Snowpark DataFrames.
 
     """
+    LOGGER.info(
+        "Starting to create a Hypothesis strategy from the given JSON schema file"
+    )
     json_schema_dict = load_json_schema(schema)
     pandera_schema = json_schema_dict.get(PANDERA_SCHEMA_KEY)
     custom_data = json_schema_dict.get(CUSTOM_DATA_KEY)
@@ -220,13 +241,17 @@ def _dataframe_strategy_from_json_schema(
             f"{[column.get(CUSTOM_DATA_TYPE_KEY) for column in not_supported_columns]}"
         )
 
+    LOGGER.info("Creating a Pandera DataFrameSchema object from the given schema")
     df_schema = pa.DataFrameSchema.from_json(json.dumps(pandera_schema))
+    LOGGER.debug("Loaded Pandera DataFrameSchema: %s", repr(df_schema))
     df_schema = _process_dataframe_schema(df_schema)
 
     @composite
+    @log()
     def _dataframe_strategy(draw: DrawFn) -> DataFrame:
         pandas_strategy = df_schema.strategy(size=size)
         pandas_df = draw(pandas_strategy)
+        LOGGER.info("Generated a Pandas DataFrame with shape: %s", pandas_df.shape)
         pandas_df = draw(
             update_pandas_df_strategy(pandas_df, columns_with_custom_strategy)
         )
@@ -236,6 +261,9 @@ def _dataframe_strategy_from_json_schema(
         snowpark_df = generate_snowpark_dataframe(pandas_df, snowpark_schema, session)
         return snowpark_df
 
+    LOGGER.info(
+        "Successfully created a Hypothesis strategy from the given JSON schema file"
+    )
     return _dataframe_strategy()
 
 
@@ -247,6 +275,10 @@ def _process_dataframe_schema(df_schema: pa.DataFrameSchema) -> pa.DataFrameSche
             # Data generation for date type is currently unsupported by Pandera. As a workaround,
             # we can change the data type to any supported type to avoid an exception and manually
             # generate the dates.
+            LOGGER.warning(
+                "Data generation for Date type is not supported; converting column '%s' to Timestamp",
+                column_obj.name,
+            )
             column_obj.dtype = pa.DateTime
 
     return df_schema_copy

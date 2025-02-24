@@ -147,6 +147,8 @@ class SnowConnection:
                 else str(Path(file).resolve())
             )
             new_file_path = file_full_path.replace(input_path, folder_name)
+            # as Posix to convert Windows dir to posix
+            new_file_path = Path(new_file_path).as_posix()
             stage_file_path = STAGE_PATH_FORMAT.format(stage_name, new_file_path)
 
             parquet_file = get_io_file_manager().read_bytes(file_full_path)

@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import json
-import os
 import random
 import re
 
@@ -36,6 +35,7 @@ from snowflake.hypothesis_snowpark.datatype_mapper import (
     pandera_dtype_to_snowpark_dtype,
     pyspark_dtype_to_snowpark_dtype,
 )
+from snowflake.hypothesis_snowpark.io_utils.io_file_manager import get_io_file_manager
 from snowflake.snowpark import DataFrame, Session
 from snowflake.snowpark.types import StructField, StructType
 
@@ -50,12 +50,12 @@ def load_json_schema(json_schema: str) -> dict:
         The JSON schema as a dictionary.
 
     """
-    if not os.path.isfile(json_schema):
+    if not get_io_file_manager().file_exists(json_schema):
         raise ValueError(f"Invalid JSON schema path: {json_schema}")
 
     try:
-        with open(json_schema, encoding="utf-8") as file:
-            return json.load(file)
+        file = get_io_file_manager().read(json_schema, encoding="utf-8")
+        return json.loads(file)
     except (OSError, json.JSONDecodeError) as e:
         raise ValueError(f"Error reading JSON schema file: {e}") from None
 

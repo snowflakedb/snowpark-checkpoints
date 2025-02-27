@@ -13,12 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+
 from typing import Optional
 
 import pandas
 
 from snowflake.snowpark import DataFrame as SnowparkDataFrame
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class SamplingStrategy:
@@ -52,23 +57,43 @@ class SamplingAdapter:
     def process_args(self, input_args):
         # create the intermediate pandas
         # data frame for the test data
+        LOGGER.info("Processing %s input argument(s) for sampling", len(input_args))
         for arg in input_args:
             if isinstance(arg, SnowparkDataFrame):
-                if arg.count() == 0:
+                df_count = arg.count()
+                if df_count == 0:
                     raise SamplingError(
                         "Input DataFrame is empty. Cannot sample from an empty DataFrame."
                     )
 
+                LOGGER.info("Sampling a Snowpark DataFrame with %s rows", df_count)
                 if self.sampling_strategy == SamplingStrategy.RANDOM_SAMPLE:
                     if self.sample_frac:
+                        LOGGER.info(
+                            "Applying random sampling with fraction %s",
+                            self.sample_frac,
+                        )
                         df_sample = arg.sample(frac=self.sample_frac).to_pandas()
                     else:
+                        LOGGER.info(
+                            "Applying random sampling with size %s", self.sample_number
+                        )
                         df_sample = arg.sample(n=self.sample_number).to_pandas()
                 else:
+                    LOGGER.info(
+                        "Applying limit sampling with size %s", self.sample_number
+                    )
                     df_sample = arg.limit(self.sample_number).to_pandas()
 
+                LOGGER.info(
+                    "Successfully sampled the DataFrame. Resulting shape: %s",
+                    df_sample.shape,
+                )
                 self.pandas_sample_args.append(df_sample)
             else:
+                LOGGER.debug(
+                    "Argument is not a Snowpark DataFrame. No sampling is applied."
+                )
                 self.pandas_sample_args.append(arg)
 
     def get_sampled_pandas_args(self):

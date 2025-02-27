@@ -1,9 +1,25 @@
+# Copyright 2025 Snowflake Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+# http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import logging
+
 from datetime import datetime
 from typing import Optional
 
 from pandera import Check, DataFrameSchema
 
-from snowflake.snowpark_checkpoints.utils.checkpoint_logger import CheckpointLogger
 from snowflake.snowpark_checkpoints.utils.constants import (
     COLUMNS_KEY,
     DECIMAL_PRECISION_KEY,
@@ -26,6 +42,9 @@ from snowflake.snowpark_checkpoints.utils.supported_types import (
     BooleanTypes,
     NumericTypes,
 )
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class PanderaCheckManager:
@@ -258,24 +277,27 @@ class PanderaCheckManager:
             ValueError: If the column name or type is not defined in the schema.
 
         """
-        logger = CheckpointLogger().get_logger()
+        LOGGER.info("Adding checks for the checkpoint '%s'", self.checkpoint_name)
+
         for additional_check in custom_data.get(COLUMNS_KEY):
-
-            type = additional_check.get(TYPE_KEY, None)
             name = additional_check.get(NAME_KEY, None)
-            is_nullable = additional_check.get(NULLABLE_KEY, False)
-
             if name is None:
                 raise ValueError(
                     f"Column name not defined in the schema {self.checkpoint_name}"
                 )
 
+            type = additional_check.get(TYPE_KEY, None)
             if type is None:
                 raise ValueError(f"Type not defined for column {name}")
 
             if self.schema.columns.get(name) is None:
-                logger.warning(f"Column {name} not found in schema")
+                LOGGER.warning(
+                    "Column '%s' was not found in the Pandera schema. Skipping checks for this column.",
+                    name,
+                )
                 continue
+
+            LOGGER.debug("Adding checks for column '%s' of type '%s'", name, type)
 
             if type in NumericTypes:
                 self._add_numeric_checks(name, additional_check)
@@ -289,7 +311,9 @@ class PanderaCheckManager:
             elif type == "datetime":
                 self._add_date_time_checks(name, additional_check)
 
+            is_nullable = additional_check.get(NULLABLE_KEY, False)
             if is_nullable:
+                LOGGER.debug("Column '%s' is nullable. Adding null checks.", name)
                 self._add_null_checks(name, additional_check)
 
         return self.schema
@@ -318,8 +342,19 @@ class PanderaCheckManager:
             if col in self.schema.columns:
 
                 if SKIP_ALL in checks_to_skip:
+                    LOGGER.info(
+                        "Skipping all checks for column '%s' in checkpoint '%s'",
+                        col,
+                        self.checkpoint_name,
+                    )
                     self.schema.columns[col].checks = {}
                 else:
+                    LOGGER.info(
+                        "Skipping checks %s for column '%s' in checkpoint '%s'",
+                        checks_to_skip,
+                        col,
+                        self.checkpoint_name,
+                    )
                     self.schema.columns[col].checks = [
                         check
                         for check in self.schema.columns[col].checks
@@ -350,6 +385,12 @@ class PanderaCheckManager:
         for col, checks in custom_checks.items():
 
             if col in self.schema.columns:
+                LOGGER.info(
+                    "Adding %d custom checks to column '%s' in checkpoint '%s'",
+                    len(checks),
+                    col,
+                    self.checkpoint_name,
+                )
                 col_schema = self.schema.columns[col]
                 col_schema.checks.extend(checks)
             else:

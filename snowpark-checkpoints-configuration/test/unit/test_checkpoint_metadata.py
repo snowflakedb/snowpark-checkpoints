@@ -39,12 +39,10 @@ LOGGER_NAME = "snowflake.snowpark_checkpoints_configuration.checkpoint_metadata"
 
 
 def test_checkpoint_metadata_loading(caplog: pytest.LogCaptureFixture):
+    caplog.set_level(level=logging.INFO, logger=LOGGER_NAME)
     path = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(path, "valid_checkpoint")
-
-    with caplog.at_level(level=logging.INFO, logger=LOGGER_NAME):
-        metadata = CheckpointMetadata(path)
-
+    metadata = CheckpointMetadata(path)
     expected_checkpoint_1 = Checkpoint(
         name="demo_initial_creation_checkpoint",
         df="df",
@@ -74,22 +72,21 @@ def test_checkpoint_metadata_loading(caplog: pytest.LogCaptureFixture):
 
 
 def test_checkpoint_metadata_loading_no_file(caplog: pytest.LogCaptureFixture):
+    caplog.set_level(level=logging.WARNING, logger=LOGGER_NAME)
     path = tempfile.gettempdir()
-    with caplog.at_level(level=logging.WARNING, logger=LOGGER_NAME):
-        metadata = CheckpointMetadata(path)
+    metadata = CheckpointMetadata(path)
     expected_checkpoints = Checkpoints(type="", pipelines=[])
     assert metadata.checkpoint_model == expected_checkpoints
     assert "Checkpoints file not found" in caplog.text
 
 
 def test_checkpoint_metadata_loading_invalid_file(caplog: pytest.LogCaptureFixture):
+    caplog.set_level(level=logging.ERROR, logger=LOGGER_NAME)
     path = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(path, "invalid_checkpoint")
     checkpoint_file_name = os.path.join(path, "checkpoints.json")
     expected_error_msg = f"An error occurred while reading the checkpoints file: '{checkpoint_file_name}'"
-    with pytest.raises(Exception) as ex_info, caplog.at_level(
-        logging.ERROR, LOGGER_NAME
-    ):
+    with pytest.raises(Exception) as ex_info:
         CheckpointMetadata(path)
     assert str(ex_info.value).startswith(expected_error_msg)
     assert expected_error_msg in caplog.text

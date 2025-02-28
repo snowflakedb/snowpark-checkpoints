@@ -27,6 +27,7 @@ LOGGER_NAME = "snowflake.snowpark_checkpoints_configuration.model.checkpoints"
 
 
 def test_add_checkpoint(caplog: pytest.LogCaptureFixture):
+    caplog.set_level(level=logging.DEBUG, logger=LOGGER_NAME)
     checkpoints = Checkpoints(type="Collection", pipelines=[])
     normalized_checkpoint_name = "checkpoint_name"
     new_checkpoint = Checkpoint(
@@ -38,10 +39,7 @@ def test_add_checkpoint(caplog: pytest.LogCaptureFixture):
         location=1,
         enabled=False,
     )
-
-    with caplog.at_level(level=logging.DEBUG, logger=LOGGER_NAME):
-        checkpoints.add_checkpoint(new_checkpoint)
-
+    checkpoints.add_checkpoint(new_checkpoint)
     assert checkpoints.get_check_point(normalized_checkpoint_name) == new_checkpoint
     assert (
         f"Checkpoint '{normalized_checkpoint_name}' added successfully" in caplog.text
@@ -101,12 +99,10 @@ def test_get_checkpoint_existing():
 
 
 def test_get_checkpoint_non_existing_empty_dict(caplog: pytest.LogCaptureFixture):
+    caplog.set_level(level=logging.DEBUG, logger=LOGGER_NAME)
     checkpoints = Checkpoints(type="Collection", pipelines=[])
     checkpoint_name = "checkpoint-name-2"
-
-    with caplog.at_level(level=logging.DEBUG, logger=LOGGER_NAME):
-        checkpoint = checkpoints.get_check_point(checkpoint_name)
-
+    checkpoint = checkpoints.get_check_point(checkpoint_name)
     assert checkpoint == Checkpoint(name=checkpoint_name, enabled=True)
     assert (
         f"No checkpoints found, creating a new enabled checkpoint with name: '{checkpoint_name}'"
@@ -115,6 +111,7 @@ def test_get_checkpoint_non_existing_empty_dict(caplog: pytest.LogCaptureFixture
 
 
 def test_get_checkpoint_no_existing_non_empty_dict(caplog: pytest.LogCaptureFixture):
+    caplog.set_level(level=logging.INFO, logger=LOGGER_NAME)
     checkpoint = Checkpoint(
         name="checkpoint_name_1",
         df="df",
@@ -128,8 +125,7 @@ def test_get_checkpoint_no_existing_non_empty_dict(caplog: pytest.LogCaptureFixt
     checkpoints = Checkpoints(type="Collection", pipelines=[pipeline])
     checkpoint_name = "checkpoint_name_2"
 
-    with caplog.at_level(level=logging.INFO, logger=LOGGER_NAME):
-        checkpoint = checkpoints.get_check_point(checkpoint_name)
+    checkpoint = checkpoints.get_check_point(checkpoint_name)
 
     assert checkpoint == Checkpoint(name=checkpoint_name, enabled=False)
     assert (

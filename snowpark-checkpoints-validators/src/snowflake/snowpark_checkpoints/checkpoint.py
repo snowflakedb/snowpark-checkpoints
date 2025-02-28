@@ -245,7 +245,7 @@ def check_dataframe_schema(
         raise ValueError("Schema is required")
 
     if not is_checkpoint_enabled(checkpoint_name):
-        LOGGER.info(
+        LOGGER.warning(
             "Checkpoint '%s' is disabled. Skipping DataFrame schema validation.",
             checkpoint_name,
         )

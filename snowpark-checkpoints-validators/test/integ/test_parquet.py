@@ -388,3 +388,20 @@ def test_df_mode_dataframe_invalid_mode(
             mode="invalid",
         )
     assert str(ex.value) in caplog.text
+
+
+@patch("snowflake.snowpark_checkpoints.checkpoint.is_checkpoint_enabled")
+def test_validate_dataframe_checkpoint_disabled_checkpoint(
+    mock_is_checkpoint_enabled: MagicMock, caplog: pytest.LogCaptureFixture
+):
+    mock_is_checkpoint_enabled.return_value = False
+    caplog.set_level(level=logging.WARNING, logger=LOGGER_NAME)
+
+    df = MagicMock()
+    checkpoint_name = "test_checkpoint"
+    result = validate_dataframe_checkpoint(df=df, checkpoint_name=checkpoint_name)
+
+    mock_is_checkpoint_enabled.assert_called_once_with(checkpoint_name)
+    assert result is None
+    assert "disabled" in caplog.text
+    assert checkpoint_name in caplog.text

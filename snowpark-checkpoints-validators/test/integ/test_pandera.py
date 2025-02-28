@@ -19,7 +19,7 @@ import os
 import tempfile
 
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -493,3 +493,23 @@ def test_df_check_skip_check(telemetry_output_path):
     validate_telemetry_file_output(
         "test_df_check_skip_check_telemetry.json", telemetry_output_path
     )
+
+
+@patch("snowflake.snowpark_checkpoints.checkpoint.is_checkpoint_enabled")
+def test_check_dataframe_schema_disabled_checkpoint(
+    mock_is_checkpoint_enabled: MagicMock, caplog: pytest.LogCaptureFixture
+):
+    mock_is_checkpoint_enabled.return_value = False
+    caplog.set_level(level=logging.WARNING, logger=LOGGER_NAME)
+
+    df = MagicMock()
+    pandera_schema = MagicMock()
+    checkpoint_name = "test_checkpoint"
+    result = check_dataframe_schema(
+        df=df, pandera_schema=pandera_schema, checkpoint_name=checkpoint_name
+    )
+
+    mock_is_checkpoint_enabled.assert_called_once_with(checkpoint_name)
+    assert result is None
+    assert checkpoint_name in caplog.text
+    assert "disabled" in caplog.text

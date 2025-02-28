@@ -57,21 +57,22 @@ class SnowparkJobContext:
     def _mark_fail(
         self, message, checkpoint_name, data, execution_mode=SCHEMA_EXECUTION_MODE
     ):
+        if not self.log_results:
+            LOGGER.warning(
+                (
+                    "Recording of migration results into Snowflake is disabled. "
+                    "Failure result for checkpoint '%s' will not be recorded."
+                ),
+                checkpoint_name,
+            )
+            return
+
         LOGGER.debug(
             "Marking failure for checkpoint '%s' in '%s' mode with message '%s'",
             checkpoint_name,
             execution_mode,
             message,
         )
-        if not self.log_results:
-            LOGGER.warning(
-                (
-                    "Recording of migration results into Snowflake is disabled, "
-                    "failure result not recorded for checkpoint: '%s'"
-                ),
-                checkpoint_name,
-            )
-            return
 
         session = self.snowpark_session
         df = pd.DataFrame(
@@ -90,20 +91,21 @@ class SnowparkJobContext:
         report_df.write.mode("append").save_as_table(RESULTS_TABLE)
 
     def _mark_pass(self, checkpoint_name, execution_mode=SCHEMA_EXECUTION_MODE):
+        if not self.log_results:
+            LOGGER.warning(
+                (
+                    "Recording of migration results into Snowflake is disabled. "
+                    "Pass result for checkpoint '%s' will not be recorded."
+                ),
+                checkpoint_name,
+            )
+            return
+
         LOGGER.debug(
             "Marking pass for checkpoint '%s' in '%s' mode",
             checkpoint_name,
             execution_mode,
         )
-        if not self.log_results:
-            LOGGER.warning(
-                (
-                    "Recording of migration results into Snowflake is disabled, "
-                    "pass result not recorded for checkpoint: '%s'"
-                ),
-                checkpoint_name,
-            )
-            return
 
         session = self.snowpark_session
         df = pd.DataFrame(

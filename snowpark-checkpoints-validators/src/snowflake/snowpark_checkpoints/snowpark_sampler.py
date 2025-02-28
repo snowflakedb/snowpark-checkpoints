@@ -86,7 +86,7 @@ class SamplingAdapter:
                     df_sample = arg.limit(self.sample_number).to_pandas()
 
                 LOGGER.info(
-                    "Successfully sampled the DataFrame. Resulting shape: %s",
+                    "Successfully sampled the DataFrame. Resulting DataFrame shape: %s",
                     df_sample.shape,
                 )
                 self.pandas_sample_args.append(df_sample)

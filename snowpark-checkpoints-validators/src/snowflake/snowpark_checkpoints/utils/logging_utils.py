@@ -16,7 +16,9 @@
 import logging
 
 from functools import wraps
-from typing import Callable, Optional, ParamSpec, TypeVar
+from typing import Callable, Optional, TypeVar
+
+from typing_extensions import ParamSpec
 
 
 P = ParamSpec("P")

@@ -386,7 +386,7 @@ class PanderaCheckManager:
 
             if col in self.schema.columns:
                 LOGGER.info(
-                    "Adding %d custom checks to column '%s' in checkpoint '%s'",
+                    "Adding %s custom checks to column '%s' in checkpoint '%s'",
                     len(checks),
                     col,
                     self.checkpoint_name,

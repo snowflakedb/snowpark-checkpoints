@@ -87,7 +87,7 @@ class SnowparkJobContext:
             }
         )
         report_df = session.createDataFrame(df)
-        LOGGER.info("Writing failed result to table: '%s'", RESULTS_TABLE)
+        LOGGER.info("Writing failure result to table: '%s'", RESULTS_TABLE)
         report_df.write.mode("append").save_as_table(RESULTS_TABLE)
 
     def _mark_pass(self, checkpoint_name, execution_mode=SCHEMA_EXECUTION_MODE):

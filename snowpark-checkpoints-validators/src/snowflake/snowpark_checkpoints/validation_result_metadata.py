@@ -74,7 +74,7 @@ class ValidationResultsMetadata(metaclass=Singleton):
         )
 
         LOGGER.debug(
-            "Setting validation results directory to: %s",
+            "Setting validation results directory to: '%s'",
             self.validation_results_directory,
         )
 
@@ -84,14 +84,14 @@ class ValidationResultsMetadata(metaclass=Singleton):
         )
 
         LOGGER.debug(
-            "Setting validation results file to: %s", self.validation_results_file
+            "Setting validation results file to: '%s'", self.validation_results_file
         )
 
         self.validation_results = ValidationResults(results=[])
 
         if os.path.exists(self.validation_results_file):
             LOGGER.info(
-                "Loading validation results from: %s", self.validation_results_file
+                "Loading validation results from: '%s'", self.validation_results_file
             )
             with open(self.validation_results_file) as file:
                 try:
@@ -105,7 +105,7 @@ class ValidationResultsMetadata(metaclass=Singleton):
                     ) from None
         else:
             LOGGER.info(
-                "Validation results file not found: %s",
+                "Validation results file not found: '%s'",
                 self.validation_results_file,
             )
 
@@ -142,7 +142,7 @@ class ValidationResultsMetadata(metaclass=Singleton):
         """
         if not os.path.exists(self.validation_results_directory):
             LOGGER.debug(
-                "Validation results directory %s does not exist. Creating it...",
+                "Validation results directory '%s' does not exist. Creating it...",
                 self.validation_results_directory,
             )
             os.makedirs(self.validation_results_directory)
@@ -150,6 +150,6 @@ class ValidationResultsMetadata(metaclass=Singleton):
         with open(self.validation_results_file, "w") as output_file:
             output_file.write(self.validation_results.model_dump_json())
             LOGGER.info(
-                "Validation results successfully saved to: %s",
+                "Validation results successfully saved to: '%s'",
                 self.validation_results_file,
             )

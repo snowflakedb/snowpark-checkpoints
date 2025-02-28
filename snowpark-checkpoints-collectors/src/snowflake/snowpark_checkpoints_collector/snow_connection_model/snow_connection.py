@@ -90,7 +90,7 @@ class SnowConnection:
             )
             self.create_table_from_parquet(table_name, stage_directory_path)
         finally:
-            LOGGER.info("Removing folder %s", stage_directory_path)
+            LOGGER.info("Removing stage folder %s", stage_directory_path)
             self.session.sql(
                 REMOVE_STAGE_FOLDER_STATEMENT_FORMAT.format(stage_directory_path)
             ).collect()

@@ -472,10 +472,6 @@ def test_collect_empty_dataframe_without_schema(
 
     assert expected_error_msg == str(ex_info.value)
     assert expected_error_msg in caplog.text
-    assert (
-        f"An error occurred while collecting the checkpoint '{checkpoint_name}'"
-        in caplog.messages
-    )
 
 
 def test_collect_dataframe_with_only_null_values(spark_session, output_path):

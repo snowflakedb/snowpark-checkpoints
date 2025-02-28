@@ -94,10 +94,6 @@ def test_collect_with_exception(
 
     assert expected_error_msg == str(ex_info.value)
     assert expected_error_msg in caplog.text
-    assert (
-        f"An error occurred while collecting the checkpoint '{checkpoint_name}'"
-        in caplog.text
-    )
     validate_collection_point_result_file(CollectionResult.FAIL, output_path)
 
 

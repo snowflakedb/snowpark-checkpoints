@@ -72,7 +72,3 @@ def test_collect_dataframe_with_invalid_checkpoint_name(
 
     assert expected_error_msg == str(ex_info.value)
     assert expected_error_msg in caplog.text
-    assert (
-        f"An error occurred while collecting the checkpoint '{checkpoint_name}'"
-        in caplog.messages
-    )

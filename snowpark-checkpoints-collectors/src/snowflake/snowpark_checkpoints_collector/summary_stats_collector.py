@@ -66,12 +66,14 @@ from snowflake.snowpark_checkpoints_collector.utils.extra_config import (
     get_checkpoint_sample,
     is_checkpoint_enabled,
 )
+from snowflake.snowpark_checkpoints_collector.utils.logging_utils import log
 from snowflake.snowpark_checkpoints_collector.utils.telemetry import report_telemetry
 
 
 LOGGER = logging.getLogger(__name__)
 
 
+@log
 def collect_dataframe_checkpoint(
     df: SparkDataFrame,
     checkpoint_name: str,
@@ -96,97 +98,81 @@ def collect_dataframe_checkpoint(
         Exception: Invalid checkpoint name. Checkpoint names must only contain alphanumeric characters and underscores.
 
     """
+    normalized_checkpoint_name = checkpoint_name_utils.normalize_checkpoint_name(
+        checkpoint_name
+    )
+    is_valid_checkpoint_name = checkpoint_name_utils.is_valid_checkpoint_name(
+        normalized_checkpoint_name
+    )
+    if not is_valid_checkpoint_name:
+        raise Exception(
+            f"Invalid checkpoint name: {checkpoint_name}. Checkpoint names must only contain alphanumeric "
+            f"characters and underscores."
+        )
+
+    if not is_checkpoint_enabled(normalized_checkpoint_name):
+        LOGGER.info(
+            "Checkpoint '%s' is disabled. Skipping collection.", checkpoint_name
+        )
+        return
+
+    LOGGER.info("Starting to collect checkpoint '%s'", checkpoint_name)
+    LOGGER.debug("DataFrame size: %s rows", df.count())
+    LOGGER.debug("DataFrame schema: %s", df.schema)
+
+    collection_point_file_path = file_utils.get_collection_point_source_file_path()
+    collection_point_line_of_code = file_utils.get_collection_point_line_of_code()
+    collection_point_result = CollectionPointResult(
+        collection_point_file_path,
+        collection_point_line_of_code,
+        normalized_checkpoint_name,
+    )
+
     try:
-        LOGGER.info("Starting to collect checkpoint '%s'", checkpoint_name)
-        LOGGER.debug(
-            "%s called with: %s, %s, %s, %s",
-            collect_dataframe_checkpoint.__name__,
-            f"{checkpoint_name=}",
-            f"{sample=}",
-            f"{mode=}",
-            f"{output_path=}",
-        )
-        LOGGER.debug("DataFrame size: %s rows", df.count())
-        LOGGER.debug("DataFrame schema: %s", df.schema)
-
-        normalized_checkpoint_name = checkpoint_name_utils.normalize_checkpoint_name(
-            checkpoint_name
-        )
-        is_valid_checkpoint_name = checkpoint_name_utils.is_valid_checkpoint_name(
-            normalized_checkpoint_name
-        )
-        if not is_valid_checkpoint_name:
+        if _is_empty_dataframe_without_schema(df):
             raise Exception(
-                f"Invalid checkpoint name: {checkpoint_name}. Checkpoint names must only contain alphanumeric "
-                f"characters and underscores."
+                "It is not possible to collect an empty DataFrame without schema"
             )
 
-        if not is_checkpoint_enabled(normalized_checkpoint_name):
+        _mode = get_checkpoint_mode(normalized_checkpoint_name, mode)
+
+        if _mode == CheckpointMode.SCHEMA:
+            column_type_dict = _get_spark_column_types(df)
+            _sample = get_checkpoint_sample(normalized_checkpoint_name, sample)
             LOGGER.info(
-                "Checkpoint '%s' is disabled. Skipping collection.", checkpoint_name
+                "Collecting checkpoint in %s mode using sample value %s",
+                CheckpointMode.SCHEMA.name,
+                _sample,
             )
-            return
+            _collect_dataframe_checkpoint_mode_schema(
+                normalized_checkpoint_name,
+                df,
+                _sample,
+                column_type_dict,
+                output_path,
+            )
+        elif _mode == CheckpointMode.DATAFRAME:
+            LOGGER.info(
+                "Collecting checkpoint in %s mode", CheckpointMode.DATAFRAME.name
+            )
+            snow_connection = SnowConnection()
+            _collect_dataframe_checkpoint_mode_dataframe(
+                normalized_checkpoint_name, df, snow_connection, output_path
+            )
+        else:
+            raise Exception(f"Invalid mode value: {_mode}")
 
-        collection_point_file_path = file_utils.get_collection_point_source_file_path()
-        collection_point_line_of_code = file_utils.get_collection_point_line_of_code()
-        collection_point_result = CollectionPointResult(
-            collection_point_file_path,
-            collection_point_line_of_code,
-            normalized_checkpoint_name,
-        )
-
-        try:
-            if _is_empty_dataframe_without_schema(df):
-                raise Exception(
-                    "It is not possible to collect an empty DataFrame without schema"
-                )
-
-            _mode = get_checkpoint_mode(normalized_checkpoint_name, mode)
-
-            if _mode == CheckpointMode.SCHEMA:
-                column_type_dict = _get_spark_column_types(df)
-                _sample = get_checkpoint_sample(normalized_checkpoint_name, sample)
-                LOGGER.info(
-                    "Collecting checkpoint in %s mode using sample value %s",
-                    CheckpointMode.SCHEMA.name,
-                    _sample,
-                )
-                _collect_dataframe_checkpoint_mode_schema(
-                    normalized_checkpoint_name,
-                    df,
-                    _sample,
-                    column_type_dict,
-                    output_path,
-                )
-            elif _mode == CheckpointMode.DATAFRAME:
-                LOGGER.info(
-                    "Collecting checkpoint in %s mode", CheckpointMode.DATAFRAME.name
-                )
-                snow_connection = SnowConnection()
-                _collect_dataframe_checkpoint_mode_dataframe(
-                    normalized_checkpoint_name, df, snow_connection, output_path
-                )
-            else:
-                raise Exception(f"Invalid mode value: {_mode}")
-
-            collection_point_result.result = CollectionResult.PASS
-            LOGGER.info("Checkpoint '%s' collected successfully", checkpoint_name)
-
-        except Exception as err:
-            collection_point_result.result = CollectionResult.FAIL
-            error_message = str(err)
-            raise Exception(error_message) from err
-
-        finally:
-            collection_point_result_manager = CollectionPointResultManager(output_path)
-            collection_point_result_manager.add_result(collection_point_result)
+        collection_point_result.result = CollectionResult.PASS
+        LOGGER.info("Checkpoint '%s' collected successfully", checkpoint_name)
 
     except Exception as err:
-        LOGGER.exception(
-            "An error occurred while collecting the checkpoint '%s'", checkpoint_name
-        )
+        collection_point_result.result = CollectionResult.FAIL
         error_message = str(err)
         raise Exception(error_message) from err
+
+    finally:
+        collection_point_result_manager = CollectionPointResultManager(output_path)
+        collection_point_result_manager.add_result(collection_point_result)
 
 
 @report_telemetry(params_list=["column_type_dict"])

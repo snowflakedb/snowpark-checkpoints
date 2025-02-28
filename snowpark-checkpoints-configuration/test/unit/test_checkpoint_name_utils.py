@@ -80,7 +80,7 @@ def test_validate_checkpoint_name_valid_case(input_value):
 
 
 @pytest.mark.parametrize("input_value", ["_", "5", "", "56_my_checkpoint", "_+check"])
-def test_checkpoint_invalid_name(input_value, caplog: pytest.LogCaptureFixture):
+def test_checkpoint_invalid_name(input_value: str, caplog: pytest.LogCaptureFixture):
     caplog.set_level(level=logging.ERROR, logger=LOGGER_NAME)
     expected_error_msg = (
         f"Invalid checkpoint name: {input_value} in checkpoints.json file. "

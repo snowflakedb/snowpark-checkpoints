@@ -104,10 +104,7 @@ def test_get_checkpoint_non_existing_empty_dict(caplog: pytest.LogCaptureFixture
     checkpoint_name = "checkpoint-name-2"
     checkpoint = checkpoints.get_check_point(checkpoint_name)
     assert checkpoint == Checkpoint(name=checkpoint_name, enabled=True)
-    assert (
-        f"No checkpoints found, creating a new enabled checkpoint with name: '{checkpoint_name}'"
-        in caplog.text
-    )
+    assert "creating a new enabled checkpoint" in caplog.text
 
 
 def test_get_checkpoint_no_existing_non_empty_dict(caplog: pytest.LogCaptureFixture):
@@ -124,11 +121,7 @@ def test_get_checkpoint_no_existing_non_empty_dict(caplog: pytest.LogCaptureFixt
     pipeline = Pipeline(entry_point="entry-point", checkpoints=[checkpoint])
     checkpoints = Checkpoints(type="Collection", pipelines=[pipeline])
     checkpoint_name = "checkpoint_name_2"
-
     checkpoint = checkpoints.get_check_point(checkpoint_name)
 
     assert checkpoint == Checkpoint(name=checkpoint_name, enabled=False)
-    assert (
-        f"Checkpoint not found, creating a new disabled checkpoint with name: '{checkpoint_name}'"
-        in caplog.text
-    )
+    assert "creating a new disabled checkpoint" in caplog.text

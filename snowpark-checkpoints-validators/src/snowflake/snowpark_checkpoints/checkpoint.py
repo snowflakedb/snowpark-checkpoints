@@ -119,7 +119,7 @@ def validate_dataframe_checkpoint(
     if mode == CheckpointMode.DATAFRAME:
         if job_context is None:
             raise ValueError(
-                "Connectionless mode is not supported for Parquet validation"
+                "No job context provided. Please provide one when using DataFrame mode validation."
             )
         _check_compare_data(df, job_context, checkpoint_name, output_path)
         return None

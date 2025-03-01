@@ -354,7 +354,8 @@ def test_df_mode_dataframe_job_none(
     df_spark = job_context.snowpark_session.create_dataframe(data, snowpark_schema)
 
     with raises(
-        ValueError, match="Connectionless mode is not supported for Parquet validation"
+        ValueError,
+        match="No job context provided. Please provide one when using DataFrame mode validation.",
     ) as ex, caplog.at_level(level=logging.ERROR, logger=LOGGER_NAME):
         validate_dataframe_checkpoint(
             df_spark,

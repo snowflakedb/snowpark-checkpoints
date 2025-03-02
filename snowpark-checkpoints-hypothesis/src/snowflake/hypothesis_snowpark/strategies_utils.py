@@ -138,7 +138,7 @@ def apply_custom_null_values(
 
         if current_nulls < required_nulls:
             LOGGER.debug(
-                "Column '%s' has %d null values but %d are required.",
+                "Column '%s' has %s null values but %s are required.",
                 column,
                 current_nulls,
                 required_nulls,
@@ -151,7 +151,7 @@ def apply_custom_null_values(
             df_copy[column] = df_copy[column].astype(object)
             df_copy.iloc[selected_positions, df_copy.columns.get_loc(column)] = None
             LOGGER.info(
-                "Added %d null values to column '%s'",
+                "Added %s null values to column '%s'",
                 additional_nulls,
                 column,
             )

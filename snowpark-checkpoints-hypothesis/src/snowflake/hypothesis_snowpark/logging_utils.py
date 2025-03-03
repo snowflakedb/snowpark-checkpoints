@@ -16,7 +16,9 @@
 import logging
 
 from functools import wraps
-from typing import Callable, Optional, ParamSpec, TypeVar
+from typing import Callable, Optional, TypeVar
+
+from typing_extensions import ParamSpec
 
 
 P = ParamSpec("P")
@@ -33,7 +35,8 @@ def log(
 
     Args:
         _func: The function to log.
-        logger: The logger to use for logging.
+        logger: The logger to use for logging. If not provided, a logger will be created using the
+                function's module name.
         log_args: Whether to log the arguments passed to the function.
 
     Returns:

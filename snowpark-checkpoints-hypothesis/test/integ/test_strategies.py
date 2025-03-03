@@ -15,6 +15,7 @@
 
 import ast
 import json
+import logging
 import os
 import shutil
 
@@ -49,6 +50,7 @@ from snowflake.snowpark.types import (
 )
 
 
+LOGGER_NAME = "snowflake.hypothesis_snowpark"
 SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME = "snowpark-checkpoints-output"
 TEST_TELEMETRY_DATAFRAME_STRATEGIES_EXPECTED_DIRECTORY_NAME = (
     "test_telemetry_strategies_expected"
@@ -123,15 +125,16 @@ def test_dataframe_strategy_nullable_column(
 @given(data=st.data())
 @settings(deadline=None, max_examples=10, suppress_health_check=list(HealthCheck))
 def test_dataframe_strategy_from_json_schema_generated_schema(
-    data: st.DataObject, session: Session
+    data: st.DataObject, session: Session, caplog: pytest.LogCaptureFixture
 ):
-    strategy = dataframe_strategy(
-        schema="test/resources/supported_columns.json",
-        session=session,
-    )
+    with caplog.at_level(level=logging.DEBUG, logger=LOGGER_NAME):
+        strategy = dataframe_strategy(
+            schema="test/resources/supported_columns.json",
+            session=session,
+        )
 
-    df = data.draw(strategy)
-    assert isinstance(df, DataFrame)
+        df = data.draw(strategy)
+        assert isinstance(df, DataFrame)
 
     expected_schema = StructType(
         [
@@ -150,8 +153,16 @@ def test_dataframe_strategy_from_json_schema_generated_schema(
             StructField("timestampNTZ_column", TimestampType(NTZ), False),
         ]
     )
-
     assert df.schema == expected_schema
+
+    expected_log_messages = [
+        "dataframe_strategy called",
+        "Data generation for Date type is not supported; converting column 'date_column' to Timestamp",
+        "_dataframe_strategy called",
+    ]
+    for expected_log_message in expected_log_messages:
+        assert expected_log_message in caplog.text
+
     validate_telemetry_file_output(
         "test_dataframe_strategy_generated_schema_telemetry.json"
     )
@@ -295,7 +306,7 @@ def test_dataframe_strategy_from_object_schema_missing_dtype(data: st.DataObject
 @given(data=st.data())
 @settings(deadline=None, max_examples=5, suppress_health_check=list(HealthCheck))
 def test_dataframe_strategy_from_object_schema_generated_schema(
-    data: st.DataObject, session: Session
+    data: st.DataObject, session: Session, caplog: pytest.LogCaptureFixture
 ):
     schema = pa.DataFrameSchema(
         {
@@ -315,13 +326,14 @@ def test_dataframe_strategy_from_object_schema_generated_schema(
         }
     )
 
-    strategy = dataframe_strategy(
-        schema=schema,
-        session=session,
-    )
+    with caplog.at_level(level=logging.DEBUG, logger=LOGGER_NAME):
+        strategy = dataframe_strategy(
+            schema=schema,
+            session=session,
+        )
 
-    df = data.draw(strategy)
-    assert isinstance(df, DataFrame)
+        df = data.draw(strategy)
+        assert isinstance(df, DataFrame)
 
     expected_schema = StructType(
         [
@@ -338,8 +350,15 @@ def test_dataframe_strategy_from_object_schema_generated_schema(
             StructField("date_column", DateType(), True),
         ]
     )
-
     assert df.schema == expected_schema
+
+    expected_log_messages = [
+        "dataframe_strategy called",
+        "_dataframe_strategy called",
+    ]
+    for expected_log_message in expected_log_messages:
+        assert expected_log_message in caplog.text
+
     validate_telemetry_file_output(
         "test_dataframe_strategy_from_object_schema_generated_schema_telemetry.json"
     )

@@ -172,7 +172,7 @@ jobs:
           }
 
       - name: Set up Snowflake CLI
-        uses: Snowflake-Labs/snowflake-cli-action@a0d3f3a90914a6a91e6537cc6fde98ebe27e17be
+        uses: Snowflake-Labs/snowflake-cli-action@83745e5b7e861fd0f22fd285bb253f59178dc9c9
         with:
           cli-version: ${{ matrix.snow_cli_version }}
           default-config-file-path: ".github/config/config.toml"

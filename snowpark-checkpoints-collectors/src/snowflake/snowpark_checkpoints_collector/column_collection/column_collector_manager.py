@@ -136,7 +136,10 @@ class ColumnCollectorManager:
         func_name = self._collectors[clm_type]
         func = getattr(self, func_name)
         LOGGER.debug(
-            "Collecting custom data for column '%s' of type '%s'", clm_name, clm_type
+            "Collecting custom data for column '%s' of type '%s' using collector method '%s'",
+            clm_name,
+            clm_type,
+            func_name,
         )
         data = func(clm_name, struct_field, values)
         return data

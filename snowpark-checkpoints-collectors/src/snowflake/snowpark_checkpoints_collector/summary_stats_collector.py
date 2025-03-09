@@ -101,22 +101,28 @@ def collect_dataframe_checkpoint(
     normalized_checkpoint_name = checkpoint_name_utils.normalize_checkpoint_name(
         checkpoint_name
     )
+    if normalized_checkpoint_name != checkpoint_name:
+        LOGGER.info(
+            "Checkpoint name '%s' was normalized to '%s'",
+            checkpoint_name,
+            normalized_checkpoint_name,
+        )
     is_valid_checkpoint_name = checkpoint_name_utils.is_valid_checkpoint_name(
         normalized_checkpoint_name
     )
     if not is_valid_checkpoint_name:
         raise Exception(
-            f"Invalid checkpoint name: {checkpoint_name}. Checkpoint names must only contain alphanumeric "
-            f"characters and underscores."
+            f"Invalid checkpoint name: {normalized_checkpoint_name}. "
+            f"Checkpoint names must only contain alphanumeric characters and underscores."
         )
-
     if not is_checkpoint_enabled(normalized_checkpoint_name):
         LOGGER.info(
-            "Checkpoint '%s' is disabled. Skipping collection.", checkpoint_name
+            "Checkpoint '%s' is disabled. Skipping collection.",
+            normalized_checkpoint_name,
         )
         return
 
-    LOGGER.info("Starting to collect checkpoint '%s'", checkpoint_name)
+    LOGGER.info("Starting to collect checkpoint '%s'", normalized_checkpoint_name)
     LOGGER.debug("DataFrame size: %s rows", df.count())
     LOGGER.debug("DataFrame schema: %s", df.schema)
 
@@ -163,7 +169,9 @@ def collect_dataframe_checkpoint(
             raise Exception(f"Invalid mode value: {_mode}")
 
         collection_point_result.result = CollectionResult.PASS
-        LOGGER.info("Checkpoint '%s' collected successfully", checkpoint_name)
+        LOGGER.info(
+            "Checkpoint '%s' collected successfully", normalized_checkpoint_name
+        )
 
     except Exception as err:
         collection_point_result.result = CollectionResult.FAIL
@@ -372,7 +380,7 @@ def generate_parquet_for_spark_df(spark_df: SparkDataFrame, output_path: str) ->
     if parquet_files_count == 0:
         raise Exception("No parquet files were generated.")
     LOGGER.info(
-        "Wrote %s parquet files at '%s'",
+        "%s parquet files were written in '%s'",
         parquet_files_count,
         output_path,
     )

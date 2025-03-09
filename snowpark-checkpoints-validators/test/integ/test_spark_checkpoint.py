@@ -13,25 +13,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
-from snowflake.snowpark_checkpoints.spark_migration import check_with_spark
-from snowflake.snowpark_checkpoints.spark_migration import SamplingStrategy
+import logging
+import os
+import tempfile
+
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import pytest
+
 from pyspark.sql import DataFrame as SparkDataFrame
+from pyspark.sql import SparkSession
+from telemetry_compare_utils import validate_telemetry_file_output
+
 from snowflake.snowpark import DataFrame as SnowparkDataFrame
 from snowflake.snowpark import Session
-from pyspark.sql import SparkSession
-import pytest
-import pandas as pd
-import numpy as np
-import os
-from pathlib import Path
-import tempfile
+from snowflake.snowpark_checkpoints.errors import SparkMigrationError
+from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
+from snowflake.snowpark_checkpoints.spark_migration import (
+    SamplingStrategy,
+    check_with_spark,
+)
 from snowflake.snowpark_checkpoints.utils.telemetry import (
     get_telemetry_manager,
 )
-from telemetry_compare_utils import validate_telemetry_file_output
+
 
 TELEMETRY_FOLDER = "telemetry"
+LOGGER_NAME = "snowflake.snowpark_checkpoints.spark_migration"
 
 
 @pytest.fixture(scope="function")
@@ -75,7 +85,11 @@ def test_spark_checkpoint_scalar_passing(job_context, telemetry_output_path):
     )
 
 
-def test_spark_checkpoint_scalar_fail(job_context, telemetry_output_path):
+def test_spark_checkpoint_scalar_fail(
+    job_context: SnowparkJobContext,
+    telemetry_output_path: str,
+    caplog: pytest.LogCaptureFixture,
+):
     def my_spark_scalar_fn(df: SparkDataFrame):
         return df.count() + 1
 
@@ -90,14 +104,14 @@ def test_spark_checkpoint_scalar_fail(job_context, telemetry_output_path):
     df = job_context.snowpark_session.create_dataframe(
         [[1, 2], [3, 4]], schema=["a", "b"]
     )
-    try:
+    with pytest.raises(SparkMigrationError) as ex, caplog.at_level(
+        level=logging.ERROR, logger=LOGGER_NAME
+    ):
         my_snowpark_scalar_fn(df)
-        assert (False, "Should have failed")
-    except:
-        pass
     validate_telemetry_file_output(
         "spark_checkpoint_scalar_fail_telemetry.json", telemetry_output_path
     )
+    assert str(ex.value) in caplog.text
 
 
 def test_spark_checkpoint_df_pass(job_context, telemetry_output_path):
@@ -121,7 +135,11 @@ def test_spark_checkpoint_df_pass(job_context, telemetry_output_path):
     )
 
 
-def test_spark_checkpoint_df_fail(job_context, telemetry_output_path):
+def test_spark_checkpoint_df_fail(
+    job_context: SnowparkJobContext,
+    telemetry_output_path: str,
+    caplog: pytest.LogCaptureFixture,
+):
     def my_spark_fn(df: SparkDataFrame):
         return df.filter(df.A > 2)
 
@@ -136,14 +154,15 @@ def test_spark_checkpoint_df_fail(job_context, telemetry_output_path):
     df = job_context.snowpark_session.create_dataframe(
         [[1, 2], [3, 4]], schema=["a", "b"]
     )
-    try:
+    with pytest.raises(SparkMigrationError) as ex, caplog.at_level(
+        level=logging.ERROR, logger=LOGGER_NAME
+    ):
         my_snowpark_fn(df)
-        assert (False, "Should have failed")
-    except:
-        pass
+
     validate_telemetry_file_output(
         "spark_checkpoint_df_fail_telemetry.json", telemetry_output_path
     )
+    assert str(ex.value) in caplog.text
 
 
 def test_spark_checkpoint_limit_sample(job_context, telemetry_output_path):

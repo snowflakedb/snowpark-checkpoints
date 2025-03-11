@@ -23,12 +23,12 @@ requirements:
   run:
     - python<3.12,>=3.9
     - snowflake-connector-python
-    - snowflake-snowpark-python==1.26.0
+    - snowflake-snowpark-python>=1.23.0
     - pyspark
     - pydantic>=1.8.2
     - hypothesis
   run_constrained:
-    - pandera ==0.20.4
+    - pandera >=0.20.4
 
 test:
   requires:

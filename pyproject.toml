@@ -53,11 +53,10 @@ keywords = [
 
 dependencies = [
   "pyspark",
-  "pandera[io]==0.20.4",
+  "pandera[io]>=0.20.4",
   "hypothesis",
-  "snowflake-snowpark-python==1.26.0",
+  "snowflake-snowpark-python>=1.23.0",
   "snowflake-connector-python",
-  "pandera-report==0.1.2",
 ]
 
 [project.optional-dependencies]

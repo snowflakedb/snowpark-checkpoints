@@ -14,11 +14,11 @@
 # limitations under the License.
 
 # Wrapper around pandera which logs to snowflake
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, cast
 
 from pandas import DataFrame as PandasDataFrame
-from pandera import Check, DataFrameSchema
-from pandera_report import DataFrameValidator
+from pandera import Check, DataFrameModel, DataFrameSchema
+from pandera.errors import SchemaError, SchemaErrors
 
 from snowflake.snowpark import DataFrame as SnowparkDataFrame
 from snowflake.snowpark_checkpoints.errors import SchemaValidationError
@@ -259,12 +259,7 @@ def _check_dataframe_schema(
     pandera_schema_upper, sample_df = _process_sampling(
         df, pandera_schema, job_context, sample_frac, sample_number, sampling_strategy
     )
-
-    # Raises SchemaError on validation issues
-    validator = DataFrameValidator()
-    is_valid, validation_result = validator.validate(
-        pandera_schema_upper, sample_df, validity_flag=True
-    )
+    is_valid, validation_result = _validate(pandera_schema_upper, sample_df)
     if is_valid:
         if job_context is not None:
             job_context._mark_pass(checkpoint_name)
@@ -342,10 +337,8 @@ def check_output_schema(
             sampler.process_args([snowpark_results])
             pandas_sample_args = sampler.get_sampled_pandas_args()
 
-            # Raises SchemaError on validation issues
-            validator = DataFrameValidator()
-            is_valid, validation_result = validator.validate(
-                pandera_schema, pandas_sample_args[0], validity_flag=True
+            is_valid, validation_result = _validate(
+                pandera_schema, pandas_sample_args[0]
             )
             logger = CheckpointLogger().get_logger()
             logger.info(
@@ -440,11 +433,9 @@ def check_input_schema(
             for arg in pandas_sample_args:
                 if isinstance(arg, PandasDataFrame):
 
-                    validator = DataFrameValidator()
-                    is_valid, validation_result = validator.validate(
+                    is_valid, validation_result = _validate(
                         pandera_schema,
                         arg,
-                        validity_flag=True,
                     )
 
                     logger = CheckpointLogger().get_logger()
@@ -480,3 +471,19 @@ def check_input_schema(
         return wrapper
 
     return check_input_with_decorator
+
+
+def _validate(
+    schema: Union[type[DataFrameModel], DataFrameSchema],
+    df: PandasDataFrame,
+    lazy: bool = True,
+) -> Union[tuple[bool, PandasDataFrame], PandasDataFrame]:
+    if not isinstance(schema, DataFrameSchema):
+        schema = schema.to_schema()
+    is_valid = True
+    try:
+        df = schema.validate(df, lazy=lazy)
+    except (SchemaErrors, SchemaError) as schema_errors:
+        df = cast(df, schema_errors.failure_cases)
+        is_valid = False
+    return is_valid, df

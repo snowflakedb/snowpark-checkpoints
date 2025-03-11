@@ -26,10 +26,10 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Information Analysis",
 ]
 dependencies = [
-  "snowflake-snowpark-python[localtest]",
+  "snowflake-snowpark-python[localtest]>=1.23.0",
   "snowflake-connector-python[pandas]",
   "hypothesis",
-  "pandera[io]==0.20.4",
+  "pandera[io]>=0.20.4",
 ]
 description = "Hypothesis extension for generating Snowpark DataFrames"
 dynamic = ['version']

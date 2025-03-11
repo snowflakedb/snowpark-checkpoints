@@ -25,11 +25,11 @@ requirements:
     - hypothesis
     - snowflake-snowpark-python>=1.23.0
   run_constrained:
-    - pandera >=0.20.4
+    - pandera ==0.20.4
 
 test:
   commands:
-    - pip install pandera[io]>=0.20.4
+    - pip install pandera[io]==0.20.4
     - pip check
     - pip list --verbose
     - python -c "import pandera"

@@ -26,7 +26,7 @@ requirements:
     - snowflake-snowpark-python>=1.23.0
     - pyspark
   run_constrained:
-    - pandera >=0.20.4
+    - pandera ==0.20.4
 
 test:
   requires:
@@ -37,7 +37,7 @@ test:
     - pandera
 
   commands:
-    - pip install pandera[io]>=0.20.4
+    - pip install pandera[io]==0.20.4
     - pip check
     - pip list --verbose
     - python -c "import pandera"

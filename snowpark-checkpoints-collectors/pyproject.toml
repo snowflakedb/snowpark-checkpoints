@@ -29,7 +29,7 @@ dependencies = [
   "snowflake-snowpark-python>=1.23.0",
   "snowflake-connector-python",
   "pyspark",
-  "pandera[io]>=0.20.4",
+  "pandera[io]==0.20.4",
 ]
 description = "Snowpark column and table statistics collection"
 dynamic = ['version']

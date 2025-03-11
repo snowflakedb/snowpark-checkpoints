@@ -52,7 +52,6 @@ keywords = [
 ]
 
 dependencies = [
-  "pyspark",
   "pandera[io]==0.20.4",
   "hypothesis",
   "snowflake-snowpark-python>=1.23.0",
@@ -60,6 +59,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+pyspark = [
+  "pyspark>=3.5.0",
+]
 development = [
   "pytest>=8.3.3",
   "pytest-cov>=6.0.0",
@@ -70,6 +72,7 @@ development = [
   "setuptools>=70.0.0",
   "pyarrow>=18.0.0",
   "deepdiff>=8.0.0",
+  "pyspark>=3.5.0",
 ]
 
 [project.urls]

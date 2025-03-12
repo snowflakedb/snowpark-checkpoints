@@ -484,6 +484,6 @@ def _validate(
     try:
         df = schema.validate(df, lazy=lazy)
     except (SchemaErrors, SchemaError) as schema_errors:
-        df = cast(df, schema_errors.failure_cases)
+        df = cast(PandasDataFrame, schema_errors.failure_cases)
         is_valid = False
     return is_valid, df

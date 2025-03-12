@@ -477,7 +477,7 @@ def _validate(
     schema: Union[type[DataFrameModel], DataFrameSchema],
     df: PandasDataFrame,
     lazy: bool = True,
-) -> Union[tuple[bool, PandasDataFrame], PandasDataFrame]:
+) -> tuple[bool, PandasDataFrame]:
     if not isinstance(schema, DataFrameSchema):
         schema = schema.to_schema()
     is_valid = True

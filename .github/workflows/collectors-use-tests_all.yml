@@ -30,6 +30,11 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
+            python-version: "3.9"
+            cloud-provider: aws
+            snow_cli_version: "2.8.2"
+            download_name: linux
+          - os: ubuntu-latest
             python-version: "3.10"
             cloud-provider: aws
             snow_cli_version: "3.2.2"

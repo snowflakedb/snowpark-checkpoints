@@ -9,7 +9,7 @@
 ---
 ## Install the library
 ```bash
-pip install snowpark-checkpoints-collectors
+pip install snowpark-checkpoints-validators
 ```
 This package requires PySpark to be installed in the same environment. If you do not have it, you can install PySpark alongside Snowpark Checkpoints by running the following command:
 ```bash

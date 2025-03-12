@@ -17,7 +17,7 @@ The **snowpark-checkpoints**  package is a testing library that will help you va
 ##### This package is on Public Preview.
 ---
 ---
-## Install the library
+## Install the library 
 ```bash
 pip install snowpark-checkpoints
 ```

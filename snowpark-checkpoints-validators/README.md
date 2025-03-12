@@ -6,6 +6,17 @@
 
 **snowpark-checkpoints-validators** is a package designed to validate Snowpark DataFrames against predefined schemas and checkpoints. This package ensures data integrity and consistency by performing schema and data validation checks at various stages of a Snowpark pipeline.
 
+---
+## Install the library
+```bash
+pip install snowpark-checkpoints-collectors
+```
+This package requires PySpark to be installed in the same environment. If you do not have it, you can install PySpark alongside Snowpark Checkpoints by running the following command:
+```bash
+pip install "snowpark-checkpoints-validators[pyspark]"
+```
+---
+
 ## Features
 
 - Validate Snowpark DataFrames against predefined Pandera schemas.

@@ -20,11 +20,16 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
     SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH_ENV_VAR,
     CheckpointMode,
 )
+from snowflake.snowpark_checkpoints_collector.io_utils.io_file_manager import (
+    get_io_file_manager,
+)
 
 
 # noinspection DuplicatedCode
 def _get_checkpoint_contract_file_path() -> str:
-    return os.environ.get(SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH_ENV_VAR, os.getcwd())
+    return os.environ.get(
+        SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH_ENV_VAR, get_io_file_manager().getcwd()
+    )
 
 
 # noinspection DuplicatedCode

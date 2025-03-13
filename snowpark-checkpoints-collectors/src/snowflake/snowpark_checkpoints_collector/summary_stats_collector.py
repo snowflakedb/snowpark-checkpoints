@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import glob
 import json
 import os
 import shutil
@@ -51,6 +50,9 @@ from snowflake.snowpark_checkpoints_collector.column_collection import (
 )
 from snowflake.snowpark_checkpoints_collector.column_pandera_checks import (
     PanderaColumnChecksManager,
+)
+from snowflake.snowpark_checkpoints_collector.io_utils.io_file_manager import (
+    get_io_file_manager,
 )
 from snowflake.snowpark_checkpoints_collector.snow_connection_model import (
     SnowConnection,
@@ -293,8 +295,7 @@ def _generate_json_checkpoint_file(
     )
     output_directory_path = file_utils.get_output_directory_path(output_path)
     checkpoint_file_path = os.path.join(output_directory_path, checkpoint_file_name)
-    with open(checkpoint_file_path, "w") as f:
-        f.write(dataframe_schema_contract)
+    get_io_file_manager().write(checkpoint_file_path, dataframe_schema_contract)
 
 
 @report_telemetry(params_list=["df"])
@@ -344,7 +345,7 @@ def generate_parquet_for_spark_df(spark_df: SparkDataFrame, output_path: str) ->
     converted_df.write.parquet(output_path, mode="overwrite")
 
     target_dir = os.path.join(output_path, "**", f"*{DOT_PARQUET_EXTENSION}")
-    files = glob.glob(target_dir, recursive=True)
+    files = get_io_file_manager().ls(target_dir, recursive=True)
     if len(files) == 0:
         raise Exception("No parquet files were generated.")
 

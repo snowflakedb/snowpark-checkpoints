@@ -32,8 +32,8 @@ def create_requirements_from_pyproject(pyproject_path):
         optional_dependencies = pyproject_data.get("project", {}).get(
             "optional-dependencies", {}
         )
-        if "development" in optional_dependencies:
-            requirements.extend(optional_dependencies["development"])
+        for deps in optional_dependencies.values():
+            requirements.extend(deps)
 
         requirements = sorted(set(requirements))
 

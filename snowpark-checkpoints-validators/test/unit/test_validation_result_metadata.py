@@ -14,6 +14,30 @@ from snowflake.snowpark_checkpoints.validation_results import (
     ValidationResult,
     ValidationResults,
 )
+from pandas import DataFrame as PandasDataFrame, testing as PandasTesting
+from pandera import DataFrameSchema, Column, Check
+from snowflake.snowpark_checkpoints.checkpoint import _validate
+
+
+@fixture()
+def sample_data():
+    df = PandasDataFrame({"column1": [1, 2, 3], "column2": ["a", "b", "c"]})
+
+    valid_schema = DataFrameSchema(
+        {
+            "column1": Column(int, Check(lambda x: x > 0)),
+            "column2": Column(str, Check(lambda x: x.isin(["a", "b", "c"]))),
+        }
+    )
+
+    invalid_schema = DataFrameSchema(
+        {
+            "column1": Column(int, Check(lambda x: x > 3)),
+            "column2": Column(str, Check(lambda x: x.isin(["d", "e", "f"]))),
+        }
+    )
+
+    return df, valid_schema, invalid_schema
 
 
 @fixture(autouse=True)
@@ -168,3 +192,19 @@ def test_clean_with_no_file():
         metadata.clean()
 
     assert metadata.validation_results == ValidationResults(results=[])
+
+
+def test_validate_valid_schema(sample_data):
+    df, valid_schema, _ = sample_data
+    is_valid, result = _validate(valid_schema, df)
+    assert is_valid
+    assert isinstance(result, PandasDataFrame)
+    PandasTesting.assert_frame_equal(result, df)
+
+
+def test_validate_invalid_schema(sample_data):
+    df, _, invalid_schema = sample_data
+    is_valid, result = _validate(invalid_schema, df)
+    assert not is_valid
+    assert isinstance(result, PandasDataFrame)
+    assert "failure_case" in result.columns

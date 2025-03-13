@@ -15,11 +15,10 @@
 
 import os
 import tempfile
-from unittest.mock import Mock
+from unittest.mock import patch
 import pytest
 
 from snowflake.snowpark_checkpoints_collector.io_utils import (
-    EnvStrategy,
     IODefaultStrategy,
 )
 from snowflake.snowpark_checkpoints_collector.io_utils.io_file_manager import (

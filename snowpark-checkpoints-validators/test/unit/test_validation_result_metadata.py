@@ -19,7 +19,7 @@ from pandera import DataFrameSchema, Column, Check
 from snowflake.snowpark_checkpoints.checkpoint import _validate
 
 
-@fixture(autouse=True)
+@fixture()
 def sample_data():
     df = PandasDataFrame({"column1": [1, 2, 3], "column2": ["a", "b", "c"]})
 

@@ -1,5 +1,5 @@
 {% set name = "snowpark-checkpoints-validators" %}
-{% set version = "0.1.3" %}
+{% set version = "0.1.4" %}
 
 package:
   name: {{ name|lower }}
@@ -23,16 +23,15 @@ requirements:
   run:
     - python<3.12,>=3.9
     - hypothesis
-    - snowflake-snowpark-python==1.26.0
+    - snowflake-snowpark-python>=1.23.0
     - snowflake-connector-python
-    - pyspark
+    - pyspark>=3.5.0
   run_constrained:
     - pandera ==0.20.4
 
 test:
   commands:
     - pip install pandera[io]==0.20.4
-    - pip install pandera-report==0.1.2
     - pip check
     - pip list --verbose
     - python -c "import pandera"

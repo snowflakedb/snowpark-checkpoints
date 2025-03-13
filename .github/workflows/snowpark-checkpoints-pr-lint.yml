@@ -20,7 +20,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: morrisoncole/pr-lint-action@51f3cfabaf5d46f94e54524214e45685f0401b2a
+      - name: Check PR Title
+        uses: morrisoncole/pr-lint-action@51f3cfabaf5d46f94e54524214e45685f0401b2a
         with:
           title-regex: "^[a-zA-Z]+-[0-9]+"
           on-failed-regex-fail-action: true
@@ -37,6 +38,22 @@ jobs:
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+
+      - name: Validate Risk Assessment Checkbox
+        run: |
+          if echo "$PR_BODY" | grep -q '^- \[ \] I attest that this change meets the bar for low risk'; then
+              echo "The checkbox is unchecked. Failing the step."
+              exit 1
+          fi
+
+          if ! echo "$PR_BODY" | grep -q '^- \[[xX]\] I attest that this change meets the bar for low risk'; then
+              echo "The required checked checkbox is missing. Failing the step."
+              exit 1
+          fi
+
+          echo "Risk assessment checkbox validation passed."
+        env:
           PR_BODY: ${{ github.event.pull_request.body }}
 
       - name: Check PR Size

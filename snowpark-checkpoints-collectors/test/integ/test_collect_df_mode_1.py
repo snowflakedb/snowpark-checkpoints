@@ -605,65 +605,68 @@ def test_collect_dataframe_all_column_types_with_null_values(
 
 
 def test_io_strategy(spark_session, singleton, output_path):
-    # Arrange
-    sample_size = 1.0
-    checkpoint_name = "test_io_strategy"
+    try:
+        # Arrange
+        sample_size = 1.0
+        checkpoint_name = "test_io_strategy"
 
-    class TestStrategy(IODefaultStrategy):
-        pass
+        class TestStrategy(IODefaultStrategy):
+            pass
 
-    number_of_methods = inspect.getmembers(
-        IODefaultStrategy, predicate=inspect.isfunction
-    )
-    strategy = TestStrategy()
-    get_io_file_manager().set_strategy(strategy)
-
-    with patch.object(
-        strategy, "getcwd", wraps=strategy.getcwd
-    ) as getcwd_spy, patch.object(
-        strategy, "ls", wraps=strategy.ls
-    ) as ls_spy, patch.object(
-        strategy, "mkdir", wraps=strategy.mkdir
-    ) as mkdir_spy, patch.object(
-        strategy, "write", wraps=strategy.write
-    ) as write_spy, patch.object(
-        strategy, "read", wraps=strategy.read
-    ) as read_spy, patch.object(
-        strategy, "read_bytes", wraps=strategy.read_bytes
-    ) as read_bytes_spy, patch.object(
-        strategy, "file_exists", wraps=strategy.file_exists
-    ) as file_exists_spy, patch.object(
-        strategy, "folder_exists", wraps=strategy.folder_exists
-    ) as folder_exists_spy:
-
-        pyspark_df = spark_session.createDataFrame(
-            [("Roberto", 21)], schema="name string, age integer"
+        number_of_methods = inspect.getmembers(
+            IODefaultStrategy, predicate=inspect.isfunction
         )
+        strategy = TestStrategy()
+        get_io_file_manager().set_strategy(strategy)
 
-        # Act
-        collect_dataframe_checkpoint(
-            pyspark_df,
-            checkpoint_name=checkpoint_name,
-            sample=sample_size,
-            output_path=output_path,
-        )
+        with patch.object(
+            strategy, "getcwd", wraps=strategy.getcwd
+        ) as getcwd_spy, patch.object(
+            strategy, "ls", wraps=strategy.ls
+        ) as ls_spy, patch.object(
+            strategy, "mkdir", wraps=strategy.mkdir
+        ) as mkdir_spy, patch.object(
+            strategy, "write", wraps=strategy.write
+        ) as write_spy, patch.object(
+            strategy, "read", wraps=strategy.read
+        ) as read_spy, patch.object(
+            strategy, "read_bytes", wraps=strategy.read_bytes
+        ) as read_bytes_spy, patch.object(
+            strategy, "file_exists", wraps=strategy.file_exists
+        ) as file_exists_spy, patch.object(
+            strategy, "folder_exists", wraps=strategy.folder_exists
+        ) as folder_exists_spy:
 
-        # Assert
-        assert len(number_of_methods) == 8
-        getcwd_spy.assert_called()
-        mkdir_spy.assert_called()
-        write_spy.assert_called()
-        read_spy.assert_not_called()
-        read_bytes_spy.assert_not_called()
-        file_exists_spy.assert_not_called()
-        folder_exists_spy.assert_not_called()
-        ls_spy.assert_not_called()
-        assert getcwd_spy.call_count == 3
-        assert mkdir_spy.call_count == 3
-        assert write_spy.call_count == 3
-        validate_checkpoint_file_output(
-            output_path, checkpoint_name, test_telemetry=False
-        )
+            pyspark_df = spark_session.createDataFrame(
+                [("Roberto", 21)], schema="name string, age integer"
+            )
+
+            # Act
+            collect_dataframe_checkpoint(
+                pyspark_df,
+                checkpoint_name=checkpoint_name,
+                sample=sample_size,
+                output_path=output_path,
+            )
+
+            # Assert
+            assert len(number_of_methods) == 8
+            getcwd_spy.assert_called()
+            mkdir_spy.assert_called()
+            write_spy.assert_called()
+            read_spy.assert_not_called()
+            read_bytes_spy.assert_not_called()
+            file_exists_spy.assert_not_called()
+            folder_exists_spy.assert_not_called()
+            ls_spy.assert_not_called()
+            assert getcwd_spy.call_count == 3
+            assert mkdir_spy.call_count == 3
+            assert write_spy.call_count == 3
+            validate_checkpoint_file_output(
+                output_path, checkpoint_name, test_telemetry=False
+            )
+    finally:
+        get_io_file_manager().set_strategy(IODefaultStrategy())
 
 
 def get_checkpoint_file_name(checkpoint_name) -> str:

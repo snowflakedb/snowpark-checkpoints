@@ -444,66 +444,69 @@ def test_io_strategy(
     test_id,
     telemetry_output,
 ):
-    checkpoint_name = f"test_io_strategy_{test_id}"
+    try:
+        checkpoint_name = f"test_io_strategy_{test_id}"
 
-    class TestStrategy(IODefaultStrategy):
-        pass
+        class TestStrategy(IODefaultStrategy):
+            pass
 
-    number_of_methods = inspect.getmembers(
-        IODefaultStrategy, predicate=inspect.isfunction
-    )
-    strategy = TestStrategy()
-    get_io_file_manager().set_strategy(strategy)
-
-    with patch.object(
-        strategy, "getcwd", wraps=strategy.getcwd
-    ) as getcwd_spy, patch.object(
-        strategy, "ls", wraps=strategy.ls
-    ) as ls_spy, patch.object(
-        strategy, "mkdir", wraps=strategy.mkdir
-    ) as mkdir_spy, patch.object(
-        strategy, "write", wraps=strategy.write
-    ) as write_spy, patch.object(
-        strategy, "read", wraps=strategy.read
-    ) as read_spy, patch.object(
-        strategy, "read_bytes", wraps=strategy.read_bytes
-    ) as read_bytes_spy, patch.object(
-        strategy, "file_exists", wraps=strategy.file_exists
-    ) as file_exists_spy, patch.object(
-        strategy, "folder_exists", wraps=strategy.folder_exists
-    ) as folder_exists_spy:
-
-        pyspark_df = spark_session.createDataFrame(data, schema=spark_schema).orderBy(
-            "INTEGER"
+        number_of_methods = inspect.getmembers(
+            IODefaultStrategy, predicate=inspect.isfunction
         )
+        strategy = TestStrategy()
+        get_io_file_manager().set_strategy(strategy)
 
-        temp_dir = tempfile.gettempdir()
-        output_path = os.path.join(temp_dir, checkpoint_name)
+        with patch.object(
+            strategy, "getcwd", wraps=strategy.getcwd
+        ) as getcwd_spy, patch.object(
+            strategy, "ls", wraps=strategy.ls
+        ) as ls_spy, patch.object(
+            strategy, "mkdir", wraps=strategy.mkdir
+        ) as mkdir_spy, patch.object(
+            strategy, "write", wraps=strategy.write
+        ) as write_spy, patch.object(
+            strategy, "read", wraps=strategy.read
+        ) as read_spy, patch.object(
+            strategy, "read_bytes", wraps=strategy.read_bytes
+        ) as read_bytes_spy, patch.object(
+            strategy, "file_exists", wraps=strategy.file_exists
+        ) as file_exists_spy, patch.object(
+            strategy, "folder_exists", wraps=strategy.folder_exists
+        ) as folder_exists_spy:
 
-        collect_dataframe_checkpoint(
-            pyspark_df,
-            checkpoint_name=checkpoint_name,
-            mode=CheckpointMode.DATAFRAME,
-            output_path=output_path,
-        )
+            pyspark_df = spark_session.createDataFrame(
+                data, schema=spark_schema
+            ).orderBy("INTEGER")
 
-        # Assert
-        assert len(number_of_methods) == 8
-        getcwd_spy.assert_called()
-        mkdir_spy.assert_called()
-        write_spy.assert_called()
-        read_bytes_spy.assert_called()
-        file_exists_spy.assert_called()
-        ls_spy.assert_called()
-        folder_exists_spy.assert_not_called()
-        read_spy.assert_not_called()
-        assert getcwd_spy.call_count == 3
-        assert mkdir_spy.call_count == 3
-        assert write_spy.call_count == 2
-        assert read_bytes_spy.call_count == 1
-        assert file_exists_spy.call_count == 2
-        assert ls_spy.call_count == 2
-        validate_dataframes(checkpoint_name, pyspark_df, snowpark_schema)
+            temp_dir = tempfile.gettempdir()
+            output_path = os.path.join(temp_dir, checkpoint_name)
+
+            collect_dataframe_checkpoint(
+                pyspark_df,
+                checkpoint_name=checkpoint_name,
+                mode=CheckpointMode.DATAFRAME,
+                output_path=output_path,
+            )
+
+            # Assert
+            assert len(number_of_methods) == 8
+            getcwd_spy.assert_called()
+            mkdir_spy.assert_called()
+            write_spy.assert_called()
+            read_bytes_spy.assert_called()
+            file_exists_spy.assert_called()
+            ls_spy.assert_called()
+            folder_exists_spy.assert_not_called()
+            read_spy.assert_not_called()
+            assert getcwd_spy.call_count == 3
+            assert mkdir_spy.call_count == 3
+            assert write_spy.call_count == 2
+            assert read_bytes_spy.call_count == 1
+            assert file_exists_spy.call_count == 2
+            assert ls_spy.call_count == 2
+            validate_dataframes(checkpoint_name, pyspark_df, snowpark_schema)
+    finally:
+        get_io_file_manager().set_strategy(IODefaultStrategy())
 
 
 def validate_dataframes(

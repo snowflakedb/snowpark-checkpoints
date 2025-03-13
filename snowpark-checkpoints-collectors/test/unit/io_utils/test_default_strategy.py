@@ -18,14 +18,19 @@ import tempfile
 from unittest.mock import Mock
 import pytest
 
-from snowflake.snowpark_checkpoints_collector.io_utils import EnvStrategy
+from snowflake.snowpark_checkpoints_collector.io_utils import (
+    EnvStrategy,
+    IODefaultStrategy,
+)
 from snowflake.snowpark_checkpoints_collector.io_utils.io_file_manager import (
     get_io_file_manager,
 )
+from snowflake.snowpark_checkpoints_collector.singleton import Singleton
 
 
 @pytest.fixture(scope="function")
 def io_file_manager():
+    Singleton._instances = {}
     return get_io_file_manager()
 
 
@@ -266,14 +271,20 @@ def test_default_getcwd(io_file_manager):
 
 
 def test_default_set_strategy(io_file_manager):
-    # Arrange
-    strategy = Mock(spec=EnvStrategy)
+    try:
+        # Arrange
+        with patch(
+            "snowflake.snowpark_checkpoints.io_utils.EnvStrategy"
+        ) as MockStrategy:
+            strategy = MockStrategy()
 
-    # Act
-    io_file_manager.set_strategy(strategy)
+            # Act
+            io_file_manager.set_strategy(strategy)
 
-    # Assert
-    assert io_file_manager.strategy == strategy
+            # Assert
+            assert io_file_manager.strategy == strategy
+    finally:
+        io_file_manager.set_strategy(IODefaultStrategy())
 
 
 def test_default_get_io_file_manager_singleton():

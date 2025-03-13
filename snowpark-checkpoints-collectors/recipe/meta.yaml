@@ -23,15 +23,15 @@ requirements:
   run:
     - python<3.12,>=3.9
     - snowflake-connector-python
-    - snowflake-snowpark-python==1.26.0
-    - pyspark
+    - snowflake-snowpark-python>=1.23.0
+    - pyspark>=3.5.0
   run_constrained:
     - pandera ==0.20.4
 
 test:
   requires:
     - pip
-    - snowflake-snowpark-python==1.26.0
+    - snowflake-snowpark-python>=1.23.0
     - snowflake-connector-python
     - pyspark
     - pandera

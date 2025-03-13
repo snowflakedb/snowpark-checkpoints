@@ -6,6 +6,18 @@
 ---
 
 **snowpark-checkpoints-collector** package offers a function for extracting information from PySpark dataframes. We can then use that data to validate against the converted Snowpark dataframes to ensure that behavioral equivalence has been achieved.
+
+---
+## Install the library
+```bash
+pip install snowpark-checkpoints-collectors
+```
+This package requires PySpark to be installed in the same environment. If you do not have it, you can install PySpark alongside Snowpark Checkpoints by running the following command:
+```bash
+pip install "snowpark-checkpoints-collectors[pyspark]"
+```
+---
+
 ## Features
 
 - Schema inference collected data mode (Schema): This is the default mode, which leverages Pandera schema inference to obtain the metadata and checks that will be evaluated for the specified dataframe. This mode also collects custom data from columns of the DataFrame based on the PySpark type.

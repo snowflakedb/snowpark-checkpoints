@@ -26,11 +26,9 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Information Analysis",
 ]
 dependencies = [
-  "snowflake-snowpark-python==1.26.0",
+  "snowflake-snowpark-python>=1.23.0",
   "snowflake-connector-python[pandas]",
-  "pyspark",
   "pandera[io]==0.20.4",
-  "pandera-report==0.1.2",
 ]
 description = "Migration tools for Snowpark"
 dynamic = ['version']
@@ -48,6 +46,9 @@ readme = "README.md"
 requires-python = '>=3.9,<3.12'
 
 [project.optional-dependencies]
+pyspark = [
+  "pyspark>=3.5.0",
+]
 development = [
   "deepdiff==8.1.1",
   "pytest>=8.3.3",
@@ -59,6 +60,7 @@ development = [
   "setuptools>=70.0.0",
   "pyarrow>=18.0.0",
   "deepdiff>=8.0.0",
+  "pyspark>=3.5.0",
 ]
 
 [project.urls]

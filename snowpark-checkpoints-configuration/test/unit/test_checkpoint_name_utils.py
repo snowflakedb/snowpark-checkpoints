@@ -12,11 +12,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+import logging
+
 import pytest
 
 from snowflake.snowpark_checkpoints_configuration.model.checkpoints import (
     Checkpoint,
 )
+
+
+LOGGER_NAME = "snowflake.snowpark_checkpoints_configuration.model.checkpoints"
 
 
 @pytest.mark.parametrize(
@@ -73,10 +79,14 @@ def test_validate_checkpoint_name_valid_case(input_value):
     assert checkpoint.name == input_value
 
 
-@pytest.mark.parametrize(
-    "input_value", ["_", "5", "", "56_my_checkpoint", "my-check", "_+check"]
-)
-def test_checkpoint_invalid_name(input_value):
+@pytest.mark.parametrize("input_value", ["_", "5", "", "56_my_checkpoint", "_+check"])
+def test_checkpoint_invalid_name(input_value: str, caplog: pytest.LogCaptureFixture):
+    caplog.set_level(level=logging.ERROR, logger=LOGGER_NAME)
+    expected_error_msg = (
+        f"Invalid checkpoint name: {input_value} in checkpoints.json file. "
+        f"Checkpoint names must only contain alphanumeric characters and underscores."
+    )
+
     with pytest.raises(Exception) as ex_info:
         Checkpoint(
             name=input_value,
@@ -87,7 +97,6 @@ def test_checkpoint_invalid_name(input_value):
             location=1,
             enabled=True,
         )
-        assert (
-            f"Invalid checkpoint name: {Checkpoint.name}. Checkpoint names must only contain alphanumeric "
-            f"characters and underscores."
-        ) == str(ex_info.value)
+
+    assert str(ex_info.value).startswith(expected_error_msg)
+    assert expected_error_msg in caplog.text

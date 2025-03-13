@@ -13,15 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import os
+
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from snowflake.snowpark_checkpoints.utils.constants import (
     SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH_ENV_VAR,
 )
 
 
-def test_is_checkpoint_import_error():
+def test_is_checkpoint_import_error(caplog: pytest.LogCaptureFixture):
+    caplog.set_level(logging.DEBUG, "snowflake.snowpark_checkpoints.utils.extra_config")
     with patch(
         "snowflake.snowpark_checkpoints_configuration.checkpoint_metadata.CheckpointMetadata",
         side_effect=ImportError("Mocked exception"),
@@ -32,6 +37,7 @@ def test_is_checkpoint_import_error():
 
         enabled, _ = _get_metadata()
         assert enabled == False
+        assert "snowpark-checkpoints-configuration is not installed" in caplog.text
 
 
 def test_is_checkpoint_enabled_default():

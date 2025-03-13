@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import json
+import logging
 import random
 
 from pathlib import Path
@@ -39,6 +40,9 @@ from snowflake.snowpark.types import (
     StructField,
     StructType,
 )
+
+
+LOGGER_NAME = "snowflake.hypothesis_snowpark.strategies_utils"
 
 
 def test_load_json_schema_valid_file(tmp_path: Path):
@@ -103,14 +107,16 @@ def test_apply_custom_null_values_all_nulls():
     assert result_df["col2"].isnull().sum() == 5
 
 
-def test_apply_custom_null_values_invalid_column():
+def test_apply_custom_null_values_invalid_column(caplog: pytest.LogCaptureFixture):
     data = {"col1": [1, 2, 3, 4, 5], "col2": ["a", "b", "c", "d", "e"]}
     pandas_df = pd.DataFrame(data)
     custom_data = {"columns": [{"name": "col3", "rows_null_count": 2, "rows_count": 5}]}
-    result_df = apply_custom_null_values(pandas_df, custom_data)
+    with caplog.at_level(level=logging.WARNING, logger=LOGGER_NAME):
+        result_df = apply_custom_null_values(pandas_df, custom_data)
     assert result_df["col1"].isnull().sum() == 0
     assert result_df["col2"].isnull().sum() == 0
     assert "col3" not in result_df.columns
+    assert "'col3' not found in DataFrame" in caplog.text
 
 
 def test_generate_snowpark_schema_no_custom_data():
@@ -216,7 +222,9 @@ def test_generate_snowpark_schema_invalid_pyspark_type():
         generate_snowpark_schema(pandera_schema, custom_data)
 
 
-def test_generate_snowpark_dataframe_with_valid_data(session: Session):
+def test_generate_snowpark_dataframe_with_valid_data(
+    session: Session, caplog: pytest.LogCaptureFixture
+):
     pandas_df = pd.DataFrame({"col1": [1, 2], "col2": ["a", "b"]})
     snowpark_schema = StructType(
         [
@@ -224,12 +232,17 @@ def test_generate_snowpark_dataframe_with_valid_data(session: Session):
             StructField("col2", StringType(), nullable=False),
         ]
     )
-    result = generate_snowpark_dataframe(pandas_df, snowpark_schema, session)
+    with caplog.at_level(level=logging.INFO, logger=LOGGER_NAME):
+        result = generate_snowpark_dataframe(pandas_df, snowpark_schema, session)
     assert isinstance(result, DataFrame)
     assert result.collect() == [Row(COL1=1, COL2="a"), Row(COL1=2, COL2="b")]
+    for substring in [str(snowpark_schema), str(len(pandas_df))]:
+        assert substring in caplog.text
 
 
-def test_generate_snowpark_dataframe_with_empty_dataframe(session: Session):
+def test_generate_snowpark_dataframe_with_empty_dataframe(
+    session: Session, caplog: pytest.LogCaptureFixture
+):
     pandas_df = pd.DataFrame(columns=["col1", "col2"])
     snowpark_schema = StructType(
         [
@@ -237,12 +250,17 @@ def test_generate_snowpark_dataframe_with_empty_dataframe(session: Session):
             StructField("col2", StringType(), nullable=False),
         ]
     )
-    result = generate_snowpark_dataframe(pandas_df, snowpark_schema, session)
+    with caplog.at_level(level=logging.INFO, logger=LOGGER_NAME):
+        result = generate_snowpark_dataframe(pandas_df, snowpark_schema, session)
     assert isinstance(result, DataFrame)
     assert result.count() == 0
+    for substring in [str(snowpark_schema), str(len(pandas_df))]:
+        assert substring in caplog.text
 
 
-def test_generate_snowpark_dataframe_with_null_values(session: Session):
+def test_generate_snowpark_dataframe_with_null_values(
+    session: Session, caplog: pytest.LogCaptureFixture
+):
     pandas_df = pd.DataFrame({"col1": [1, None], "col2": ["a", None]})
     snowpark_schema = StructType(
         [
@@ -250,10 +268,13 @@ def test_generate_snowpark_dataframe_with_null_values(session: Session):
             StructField("col2", StringType(), nullable=True),
         ]
     )
-    result = generate_snowpark_dataframe(pandas_df, snowpark_schema, session)
+    with caplog.at_level(level=logging.INFO, logger=LOGGER_NAME):
+        result = generate_snowpark_dataframe(pandas_df, snowpark_schema, session)
     assert isinstance(result, DataFrame)
     assert result.filter(result["col1"].isNull()).count() == 1
     assert result.filter(result["col2"].isNull()).count() == 1
+    for substring in [str(snowpark_schema), str(len(pandas_df))]:
+        assert substring in caplog.text
 
 
 def test_temporary_random_seed_no_seed():
@@ -327,3 +348,19 @@ def test_replace_surrogate_chars_non_string_columns():
     )
     result_df = replace_surrogate_chars(pandas_df, columns)
     assert result_df.equals(expected_df)
+
+
+def test_replace_surrogate_chars_missing_columns(caplog: pytest.LogCaptureFixture):
+    pandas_df = pd.DataFrame(
+        {
+            "col1": ["a", "\uD800", "c"],
+            "col2": ["d", "\uD950", "f"],
+        }
+    )
+    columns = ["col1", "col2", "col3"]
+    expected_df = pd.DataFrame({"col1": ["a", " ", "c"], "col2": ["d", " ", "f"]})
+
+    with caplog.at_level(level=logging.WARNING, logger=LOGGER_NAME):
+        result_df = replace_surrogate_chars(pandas_df, columns)
+    assert result_df.equals(expected_df)
+    assert "'col3' not found in DataFrame" in caplog.text

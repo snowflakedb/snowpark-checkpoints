@@ -14,6 +14,9 @@
 # limitations under the License.
 
 # Wrapper around pandera which logs to snowflake
+
+import logging
+
 from typing import Any, Optional, Union, cast
 
 from pandas import DataFrame as PandasDataFrame
@@ -27,13 +30,13 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
     SamplingAdapter,
     SamplingStrategy,
 )
-from snowflake.snowpark_checkpoints.utils.checkpoint_logger import CheckpointLogger
 from snowflake.snowpark_checkpoints.utils.constants import (
     FAIL_STATUS,
     PASS_STATUS,
     CheckpointMode,
 )
 from snowflake.snowpark_checkpoints.utils.extra_config import is_checkpoint_enabled
+from snowflake.snowpark_checkpoints.utils.logging_utils import log
 from snowflake.snowpark_checkpoints.utils.pandera_check_manager import (
     PanderaCheckManager,
 )
@@ -47,6 +50,10 @@ from snowflake.snowpark_checkpoints.utils.utils_checks import (
 )
 
 
+LOGGER = logging.getLogger(__name__)
+
+
+@log
 def validate_dataframe_checkpoint(
     df: SnowparkDataFrame,
     checkpoint_name: str,
@@ -84,31 +91,45 @@ def validate_dataframe_checkpoint(
     """
     checkpoint_name = _replace_special_characters(checkpoint_name)
 
-    if is_checkpoint_enabled(checkpoint_name):
+    if not is_checkpoint_enabled(checkpoint_name):
+        LOGGER.warning(
+            "Checkpoint '%s' is disabled. Skipping DataFrame checkpoint validation.",
+            checkpoint_name,
+        )
+        return None
 
-        if mode == CheckpointMode.SCHEMA:
-            return _check_dataframe_schema_file(
-                df,
-                checkpoint_name,
-                job_context,
-                custom_checks,
-                skip_checks,
-                sample_frac,
-                sample_number,
-                sampling_strategy,
-                output_path,
-            )
-        elif mode == CheckpointMode.DATAFRAME:
-            if job_context is None:
-                raise ValueError(
-                    "Connectionless mode is not supported for Parquet validation"
-                )
-            _check_compare_data(df, job_context, checkpoint_name, output_path)
-        else:
+    LOGGER.info(
+        "Starting DataFrame checkpoint validation for checkpoint '%s'", checkpoint_name
+    )
+
+    if mode == CheckpointMode.SCHEMA:
+        result = _check_dataframe_schema_file(
+            df,
+            checkpoint_name,
+            job_context,
+            custom_checks,
+            skip_checks,
+            sample_frac,
+            sample_number,
+            sampling_strategy,
+            output_path,
+        )
+        return result
+
+    if mode == CheckpointMode.DATAFRAME:
+        if job_context is None:
             raise ValueError(
-                """Invalid validation mode.
-                Please use for schema validation use a 1 or for a full data validation use a 2 for schema validation."""
+                "No job context provided. Please provide one when using DataFrame mode validation."
             )
+        _check_compare_data(df, job_context, checkpoint_name, output_path)
+        return None
+
+    raise ValueError(
+        (
+            "Invalid validation mode. "
+            "Please use 1 for schema validation or 2 for full data validation."
+        ),
+    )
 
 
 def _check_dataframe_schema_file(
@@ -156,7 +177,7 @@ def _check_dataframe_schema_file(
 
     schema = _generate_schema(checkpoint_name, output_path)
 
-    return check_dataframe_schema(
+    return _check_dataframe_schema(
         df,
         schema,
         checkpoint_name,
@@ -170,6 +191,7 @@ def _check_dataframe_schema_file(
     )
 
 
+@log
 def check_dataframe_schema(
     df: SnowparkDataFrame,
     pandera_schema: DataFrameSchema,
@@ -212,6 +234,9 @@ def check_dataframe_schema(
 
     """
     checkpoint_name = _replace_special_characters(checkpoint_name)
+    LOGGER.info(
+        "Starting DataFrame schema validation for checkpoint '%s'", checkpoint_name
+    )
 
     if df is None:
         raise ValueError("DataFrame is required")
@@ -219,19 +244,25 @@ def check_dataframe_schema(
     if pandera_schema is None:
         raise ValueError("Schema is required")
 
-    if is_checkpoint_enabled(checkpoint_name):
-        return _check_dataframe_schema(
-            df,
-            pandera_schema,
+    if not is_checkpoint_enabled(checkpoint_name):
+        LOGGER.warning(
+            "Checkpoint '%s' is disabled. Skipping DataFrame schema validation.",
             checkpoint_name,
-            job_context,
-            custom_checks,
-            skip_checks,
-            sample_frac,
-            sample_number,
-            sampling_strategy,
-            output_path,
         )
+        return None
+
+    return _check_dataframe_schema(
+        df,
+        pandera_schema,
+        checkpoint_name,
+        job_context,
+        custom_checks,
+        skip_checks,
+        sample_frac,
+        sample_number,
+        sampling_strategy,
+        output_path,
+    )
 
 
 @report_telemetry(
@@ -261,10 +292,22 @@ def _check_dataframe_schema(
     )
     is_valid, validation_result = _validate(pandera_schema_upper, sample_df)
     if is_valid:
+        LOGGER.info(
+            "DataFrame schema validation passed for checkpoint '%s'",
+            checkpoint_name,
+        )
         if job_context is not None:
             job_context._mark_pass(checkpoint_name)
+        else:
+            LOGGER.warning(
+                "No job context provided. Skipping result recording into Snowflake.",
+            )
         _update_validation_result(checkpoint_name, PASS_STATUS, output_path)
     else:
+        LOGGER.error(
+            "DataFrame schema validation failed for checkpoint '%s'",
+            checkpoint_name,
+        )
         _update_validation_result(checkpoint_name, FAIL_STATUS, output_path)
         raise SchemaValidationError(
             "Snowpark DataFrame schema validation error",
@@ -277,6 +320,7 @@ def _check_dataframe_schema(
 
 
 @report_telemetry(params_list=["pandera_schema"])
+@log
 def check_output_schema(
     pandera_schema: DataFrameSchema,
     checkpoint_name: str,
@@ -313,11 +357,8 @@ def check_output_schema(
             function: The decorated function.
 
         """
-        _checkpoint_name = checkpoint_name
-        if checkpoint_name is None:
-            _checkpoint_name = snowpark_fn.__name__
-        _checkpoint_name = _replace_special_characters(_checkpoint_name)
 
+        @log(log_args=False)
         def wrapper(*args, **kwargs):
             """Wrapp a function to validate the schema of the output of a Snowpark function.
 
@@ -329,7 +370,25 @@ def check_output_schema(
                 Any: The result of the Snowpark function.
 
             """
+            _checkpoint_name = checkpoint_name
+            if checkpoint_name is None:
+                LOGGER.warning(
+                    (
+                        "No checkpoint name provided for output schema validation. "
+                        "Using '%s' as the checkpoint name.",
+                    ),
+                    snowpark_fn.__name__,
+                )
+                _checkpoint_name = snowpark_fn.__name__
+            _checkpoint_name = _replace_special_characters(_checkpoint_name)
+            LOGGER.info(
+                "Starting output schema validation for Snowpark function '%s' and checkpoint '%s'",
+                snowpark_fn.__name__,
+                _checkpoint_name,
+            )
+
             # Run the sampled data in snowpark
+            LOGGER.info("Running the Snowpark function '%s'", snowpark_fn.__name__)
             snowpark_results = snowpark_fn(*args, **kwargs)
             sampler = SamplingAdapter(
                 job_context, sample_frac, sample_number, sampling_strategy
@@ -340,17 +399,25 @@ def check_output_schema(
             is_valid, validation_result = _validate(
                 pandera_schema, pandas_sample_args[0]
             )
-            logger = CheckpointLogger().get_logger()
-            logger.info(
-                f"Checkpoint {_checkpoint_name} validation result:\n{validation_result}"
-            )
-
             if is_valid:
+                LOGGER.info(
+                    "Output schema validation passed for Snowpark function '%s' and checkpoint '%s'",
+                    snowpark_fn.__name__,
+                    _checkpoint_name,
+                )
                 if job_context is not None:
                     job_context._mark_pass(_checkpoint_name)
-
+                else:
+                    LOGGER.warning(
+                        "No job context provided. Skipping result recording into Snowflake.",
+                    )
                 _update_validation_result(_checkpoint_name, PASS_STATUS, output_path)
             else:
+                LOGGER.error(
+                    "Output schema validation failed for Snowpark function '%s' and checkpoint '%s'",
+                    snowpark_fn.__name__,
+                    _checkpoint_name,
+                )
                 _update_validation_result(_checkpoint_name, FAIL_STATUS, output_path)
                 raise SchemaValidationError(
                     "Snowpark output schema validation error",
@@ -358,7 +425,6 @@ def check_output_schema(
                     _checkpoint_name,
                     validation_result,
                 )
-
             return snowpark_results
 
         return wrapper
@@ -367,6 +433,7 @@ def check_output_schema(
 
 
 @report_telemetry(params_list=["pandera_schema"])
+@log
 def check_input_schema(
     pandera_schema: DataFrameSchema,
     checkpoint_name: str,
@@ -407,11 +474,8 @@ def check_input_schema(
             Callable: A wrapper function that performs schema validation before executing the original function.
 
         """
-        _checkpoint_name = checkpoint_name
-        if checkpoint_name is None:
-            _checkpoint_name = snowpark_fn.__name__
-        _checkpoint_name = _replace_special_characters(_checkpoint_name)
 
+        @log(log_args=False)
         def wrapper(*args, **kwargs):
             """Wrapp a function to validate the schema of the input of a Snowpark function.
 
@@ -422,6 +486,23 @@ def check_input_schema(
                 Any: The result of the original function after input validation.
 
             """
+            _checkpoint_name = checkpoint_name
+            if checkpoint_name is None:
+                LOGGER.warning(
+                    (
+                        "No checkpoint name provided for input schema validation. "
+                        "Using '%s' as the checkpoint name."
+                    ),
+                    snowpark_fn.__name__,
+                )
+                _checkpoint_name = snowpark_fn.__name__
+            _checkpoint_name = _replace_special_characters(_checkpoint_name)
+            LOGGER.info(
+                "Starting input schema validation for Snowpark function '%s' and checkpoint '%s'",
+                snowpark_fn.__name__,
+                _checkpoint_name,
+            )
+
             # Run the sampled data in snowpark
             sampler = SamplingAdapter(
                 job_context, sample_frac, sample_number, sampling_strategy
@@ -429,43 +510,53 @@ def check_input_schema(
             sampler.process_args(args)
             pandas_sample_args = sampler.get_sampled_pandas_args()
 
+            LOGGER.info(
+                "Validating %s input argument(s) against a Pandera schema",
+                len(pandas_sample_args),
+            )
             # Raises SchemaError on validation issues
-            for arg in pandas_sample_args:
-                if isinstance(arg, PandasDataFrame):
-
-                    is_valid, validation_result = _validate(
-                        pandera_schema,
-                        arg,
+            for index, arg in enumerate(pandas_sample_args, start=1):
+                if not isinstance(arg, PandasDataFrame):
+                    LOGGER.info(
+                        "Arg %s: Skipping schema validation for non-DataFrame argument",
+                        index,
                     )
+                    continue
 
-                    logger = CheckpointLogger().get_logger()
-                    logger.info(
-                        f"Checkpoint {checkpoint_name} validation result:\n{validation_result}"
+                is_valid, validation_result = _validate(
+                    pandera_schema,
+                    arg,
+                )
+                if is_valid:
+                    LOGGER.info(
+                        "Arg %s: Input schema validation passed",
+                        index,
                     )
-
-                    if is_valid:
-                        if job_context is not None:
-                            job_context._mark_pass(
-                                _checkpoint_name,
-                            )
-
-                        _update_validation_result(
+                    if job_context is not None:
+                        job_context._mark_pass(
                             _checkpoint_name,
-                            PASS_STATUS,
-                            output_path,
                         )
-                    else:
-                        _update_validation_result(
-                            _checkpoint_name,
-                            FAIL_STATUS,
-                            output_path,
-                        )
-                        raise SchemaValidationError(
-                            "Snowpark input schema validation error",
-                            job_context,
-                            _checkpoint_name,
-                            validation_result,
-                        )
+                    _update_validation_result(
+                        _checkpoint_name,
+                        PASS_STATUS,
+                        output_path,
+                    )
+                else:
+                    LOGGER.error(
+                        "Arg %s: Input schema validation failed",
+                        index,
+                    )
+                    _update_validation_result(
+                        _checkpoint_name,
+                        FAIL_STATUS,
+                        output_path,
+                    )
+                    raise SchemaValidationError(
+                        "Snowpark input schema validation error",
+                        job_context,
+                        _checkpoint_name,
+                        validation_result,
+                    )
             return snowpark_fn(*args, **kwargs)
 
         return wrapper

@@ -14,23 +14,29 @@
 # limitations under the License.
 
 import json
+import logging
 import os
-from unittest.mock import patch
+import tempfile
+
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
+
 from numpy import int8
 from pandas import DataFrame as PandasDataFrame
-from pandera import DataFrameSchema, Column, Check
+from pandera import Check, Column, DataFrameSchema
 from pytest import raises
-from snowflake.snowpark import Session
-from snowflake.snowpark import DataFrame as SnowparkDataFrame
+from telemetry_compare_utils import validate_telemetry_file_output
 
+from snowflake.snowpark import DataFrame as SnowparkDataFrame
+from snowflake.snowpark import Session
 from snowflake.snowpark_checkpoints.checkpoint import (
     _check_dataframe_schema_file,
     check_dataframe_schema,
-    check_output_schema,
     check_input_schema,
+    check_output_schema,
 )
-from snowflake.snowpark import Session
-
 from snowflake.snowpark_checkpoints.errors import SchemaValidationError
 from snowflake.snowpark_checkpoints.utils.constants import (
     CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME,
@@ -39,16 +45,13 @@ from snowflake.snowpark_checkpoints.utils.constants import (
     SKIP_ALL,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
 )
-import pytest
-import os
-from pathlib import Path
-import tempfile
 from snowflake.snowpark_checkpoints.utils.telemetry import (
     get_telemetry_manager,
 )
-from telemetry_compare_utils import validate_telemetry_file_output
+
 
 TELEMETRY_FOLDER = "telemetry"
+LOGGER_NAME = "snowflake.snowpark_checkpoints.checkpoint"
 
 
 @pytest.fixture(scope="function")
@@ -101,7 +104,7 @@ def test_input(telemetry_output_path):
     validate_telemetry_file_output("test_input_telemetry.json", telemetry_output_path)
 
 
-def test_input_fail(telemetry_output_path):
+def test_input_fail(telemetry_output_path: str, caplog: pytest.LogCaptureFixture):
     checkpoint_name = "test_checkpoint"
     output_path = "test_output_path/unit/"
     df = PandasDataFrame(
@@ -132,7 +135,8 @@ def test_input_fail(telemetry_output_path):
         patch(
             "snowflake.snowpark_checkpoints.checkpoint._update_validation_result"
         ) as mock_update_validation_result,
-        raises(SchemaValidationError),
+        raises(SchemaValidationError) as ex,
+        caplog.at_level(level=logging.ERROR, logger=LOGGER_NAME),
     ):
         preprocessor(sp_df)
 
@@ -142,6 +146,7 @@ def test_input_fail(telemetry_output_path):
     validate_telemetry_file_output(
         "test_input_fail_telemetry.json", telemetry_output_path
     )
+    assert str(ex.value) in caplog.text
 
 
 def test_output(telemetry_output_path):
@@ -183,7 +188,7 @@ def test_output(telemetry_output_path):
     validate_telemetry_file_output("test_output_telemetry.json", telemetry_output_path)
 
 
-def test_output_fail(telemetry_output_path):
+def test_output_fail(telemetry_output_path: str, caplog: pytest.LogCaptureFixture):
     checkpoint_name = "test_checkpoint"
     df = PandasDataFrame(
         {
@@ -213,7 +218,8 @@ def test_output_fail(telemetry_output_path):
         patch(
             "snowflake.snowpark_checkpoints.checkpoint._update_validation_result"
         ) as mock_update_validation_result,
-        raises(SchemaValidationError),
+        raises(SchemaValidationError) as ex,
+        caplog.at_level(level=logging.ERROR, logger=LOGGER_NAME),
     ):
         preprocessor(sp_df)
 
@@ -223,6 +229,7 @@ def test_output_fail(telemetry_output_path):
     validate_telemetry_file_output(
         "test_output_fail_telemetry.json", telemetry_output_path
     )
+    assert str(ex.value) in caplog.text
 
 
 def test_df_check(telemetry_output_path):
@@ -262,7 +269,7 @@ def test_df_check(telemetry_output_path):
     )
 
 
-def test_df_check_fail(telemetry_output_path):
+def test_df_check_fail(telemetry_output_path: str, caplog: pytest.LogCaptureFixture):
     checkpoint_name = "test_checkpoint"
     output_path = "test_output_path/unit/"
     df = PandasDataFrame(
@@ -290,7 +297,8 @@ def test_df_check_fail(telemetry_output_path):
         patch(
             "snowflake.snowpark_checkpoints.checkpoint._update_validation_result"
         ) as mocked_update,
-        raises(SchemaValidationError),
+        raises(SchemaValidationError) as ex,
+        caplog.at_level(level=logging.ERROR, logger=LOGGER_NAME),
     ):
         check_dataframe_schema(sp_df, schema, checkpoint_name, output_path=output_path)
 
@@ -298,6 +306,7 @@ def test_df_check_fail(telemetry_output_path):
     validate_telemetry_file_output(
         "test_df_check_fail_telemetry.json", telemetry_output_path
     )
+    assert str(ex.value) in caplog.text
 
 
 def test_df_check_from_file(telemetry_output_path):
@@ -484,3 +493,23 @@ def test_df_check_skip_check(telemetry_output_path):
     validate_telemetry_file_output(
         "test_df_check_skip_check_telemetry.json", telemetry_output_path
     )
+
+
+@patch("snowflake.snowpark_checkpoints.checkpoint.is_checkpoint_enabled")
+def test_check_dataframe_schema_disabled_checkpoint(
+    mock_is_checkpoint_enabled: MagicMock, caplog: pytest.LogCaptureFixture
+):
+    mock_is_checkpoint_enabled.return_value = False
+    caplog.set_level(level=logging.WARNING, logger=LOGGER_NAME)
+
+    df = MagicMock()
+    pandera_schema = MagicMock()
+    checkpoint_name = "test_checkpoint"
+    result = check_dataframe_schema(
+        df=df, pandera_schema=pandera_schema, checkpoint_name=checkpoint_name
+    )
+
+    mock_is_checkpoint_enabled.assert_called_once_with(checkpoint_name)
+    assert result is None
+    assert checkpoint_name in caplog.text
+    assert "disabled" in caplog.text

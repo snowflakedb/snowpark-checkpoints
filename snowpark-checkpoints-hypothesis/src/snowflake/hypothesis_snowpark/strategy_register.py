@@ -14,11 +14,14 @@
 # limitations under the License.
 
 
+import logging
+
 from functools import wraps
 from typing import Callable
 
 
 snowpark_strategies: dict[str, Callable] = {}
+LOGGER = logging.getLogger(__name__)
 
 
 def register_strategy(dtype: str) -> Callable:
@@ -38,6 +41,7 @@ def register_strategy(dtype: str) -> Callable:
             return func(*args, **kwargs)
 
         snowpark_strategies[dtype] = func
+        LOGGER.debug("Registered '%s' function for '%s' type", func.__name__, dtype)
         return wrapper
 
     return decorator

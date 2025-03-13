@@ -12,13 +12,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+import logging
 import os
+
+from typing import Optional
 
 from snowflake.snowpark_checkpoints_configuration.model.checkpoints import (
     Checkpoint,
     Checkpoints,
 )
 from snowflake.snowpark_checkpoints_configuration.singleton import Singleton
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class CheckpointMetadata(metaclass=Singleton):
@@ -33,21 +40,28 @@ class CheckpointMetadata(metaclass=Singleton):
 
     """
 
-    def __init__(self, path: str = None):
-        directory = path if path is not None else os.getcwd()
+    def __init__(self, path: Optional[str] = None):
         self.checkpoint_model: Checkpoints = Checkpoints(type="", pipelines=[])
+        directory = path if path is not None else os.getcwd()
         checkpoints_file = os.path.join(directory, "checkpoints.json")
         if os.path.exists(checkpoints_file):
-            with open(checkpoints_file) as f:
-                try:
+            LOGGER.info("Reading checkpoints file: '%s'", checkpoints_file)
+            try:
+                with open(checkpoints_file) as f:
                     checkpoint_json = f.read()
                     self.checkpoint_model = Checkpoints.model_validate_json(
                         checkpoint_json
                     )
-                except Exception as e:
-                    raise Exception(
-                        f"Error reading checkpoints file: {checkpoints_file} \n {e}"
-                    ) from None
+                LOGGER.info(
+                    "Successfully read and validated checkpoints file: '%s'",
+                    checkpoints_file,
+                )
+            except Exception as e:
+                error_msg = f"An error occurred while reading the checkpoints file: '{checkpoints_file}'"
+                LOGGER.exception(error_msg)
+                raise Exception(f"{error_msg} \n {e}") from None
+        else:
+            LOGGER.warning("Checkpoints file not found: '%s'", checkpoints_file)
 
     def get_checkpoint(self, checkpoint_name: str) -> Checkpoint:
         """Get a checkpoint by its name.

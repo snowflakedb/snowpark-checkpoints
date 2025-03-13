@@ -13,36 +13,57 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+
+import pytest
+
 from snowflake.hypothesis_snowpark.strategy_register import (
     register_strategy,
     snowpark_strategies,
 )
 
 
-def test_register_strategy_registers_a_function():
+LOGGER_NAME = "snowflake.hypothesis_snowpark.strategy_register"
+
+
+def test_register_strategy_registers_a_function(caplog: pytest.LogCaptureFixture):
     dtype = "int"
 
-    @register_strategy(dtype)
-    def strategy_int():
-        return "int strategy"
+    with caplog.at_level(level=logging.DEBUG, logger=LOGGER_NAME):
+
+        @register_strategy(dtype)
+        def strategy_int():
+            return "int strategy"
 
     assert strategy_int() == "int strategy"
     assert dtype in snowpark_strategies
     assert snowpark_strategies[dtype]() == "int strategy"
+    assert strategy_int.__name__ in caplog.text
+    assert dtype in caplog.text
 
 
-def test_register_strategy_overwrite_existing_strategy():
+def test_register_strategy_overwrite_existing_strategy(
+    caplog: pytest.LogCaptureFixture,
+):
     dtype = "int"
 
-    @register_strategy(dtype)
-    def strategy_int():
-        return "int strategy"
+    with caplog.at_level(level=logging.DEBUG, logger=LOGGER_NAME):
 
-    @register_strategy(dtype)
-    def new_strategy_int():
-        return "new int strategy"
+        @register_strategy(dtype)
+        def strategy_int():
+            return "int strategy"
+
+        @register_strategy(dtype)
+        def new_strategy_int():
+            return "new int strategy"
 
     assert strategy_int() == "int strategy"
     assert new_strategy_int() == "new int strategy"
     assert dtype in snowpark_strategies
     assert snowpark_strategies[dtype]() == "new int strategy"
+    for substring in [
+        str(strategy_int.__name__),
+        str(new_strategy_int.__name__),
+        str(dtype),
+    ]:
+        assert substring in caplog.text

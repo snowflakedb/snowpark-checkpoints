@@ -15,6 +15,7 @@
 
 import inspect
 import json
+import logging
 import os
 import re
 
@@ -56,6 +57,9 @@ from snowflake.snowpark_checkpoints.validation_result_metadata import (
     ValidationResultsMetadata,
 )
 from snowflake.snowpark_checkpoints.validation_results import ValidationResult
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 def _replace_special_characters(checkpoint_name: str) -> str:
@@ -147,6 +151,9 @@ def _generate_schema(
                          constraints of the DataFrame.
 
     """
+    LOGGER.info(
+        "Generating Pandera DataFrameSchema for checkpoint: '%s'", checkpoint_name
+    )
     current_directory_path = output_path if output_path else os.getcwd()
 
     output_directory_path = os.path.join(
@@ -169,6 +176,7 @@ Please run the Snowpark checkpoint collector first."""
             f"Checkpoint {checkpoint_name} JSON file not found. Please run the Snowpark checkpoint collector first."
         )
 
+    LOGGER.info("Reading schema from file: '%s'", checkpoint_schema_file_path)
     with open(checkpoint_schema_file_path) as schema_file:
         checkpoint_schema_config = json.load(schema_file)
 
@@ -182,6 +190,10 @@ Please run the Snowpark checkpoint collector first."""
     schema = DataFrameSchema.from_json(schema_dict_str)
 
     if DATAFRAME_CUSTOM_DATA_KEY not in checkpoint_schema_config:
+        LOGGER.info(
+            "No custom data found in the JSON file for checkpoint: '%s'",
+            checkpoint_name,
+        )
         return schema
 
     custom_data = checkpoint_schema_config.get(DATAFRAME_CUSTOM_DATA_KEY)
@@ -221,7 +233,7 @@ def _check_compare_data(
         SchemaValidationError: If there is a data mismatch between the DataFrame and the checkpoint table.
 
     """
-    result, err = _compare_data(df, job_context, checkpoint_name, output_path)
+    _, err = _compare_data(df, job_context, checkpoint_name, output_path)
     if err is not None:
         raise err
 
@@ -256,9 +268,18 @@ def _compare_data(
 
     """
     new_table_name = CHECKPOINT_TABLE_NAME_FORMAT.format(checkpoint_name)
-
+    LOGGER.info(
+        "Writing Snowpark DataFrame to table: '%s' for checkpoint: '%s'",
+        new_table_name,
+        checkpoint_name,
+    )
     df.write.save_as_table(table_name=new_table_name, mode="overwrite")
 
+    LOGGER.info(
+        "Comparing DataFrame to checkpoint table: '%s' for checkpoint: '%s'",
+        new_table_name,
+        checkpoint_name,
+    )
     expect_df = job_context.snowpark_session.sql(
         EXCEPT_HASH_AGG_QUERY, [checkpoint_name, new_table_name]
     )

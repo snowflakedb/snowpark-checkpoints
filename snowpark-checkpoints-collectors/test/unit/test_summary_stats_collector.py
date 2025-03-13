@@ -13,14 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import datetime
+import logging
 import os
 import tempfile
-from unittest.mock import MagicMock
+
+from datetime import datetime
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from snowflake.snowpark_checkpoints_collector.summary_stats_collector import (
+    collect_dataframe_checkpoint,
     generate_parquet_for_spark_df,
 )
 
@@ -38,3 +41,30 @@ def test_generate_parquet_for_spark_df_exception():
 
     with pytest.raises(Exception, match="No parquet files were generated."):
         generate_parquet_for_spark_df(spark_df, parquet_directory)
+
+
+def test_collect_dataframe_checkpoint_disabled_checkpoint(
+    caplog: pytest.LogCaptureFixture,
+):
+    """Test that collect_dataframe_checkpoint logs a message when the checkpoint is disabled."""
+    pyspark_df = MagicMock()
+    checkpoint_name = "my_checkpoint"
+    module_name = "snowflake.snowpark_checkpoints_collector.summary_stats_collector"
+    expected_log_msg = (
+        f"Checkpoint '{checkpoint_name}' is disabled. Skipping collection."
+    )
+
+    with (
+        caplog.at_level(
+            level=logging.INFO,
+            logger=module_name,
+        ),
+        patch(
+            f"{module_name}.is_checkpoint_enabled",
+            return_value=False,
+        ) as mock_is_checkpoint_enabled,
+    ):
+        collect_dataframe_checkpoint(pyspark_df, checkpoint_name)
+
+    mock_is_checkpoint_enabled.assert_called_once_with(checkpoint_name)
+    assert expected_log_msg in caplog.messages

@@ -13,15 +13,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+
+
+# Add a NullHandler to prevent logging messages from being output to
+# sys.stderr if no logging configuration is provided.
+logging.getLogger(__name__).addHandler(logging.NullHandler())
+
+# ruff: noqa: E402
+
 from snowflake.snowpark_checkpoints.checkpoint import (
     check_dataframe_schema,
-    check_output_schema,
     check_input_schema,
+    check_output_schema,
     validate_dataframe_checkpoint,
 )
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from snowflake.snowpark_checkpoints.spark_migration import check_with_spark
 from snowflake.snowpark_checkpoints.utils.constants import CheckpointMode
+
 
 __all__ = [
     "check_with_spark",

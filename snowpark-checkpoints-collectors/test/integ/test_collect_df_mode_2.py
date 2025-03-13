@@ -12,20 +12,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from datetime import datetime
+
 import glob
+import logging
 import os
-from pathlib import Path
 import tempfile
 import time
+
+from datetime import datetime
+from pathlib import Path
+
+import pyspark.sql.types as t
+import pytest
 
 from pandas.testing import assert_frame_equal
 from pyspark.sql import SparkSession
 from pyspark.sql.dataframe import DataFrame as SparkDataFrame
 from pyspark.sql.types import BooleanType, LongType, StructField, StructType
-import pyspark.sql.types as t
-import pytest
 from pytest import fixture
+from telemetry_compare_utils import validate_telemetry_file_output
+
 from snowflake.snowpark.types import (
     BooleanType,
     DateType,
@@ -35,17 +41,15 @@ from snowflake.snowpark.types import (
     StructField,
     StructType,
 )
-
-from snowflake.snowpark_checkpoints_collector.singleton import Singleton
-
 from snowflake.snowpark_checkpoints_collector import (
     collect_dataframe_checkpoint,
 )
 from snowflake.snowpark_checkpoints_collector.collection_common import (
-    CheckpointMode,
     DOT_PARQUET_EXTENSION,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
+    CheckpointMode,
 )
+from snowflake.snowpark_checkpoints_collector.singleton import Singleton
 from snowflake.snowpark_checkpoints_collector.snow_connection_model import (
     SnowConnection,
 )
@@ -55,10 +59,11 @@ from snowflake.snowpark_checkpoints_collector.summary_stats_collector import (
 from snowflake.snowpark_checkpoints_collector.utils.telemetry import (
     get_telemetry_manager,
 )
-from telemetry_compare_utils import validate_telemetry_file_output
+
 
 TEST_COLLECT_DF_MODE_2_EXPECTED_DIRECTORY_NAME = "test_collect_df_mode_2_expected"
 TELEMETRY_FOLDER = "telemetry"
+TOP_LEVEL_LOGGER_NAME = "snowflake.snowpark_checkpoints_collector"
 
 
 @pytest.fixture(scope="function")
@@ -80,7 +85,7 @@ def spark_session():
     return SparkSession.builder.getOrCreate()
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def singleton():
     Singleton._instances = {}
 
@@ -292,7 +297,6 @@ def test_collect_checkpoint_mode_2_parquet_directory(
     data,
     spark_schema,
     snowpark_schema,
-    singleton,
     test_id,
     telemetry_output,
 ):
@@ -342,7 +346,6 @@ def test_collect_checkpoint_mode_2(
     data,
     spark_schema,
     snowpark_schema,
-    singleton,
     test_id,
     telemetry_output,
 ):
@@ -384,12 +387,26 @@ def test_collect_empty_dataframe_with_schema(
     validate_telemetry("test_collect_empty_dataframe_with_schema", telemetry_output)
 
 
-def test_collect_invalid_mode(spark_session, data, spark_schema, telemetry_output):
+def test_collect_invalid_mode(
+    spark_session: SparkSession,
+    data: list[list],
+    spark_schema: t.StructType,
+    telemetry_output: Path,
+    caplog: pytest.LogCaptureFixture,
+):
     pyspark_df = spark_session.createDataFrame(data=data, schema=spark_schema)
+    checkpoint_mode = 3
+    expected_error_msg = f"Invalid mode value: {checkpoint_mode}"
 
-    with pytest.raises(Exception) as ex_info:
-        collect_dataframe_checkpoint(pyspark_df, checkpoint_name="invalid_mode", mode=3)
-    assert "Invalid mode value." == str(ex_info.value)
+    with pytest.raises(Exception) as ex_info, caplog.at_level(
+        level=logging.ERROR, logger=TOP_LEVEL_LOGGER_NAME
+    ):
+        collect_dataframe_checkpoint(
+            pyspark_df, checkpoint_name="invalid_mode", mode=checkpoint_mode
+        )
+
+    assert expected_error_msg == str(ex_info.value)
+    assert expected_error_msg in caplog.text
     validate_telemetry("test_collect_invalid_mode", telemetry_output)
 
 

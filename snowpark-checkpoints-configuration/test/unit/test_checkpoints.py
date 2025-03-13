@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+import pytest
+
 from snowflake.snowpark_checkpoints_configuration.model.checkpoints import (
     Checkpoint,
     Checkpoints,
@@ -20,8 +23,13 @@ from snowflake.snowpark_checkpoints_configuration.model.checkpoints import (
 )
 
 
-def test_add_checkpoint():
+LOGGER_NAME = "snowflake.snowpark_checkpoints_configuration.model.checkpoints"
+
+
+def test_add_checkpoint(caplog: pytest.LogCaptureFixture):
+    caplog.set_level(level=logging.DEBUG, logger=LOGGER_NAME)
     checkpoints = Checkpoints(type="Collection", pipelines=[])
+    normalized_checkpoint_name = "checkpoint_name"
     new_checkpoint = Checkpoint(
         name="checkpoint-name",
         df="df",
@@ -32,7 +40,10 @@ def test_add_checkpoint():
         enabled=False,
     )
     checkpoints.add_checkpoint(new_checkpoint)
-    assert checkpoints.get_check_point("checkpoint_name") == new_checkpoint
+    assert checkpoints.get_check_point(normalized_checkpoint_name) == new_checkpoint
+    assert (
+        f"Checkpoint '{normalized_checkpoint_name}' added successfully" in caplog.text
+    )
 
 
 def test_add_checkpoint_with_same_name():
@@ -87,9 +98,30 @@ def test_get_checkpoint_existing():
     assert checkpoints.get_check_point("checkpoint_name") == expected_checkpoint
 
 
-def test_get_checkpoint_non_existing():
+def test_get_checkpoint_non_existing_empty_dict(caplog: pytest.LogCaptureFixture):
+    caplog.set_level(level=logging.DEBUG, logger=LOGGER_NAME)
     checkpoints = Checkpoints(type="Collection", pipelines=[])
+    checkpoint_name = "checkpoint-name-2"
+    checkpoint = checkpoints.get_check_point(checkpoint_name)
+    assert checkpoint == Checkpoint(name=checkpoint_name, enabled=True)
+    assert "creating a new enabled checkpoint" in caplog.text
 
-    assert checkpoints.get_check_point("checkpoint-name-2") == Checkpoint(
-        name="checkpoint-name-2", enabled=True
+
+def test_get_checkpoint_no_existing_non_empty_dict(caplog: pytest.LogCaptureFixture):
+    caplog.set_level(level=logging.INFO, logger=LOGGER_NAME)
+    checkpoint = Checkpoint(
+        name="checkpoint_name_1",
+        df="df",
+        mode=1,
+        function="",
+        file="file",
+        location=1,
+        enabled=False,
     )
+    pipeline = Pipeline(entry_point="entry-point", checkpoints=[checkpoint])
+    checkpoints = Checkpoints(type="Collection", pipelines=[pipeline])
+    checkpoint_name = "checkpoint_name_2"
+    checkpoint = checkpoints.get_check_point(checkpoint_name)
+
+    assert checkpoint == Checkpoint(name=checkpoint_name, enabled=False)
+    assert "creating a new disabled checkpoint" in caplog.text

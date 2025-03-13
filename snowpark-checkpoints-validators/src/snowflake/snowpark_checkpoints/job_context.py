@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+
 from datetime import datetime
 from typing import Optional
 
@@ -22,6 +24,10 @@ from pyspark.sql import SparkSession
 
 from snowflake.snowpark import Session
 from snowflake.snowpark_checkpoints.utils.constants import SCHEMA_EXECUTION_MODE
+
+
+LOGGER = logging.getLogger(__name__)
+RESULTS_TABLE = "SNOWPARK_CHECKPOINTS_REPORT"
 
 
 class SnowparkJobContext:
@@ -45,41 +51,78 @@ class SnowparkJobContext:
     ):
         self.log_results = log_results
         self.job_name = job_name
-        self.spark_session = spark_session or SparkSession.builder.getOrCreate()
+        self.spark_session = spark_session or self._create_pyspark_session()
         self.snowpark_session = snowpark_session
 
     def _mark_fail(
         self, message, checkpoint_name, data, execution_mode=SCHEMA_EXECUTION_MODE
     ):
-        if self.log_results:
-            session = self.snowpark_session
-            df = pd.DataFrame(
-                {
-                    "DATE": [datetime.now()],
-                    "JOB": [self.job_name],
-                    "STATUS": ["fail"],
-                    "CHECKPOINT": [checkpoint_name],
-                    "MESSAGE": [message],
-                    "DATA": [f"{data}"],
-                    "EXECUTION_MODE": [execution_mode],
-                }
+        if not self.log_results:
+            LOGGER.warning(
+                (
+                    "Recording of migration results into Snowflake is disabled. "
+                    "Failure result for checkpoint '%s' will not be recorded."
+                ),
+                checkpoint_name,
             )
-            report_df = session.createDataFrame(df)
-            report_df.write.mode("append").save_as_table("SNOWPARK_CHECKPOINTS_REPORT")
+            return
+
+        LOGGER.debug(
+            "Marking failure for checkpoint '%s' in '%s' mode with message '%s'",
+            checkpoint_name,
+            execution_mode,
+            message,
+        )
+
+        session = self.snowpark_session
+        df = pd.DataFrame(
+            {
+                "DATE": [datetime.now()],
+                "JOB": [self.job_name],
+                "STATUS": ["fail"],
+                "CHECKPOINT": [checkpoint_name],
+                "MESSAGE": [message],
+                "DATA": [f"{data}"],
+                "EXECUTION_MODE": [execution_mode],
+            }
+        )
+        report_df = session.createDataFrame(df)
+        LOGGER.info("Writing failure result to table: '%s'", RESULTS_TABLE)
+        report_df.write.mode("append").save_as_table(RESULTS_TABLE)
 
     def _mark_pass(self, checkpoint_name, execution_mode=SCHEMA_EXECUTION_MODE):
-        if self.log_results:
-            session = self.snowpark_session
-            df = pd.DataFrame(
-                {
-                    "DATE": [datetime.now()],
-                    "JOB": [self.job_name],
-                    "STATUS": ["pass"],
-                    "CHECKPOINT": [checkpoint_name],
-                    "MESSAGE": [""],
-                    "DATA": [""],
-                    "EXECUTION_MODE": [execution_mode],
-                }
+        if not self.log_results:
+            LOGGER.warning(
+                (
+                    "Recording of migration results into Snowflake is disabled. "
+                    "Pass result for checkpoint '%s' will not be recorded."
+                ),
+                checkpoint_name,
             )
-            report_df = session.createDataFrame(df)
-            report_df.write.mode("append").save_as_table("SNOWPARK_CHECKPOINTS_REPORT")
+            return
+
+        LOGGER.debug(
+            "Marking pass for checkpoint '%s' in '%s' mode",
+            checkpoint_name,
+            execution_mode,
+        )
+
+        session = self.snowpark_session
+        df = pd.DataFrame(
+            {
+                "DATE": [datetime.now()],
+                "JOB": [self.job_name],
+                "STATUS": ["pass"],
+                "CHECKPOINT": [checkpoint_name],
+                "MESSAGE": [""],
+                "DATA": [""],
+                "EXECUTION_MODE": [execution_mode],
+            }
+        )
+        report_df = session.createDataFrame(df)
+        LOGGER.info("Writing pass result to table: '%s'", RESULTS_TABLE)
+        report_df.write.mode("append").save_as_table(RESULTS_TABLE)
+
+    def _create_pyspark_session(self) -> SparkSession:
+        LOGGER.info("Creating a PySpark session")
+        return SparkSession.builder.getOrCreate()

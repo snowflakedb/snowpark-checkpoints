@@ -62,6 +62,7 @@ html_show_sphinx = False
 # https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html#configuration
 
 autoclass_content = "class"
+autodoc_mock_imports = ["pyspark"]
 autodoc_default_options = {
     "member-order": "alphabetical",
     "undoc-members": True,

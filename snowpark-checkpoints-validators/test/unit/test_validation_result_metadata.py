@@ -144,13 +144,18 @@ def test_save_creates_directory():
     metadata = ValidationResultsMetadata(test_path)
 
     with (
-        patch("os.path.exists", return_value=False),
+        patch(
+            "snowflake.snowpark_checkpoints.io_utils.io_default_strategy.IODefaultStrategy.folder_exists",
+            return_value=False,
+        ),
         patch("os.makedirs") as mock_makedirs,
         patch("builtins.open", mock_open()),
     ):
         metadata.save()
 
-    mock_makedirs.assert_called_once_with(metadata.validation_results_directory)
+    mock_makedirs.assert_called_once_with(
+        metadata.validation_results_directory, exist_ok=False
+    )
 
 
 def test_clean_with_existing_file():
@@ -188,7 +193,10 @@ def test_clean_with_no_file():
     )
     metadata.add_validation_result(new_validation_result)
 
-    with patch("os.path.exists", return_value=False):
+    with patch(
+        "snowflake.snowpark_checkpoints.io_utils.io_default_strategy.IODefaultStrategy.file_exists",
+        return_value=False,
+    ):
         metadata.clean()
 
     assert metadata.validation_results == ValidationResults(results=[])

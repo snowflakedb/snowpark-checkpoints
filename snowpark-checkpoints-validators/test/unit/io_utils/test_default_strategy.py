@@ -18,7 +18,7 @@ import tempfile
 from unittest.mock import patch
 import pytest
 
-from snowflake.snowpark_checkpoints.io_utils import EnvStrategy, IODefaultStrategy
+from snowflake.snowpark_checkpoints.io_utils import IODefaultStrategy
 from snowflake.snowpark_checkpoints.io_utils.io_file_manager import (
     get_io_file_manager,
 )

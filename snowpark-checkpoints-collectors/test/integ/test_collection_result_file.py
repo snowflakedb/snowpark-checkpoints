@@ -12,11 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import json
-import os
-from pathlib import Path
-import time
 
+import json
+import logging
+import os
+
+from pathlib import Path
+
+import tempfile
 import pytest
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, LongType, BooleanType
@@ -34,7 +37,6 @@ from snowflake.snowpark_checkpoints_collector.collection_result.model.collection
 )
 from snowflake.snowpark_checkpoints_collector.utils import file_utils
 from snowflake.snowpark_checkpoints_collector.singleton import Singleton
-import tempfile
 
 
 @pytest.fixture(scope="function")
@@ -50,35 +52,48 @@ def spark_session():
     return SparkSession.builder.getOrCreate()
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def singleton():
     Singleton._instances = {}
 
 
-def test_collect_dataframe_mode_schema(spark_session, singleton, output_path):
+def test_collect_dataframe_mode_schema(spark_session, output_path):
 
     execute_dataframe_collection(spark_session, CheckpointMode.SCHEMA, output_path)
     validate_collection_point_result_file(CollectionResult.PASS, output_path)
 
 
-def test_collect_dataframe_mode_dataframe(spark_session, singleton, output_path):
+def test_collect_dataframe_mode_dataframe(spark_session, output_path):
     execute_dataframe_collection(spark_session, CheckpointMode.DATAFRAME, output_path)
     validate_collection_point_result_file(CollectionResult.PASS, output_path)
 
 
-def test_collect_with_exception(spark_session, singleton, output_path):
+def test_collect_with_exception(
+    spark_session: SparkSession, output_path: str, caplog: pytest.LogCaptureFixture
+):
     pyspark_df = spark_session.createDataFrame(
         [(1, 10), (2, 20), (3, 30), (4, 40)], schema="code integer, price integer"
     )
-    with pytest.raises(Exception) as ex_info:
+    checkpoint_name = "df_checkpoint_failed"
+    checkpoint_mode = 3
+    expected_error_msg = f"Invalid mode value: {checkpoint_mode}"
+
+    with (
+        pytest.raises(Exception) as ex_info,
+        caplog.at_level(
+            level=logging.ERROR,
+            logger="snowflake.snowpark_checkpoints_collector.summary_stats_collector",
+        ),
+    ):
         collect_dataframe_checkpoint(
             pyspark_df,
-            checkpoint_name="df_checkpoint_failed",
-            mode=3,
+            checkpoint_name=checkpoint_name,
+            mode=checkpoint_mode,
             output_path=output_path,
         )
-    assert "Invalid mode value." == str(ex_info.value)
 
+    assert expected_error_msg == str(ex_info.value)
+    assert expected_error_msg in caplog.text
     validate_collection_point_result_file(CollectionResult.FAIL, output_path)
 
 

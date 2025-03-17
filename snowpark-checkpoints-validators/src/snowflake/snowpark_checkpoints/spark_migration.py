@@ -12,6 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+import logging
+
 from typing import Callable, Optional, TypeVar
 
 import pandas as pd
@@ -27,6 +30,7 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
     SamplingStrategy,
 )
 from snowflake.snowpark_checkpoints.utils.constants import FAIL_STATUS, PASS_STATUS
+from snowflake.snowpark_checkpoints.utils.logging_utils import log
 from snowflake.snowpark_checkpoints.utils.telemetry import STATUS_KEY, report_telemetry
 from snowflake.snowpark_checkpoints.utils.utils_checks import (
     _replace_special_characters,
@@ -35,8 +39,10 @@ from snowflake.snowpark_checkpoints.utils.utils_checks import (
 
 
 fn = TypeVar("F", bound=Callable)
+LOGGER = logging.getLogger(__name__)
 
 
+@log
 def check_with_spark(
     job_context: Optional[SnowparkJobContext],
     spark_function: fn,
@@ -67,12 +73,22 @@ def check_with_spark(
     """
 
     def check_with_spark_decorator(snowpark_fn):
-        _checkpoint_name = checkpoint_name
-        if checkpoint_name is None:
-            _checkpoint_name = snowpark_fn.__name__
-        _checkpoint_name = _replace_special_characters(_checkpoint_name)
-
+        @log(log_args=False)
         def wrapper(*args, **kwargs):
+            LOGGER.info(
+                "Starting output validation between Snowpark function '%s' and Spark function '%s'",
+                snowpark_fn.__name__,
+                spark_function.__name__,
+            )
+            _checkpoint_name = checkpoint_name
+            if checkpoint_name is None:
+                LOGGER.warning(
+                    "No checkpoint name provided. Using '%s' as the checkpoint name",
+                    snowpark_fn.__name__,
+                )
+                _checkpoint_name = snowpark_fn.__name__
+            _checkpoint_name = _replace_special_characters(_checkpoint_name)
+
             sampler = SamplingAdapter(
                 job_context,
                 sample_number=sample_number,
@@ -81,9 +97,14 @@ def check_with_spark(
             sampler.process_args(args)
             snowpark_sample_args = sampler.get_sampled_snowpark_args()
             pyspark_sample_args = sampler.get_sampled_spark_args()
+
             # Run the sampled data in snowpark
+            LOGGER.info("Running the Snowpark function with sampled args")
             snowpark_test_results = snowpark_fn(*snowpark_sample_args, **kwargs)
+            LOGGER.info("Running the Spark function with sampled args")
             spark_test_results = spark_function(*pyspark_sample_args, **kwargs)
+
+            LOGGER.info("Comparing the results of the Snowpark and Spark functions")
             result, exception = _assert_return(
                 snowpark_test_results,
                 spark_test_results,
@@ -92,7 +113,18 @@ def check_with_spark(
                 output_path,
             )
             if not result:
+                LOGGER.error(
+                    "Validation failed. The results of the Snowpark function '%s' and Spark function '%s' do not match",
+                    snowpark_fn.__name__,
+                    spark_function.__name__,
+                )
                 raise exception from None
+            LOGGER.info(
+                "Validation passed. The results of the Snowpark function '%s' and Spark function '%s' match",
+                snowpark_fn.__name__,
+                spark_function.__name__,
+            )
+
             # Run the original function in snowpark
             return snowpark_fn(*args, **kwargs)
 
@@ -126,6 +158,7 @@ def _assert_return(
     if isinstance(snowpark_results, SnowparkDataFrame) and isinstance(
         spark_results, SparkDataFrame
     ):
+        LOGGER.debug("Comparing two DataFrame results for equality")
         cmp = compare_spark_snowpark_dfs(spark_results, snowpark_results)
 
         if not cmp.empty:
@@ -137,7 +170,7 @@ def _assert_return(
         _update_validation_result(checkpoint_name, PASS_STATUS, output_path)
         return True, None
     else:
-
+        LOGGER.debug("Comparing two scalar results for equality")
         if snowpark_results != spark_results:
             exception_result = SparkMigrationError(
                 "Return value difference:\n",

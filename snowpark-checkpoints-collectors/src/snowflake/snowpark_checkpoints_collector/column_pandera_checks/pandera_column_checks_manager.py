@@ -12,6 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+import logging
+
 import pandas as pd
 
 from pandera import Check, Column
@@ -39,6 +42,9 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
 )
 
 
+LOGGER = logging.getLogger(__name__)
+
+
 def collector_register(cls):
     """Decorate a class with the checks mechanism.
 
@@ -49,6 +55,7 @@ def collector_register(cls):
         The class to decorate.
 
     """
+    LOGGER.debug("Starting to register checks from class %s", cls.__name__)
     cls._collectors = {}
     for method_name in dir(cls):
         method = getattr(cls, method_name)
@@ -56,6 +63,9 @@ def collector_register(cls):
             col_type_collection = method._column_type
             for col_type in col_type_collection:
                 cls._collectors[col_type] = method_name
+                LOGGER.debug(
+                    "Registered check '%s' for column type '%s'", method_name, col_type
+                )
     return cls
 
 
@@ -101,10 +111,18 @@ class PanderaColumnChecksManager:
 
         """
         if clm_type not in self._collectors:
+            LOGGER.debug(
+                "No Pandera checks found for column '%s' of type '%s'. Skipping checks for this column.",
+                clm_name,
+                clm_type,
+            )
             return
 
         func_name = self._collectors[clm_type]
         func = getattr(self, func_name)
+        LOGGER.debug(
+            "Adding Pandera checks to column '%s' of type '%s'", clm_name, clm_type
+        )
         func(clm_name, pyspark_df, pandera_column)
 
     @column_register(BOOLEAN_COLUMN_TYPE)

@@ -14,9 +14,9 @@
 # limitations under the License.
 
 import ast
-import json
 import os
-import shutil
+from pathlib import Path
+import tempfile
 
 from datetime import date, datetime
 from unittest.mock import Mock, patch
@@ -27,7 +27,6 @@ import pandas as pd
 import pandera as pa
 import pytest
 
-from deepdiff import DeepDiff
 from hypothesis import HealthCheck, given, settings
 
 from snowflake.hypothesis_snowpark import dataframe_strategy
@@ -47,16 +46,15 @@ from snowflake.snowpark.types import (
     TimestampTimeZone,
     TimestampType,
 )
+from .test_telemetry_uitls import validate_telemetry_file_output
 
 
 SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME = "snowpark-checkpoints-output"
-TEST_TELEMETRY_DATAFRAME_STRATEGIES_EXPECTED_DIRECTORY_NAME = (
-    "test_telemetry_strategies_expected"
-)
 
 
 NTZ = TimestampTimeZone.NTZ
 TZ = TimestampTimeZone.TZ
+TELEMETRY_FOLDER = "telemetry"
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -66,10 +64,22 @@ def telemetry_testing_mode():
     telemetry_manager.sc_is_enabled = True
 
 
+@pytest.fixture(scope="session")
+def telemetry_output_path():
+    folder = os.urandom(8).hex()
+    directory = Path(tempfile.gettempdir()).resolve() / folder
+    os.makedirs(directory)
+    telemetry_dir = directory / TELEMETRY_FOLDER
+
+    telemetry_manager = get_telemetry_manager()
+    telemetry_manager.set_sc_output_path(telemetry_dir)
+    return str(telemetry_dir)
+
+
 @given(data=st.data())
 @settings(deadline=None)
 def test_dataframe_strategy_non_nullable_columns(
-    data: st.DataObject, local_session: Session
+    data: st.DataObject, local_session: Session, telemetry_output_path: str
 ):
     strategy = dataframe_strategy(
         schema="test/resources/non_nullable_columns.json",
@@ -87,12 +97,16 @@ def test_dataframe_strategy_non_nullable_columns(
     assert (
         actual_null_count == 0
     ), f"Expected 0 null values, but got {actual_null_count}"
+    validate_telemetry_file_output(
+        "test_dataframe_strategy_non_nullable_columns_telemetry.json",
+        telemetry_output_path,
+    )
 
 
 @given(data=st.data())
 @settings(deadline=None)
 def test_dataframe_strategy_nullable_column(
-    data: st.DataObject, local_session: Session
+    data: st.DataObject, local_session: Session, telemetry_output_path: str
 ):
     number_of_rows = 8
 
@@ -116,14 +130,14 @@ def test_dataframe_strategy_nullable_column(
         expected_min_null_count <= actual_null_count <= expected_max_null_count
     ), f"Expected {expected_min_null_count} <= null values <= {expected_max_null_count}, but got {actual_null_count}."
     validate_telemetry_file_output(
-        "test_dataframe_strategy_nullable_column_telemetry.json"
+        "test_dataframe_strategy_nullable_column_telemetry.json", telemetry_output_path
     )
 
 
 @given(data=st.data())
 @settings(deadline=None, max_examples=10, suppress_health_check=list(HealthCheck))
 def test_dataframe_strategy_from_json_schema_generated_schema(
-    data: st.DataObject, session: Session
+    data: st.DataObject, session: Session, telemetry_output_path: str
 ):
     strategy = dataframe_strategy(
         schema="test/resources/supported_columns.json",
@@ -153,14 +167,14 @@ def test_dataframe_strategy_from_json_schema_generated_schema(
 
     assert df.schema == expected_schema
     validate_telemetry_file_output(
-        "test_dataframe_strategy_generated_schema_telemetry.json"
+        "test_dataframe_strategy_generated_schema_telemetry.json", telemetry_output_path
     )
 
 
 @given(data=st.data())
 @settings(deadline=None, max_examples=10, suppress_health_check=list(HealthCheck))
 def test_dataframe_strategy_from_json_schema_generated_values(
-    data: st.DataObject, session: Session
+    data: st.DataObject, session: Session, telemetry_output_path: str
 ):
     strategy = dataframe_strategy(
         schema="test/resources/supported_columns.json",
@@ -262,12 +276,14 @@ def test_dataframe_strategy_from_json_schema_generated_values(
     except pa.errors.SchemaError as e:
         raise AssertionError(f"Schema validation failed: {e.args[0]}.\n") from e
     validate_telemetry_file_output(
-        "test_dataframe_strategy_generated_values_telemetry.json"
+        "test_dataframe_strategy_generated_values_telemetry.json", telemetry_output_path
     )
 
 
 @given(data=st.data())
-def test_dataframe_strategy_from_object_schema_missing_dtype(data: st.DataObject):
+def test_dataframe_strategy_from_object_schema_missing_dtype(
+    data: st.DataObject, telemetry_output_path: str
+):
     schema = pa.DataFrameSchema(
         {
             "integer_column": pa.Column(checks=pa.Check.in_range(0, 10)),
@@ -288,14 +304,15 @@ def test_dataframe_strategy_from_object_schema_missing_dtype(data: st.DataObject
     ):
         data.draw(strategy)
     validate_telemetry_file_output(
-        "test_dataframe_strategy_from_object_schema_missing_dtype_telemetry.json"
+        "test_dataframe_strategy_from_object_schema_missing_dtype_telemetry.json",
+        telemetry_output_path,
     )
 
 
 @given(data=st.data())
 @settings(deadline=None, max_examples=5, suppress_health_check=list(HealthCheck))
 def test_dataframe_strategy_from_object_schema_generated_schema(
-    data: st.DataObject, session: Session
+    data: st.DataObject, session: Session, telemetry_output_path: str
 ):
     schema = pa.DataFrameSchema(
         {
@@ -341,14 +358,15 @@ def test_dataframe_strategy_from_object_schema_generated_schema(
 
     assert df.schema == expected_schema
     validate_telemetry_file_output(
-        "test_dataframe_strategy_from_object_schema_generated_schema_telemetry.json"
+        "test_dataframe_strategy_from_object_schema_generated_schema_telemetry.json",
+        telemetry_output_path,
     )
 
 
 @given(data=st.data())
 @settings(deadline=None, max_examples=5, suppress_health_check=list(HealthCheck))
 def test_dataframe_strategy_from_object_schema_generated_values(
-    data: st.DataObject, session: Session
+    data: st.DataObject, session: Session, telemetry_output_path: str
 ):
     min_timestamp_value = datetime(
         2023, 1, 8, 19, 56, 47, 124971, tzinfo=ZoneInfo("UTC")
@@ -427,7 +445,8 @@ def test_dataframe_strategy_from_object_schema_generated_values(
         out_of_range_timestamps_df.count() == 0
     ), f"TIMESTAMP_COLUMN values are out of range: {out_of_range_timestamps_df.collect()}"
     validate_telemetry_file_output(
-        "test_dataframe_strategy_from_object_schema_generated_values_telemetry.json"
+        "test_dataframe_strategy_from_object_schema_generated_values_telemetry.json",
+        telemetry_output_path,
     )
 
 
@@ -512,69 +531,3 @@ def test_dataframe_strategy_from_json_schema_surrogate_characters(
             Row(STRING_COLUMN="e"),
             Row(STRING_COLUMN=" "),
         ]
-
-
-def get_expected(file_name: str) -> str:
-    current_directory_path = os.path.dirname(__file__)
-    expected_file_path = os.path.join(
-        current_directory_path,
-        TEST_TELEMETRY_DATAFRAME_STRATEGIES_EXPECTED_DIRECTORY_NAME,
-        file_name,
-    )
-
-    with open(expected_file_path) as f:
-        return f.read().strip()
-
-
-def remove_output_directory() -> None:
-    current_directory_path = os.getcwd()
-    output_directory_path = os.path.join(
-        current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME
-    )
-    if os.path.exists(output_directory_path):
-        shutil.rmtree(output_directory_path)
-
-
-def get_output_telemetry() -> str:
-    current_directory_path = os.getcwd()
-    telemetry_directory_path = os.path.join(
-        current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME, "telemetry"
-    )
-    for file in os.listdir(telemetry_directory_path):
-        if file.endswith(".json"):
-            output_file_path = os.path.join(telemetry_directory_path, file)
-            with open(output_file_path) as f:
-                return f.read().strip()
-    return "{}"
-
-
-def validate_telemetry_file_output(telemetry_file_name: str) -> None:
-    telemetry_expected = get_expected(telemetry_file_name)
-    telemetry_output = get_output_telemetry()
-
-    telemetry_expected_obj = json.loads(telemetry_expected)
-    telemetry_output_obj = json.loads(telemetry_output)
-    exclude_telemetry_paths = [
-        "root['timestamp']",
-        "root['message']['metadata']['device_id']",
-        "root['message']['metadata']",
-        "root['message']['data']",
-        "root['message']['driver_version']",
-    ]
-
-    diff_telemetry = DeepDiff(
-        telemetry_expected_obj,
-        telemetry_output_obj,
-        ignore_order=True,
-        exclude_paths=exclude_telemetry_paths,
-    )
-    remove_output_directory()
-    get_telemetry_manager().sc_hypothesis_input_events = []
-
-    assert diff_telemetry == {}
-    assert isinstance(
-        telemetry_output_obj.get("message")
-        .get("metadata")
-        .get("snowpark_checkpoints_version"),
-        str,
-    )

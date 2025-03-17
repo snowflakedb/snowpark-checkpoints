@@ -34,7 +34,7 @@ from snowflake.snowpark_checkpoints.utils.telemetry import (
     get_telemetry_manager,
     TelemetryManager,
 )
-from telemetry_compare_utils import validate_telemetry_file_output
+from telemetry_compare_utils import validate_telemetry_file_output, reset_telemetry_util
 
 TELEMETRY_FOLDER = "telemetry"
 
@@ -359,7 +359,7 @@ def test_df_mode_dataframe_invalid_mode(job_context, snowpark_schema, data):
         )
 
 
-def test_io_strategy(job_context, snowpark_schema, data):
+def test_io_strategy(job_context, snowpark_schema, data, telemetry_output_path: str):
     try:
 
         class TestStrategy(IODefaultStrategy):
@@ -394,6 +394,8 @@ def test_io_strategy(job_context, snowpark_schema, data):
                 return_value=TelemetryManager(),
             ),
         ):
+            telemetry_manager = reset_telemetry_util()
+            telemetry_manager.set_sc_output_path(Path(telemetry_output_path))
             checkpoint_name = "test_io_strategy_validator_mode_dataframe"
             df = job_context.snowpark_session.create_dataframe(data, snowpark_schema)
             df.write.save_as_table(checkpoint_name, mode="overwrite")
@@ -418,10 +420,10 @@ def test_io_strategy(job_context, snowpark_schema, data):
             file_exists_spy.assert_not_called()
             ls_spy.assert_not_called()
             folder_exists_spy.assert_not_called()
-            assert getcwd_spy.call_count == 2
-            assert mkdir_spy.call_count == 2
+            assert getcwd_spy.call_count == 3
+            assert mkdir_spy.call_count == 4
             assert write_spy.call_count == 1
-            assert read_spy.call_count == 1
+            assert read_spy.call_count == 2
             mocked_update.assert_called_once_with(checkpoint_name, PASS_STATUS, None)
             mocked_session.assert_called_once_with(
                 checkpoint_name, DATAFRAME_EXECUTION_MODE

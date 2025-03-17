@@ -57,11 +57,18 @@ TZ = TimestampTimeZone.TZ
 TELEMETRY_FOLDER = "telemetry"
 
 
+@pytest.fixture(scope="function", autouse=True)
+def reset_telemetry_hypothesis_events():
+    telemetry_manager = get_telemetry_manager()
+    telemetry_manager.sc_hypothesis_input_events = []
+
+
 @pytest.fixture(scope="session", autouse=True)
 def telemetry_testing_mode():
     telemetry_manager = get_telemetry_manager()
     telemetry_manager.sc_is_testing = True
     telemetry_manager.sc_is_enabled = True
+    telemetry_manager.sc_hypothesis_input_events = []
 
 
 @pytest.fixture(scope="session")

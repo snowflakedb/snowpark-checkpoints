@@ -38,7 +38,10 @@ from snowflake.hypothesis_snowpark.io_utils.io_file_manager import IODefaultStra
 from snowflake.hypothesis_snowpark.io_utils.io_file_manager import (
     get_io_file_manager,
 )
-from .test_telemetry_uitls import validate_telemetry_file_output, reset_telemetry_util
+from .telemetry_compare_utils import (
+    validate_telemetry_file_output,
+    reset_telemetry_util,
+)
 
 SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME = "snowpark-checkpoints-output"
 

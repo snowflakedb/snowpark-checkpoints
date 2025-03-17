@@ -46,7 +46,7 @@ from snowflake.snowpark.types import (
     TimestampTimeZone,
     TimestampType,
 )
-from .test_telemetry_uitls import validate_telemetry_file_output
+from .telemetry_compare_utils import validate_telemetry_file_output
 
 
 SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME = "snowpark-checkpoints-output"

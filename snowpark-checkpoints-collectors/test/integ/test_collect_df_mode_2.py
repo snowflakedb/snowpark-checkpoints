@@ -64,7 +64,7 @@ from snowflake.snowpark_checkpoints_collector.io_utils.io_file_manager import (
 from unittest.mock import patch
 
 import inspect
-from telemetry_compare_utils import validate_telemetry_file_output
+from telemetry_compare_utils import validate_telemetry_file_output, reset_telemetry_util
 
 
 TEST_COLLECT_DF_MODE_2_EXPECTED_DIRECTORY_NAME = "test_collect_df_mode_2_expected"
@@ -473,7 +473,8 @@ def test_io_strategy(
         ) as file_exists_spy, patch.object(
             strategy, "folder_exists", wraps=strategy.folder_exists
         ) as folder_exists_spy:
-
+            telemetry_manager = reset_telemetry_util()
+            telemetry_manager.set_sc_output_path(Path(telemetry_output))
             pyspark_df = spark_session.createDataFrame(
                 data, schema=spark_schema
             ).orderBy("INTEGER")
@@ -493,14 +494,15 @@ def test_io_strategy(
             getcwd_spy.assert_called()
             mkdir_spy.assert_called()
             write_spy.assert_called()
+            read_spy.assert_called()
             read_bytes_spy.assert_called()
             file_exists_spy.assert_called()
             ls_spy.assert_called()
             folder_exists_spy.assert_not_called()
-            read_spy.assert_not_called()
-            assert getcwd_spy.call_count == 3
-            assert mkdir_spy.call_count == 3
+            assert getcwd_spy.call_count == 4
+            assert mkdir_spy.call_count == 5
             assert write_spy.call_count == 2
+            assert read_spy.call_count == 1
             assert read_bytes_spy.call_count == 1
             assert file_exists_spy.call_count == 2
             assert ls_spy.call_count == 2

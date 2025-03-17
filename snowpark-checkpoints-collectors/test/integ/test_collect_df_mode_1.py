@@ -82,7 +82,7 @@ import tempfile
 from snowflake.snowpark_checkpoints_collector.utils.telemetry import (
     get_telemetry_manager,
 )
-from telemetry_compare_utils import validate_telemetry_file_output
+from telemetry_compare_utils import validate_telemetry_file_output, reset_telemetry_util
 
 TEST_COLLECT_DF_MODE_1_EXPECTED_DIRECTORY_NAME = "test_collect_df_mode_1_expected"
 TELEMETRY_FOLDER = "telemetry"
@@ -636,7 +636,8 @@ def test_io_strategy(spark_session, singleton, output_path):
         ) as file_exists_spy, patch.object(
             strategy, "folder_exists", wraps=strategy.folder_exists
         ) as folder_exists_spy:
-
+            telemetry_manager = reset_telemetry_util()
+            telemetry_manager.set_sc_output_path(Path(output_path))
             pyspark_df = spark_session.createDataFrame(
                 [("Roberto", 21)], schema="name string, age integer"
             )
@@ -654,13 +655,14 @@ def test_io_strategy(spark_session, singleton, output_path):
             getcwd_spy.assert_called()
             mkdir_spy.assert_called()
             write_spy.assert_called()
-            read_spy.assert_not_called()
+            read_spy.assert_called()
             read_bytes_spy.assert_not_called()
             file_exists_spy.assert_not_called()
             folder_exists_spy.assert_not_called()
             ls_spy.assert_not_called()
-            assert getcwd_spy.call_count == 3
-            assert mkdir_spy.call_count == 3
+            assert read_spy.call_count == 1
+            assert getcwd_spy.call_count == 4
+            assert mkdir_spy.call_count == 5
             assert write_spy.call_count == 3
             validate_checkpoint_file_output(
                 output_path, checkpoint_name, test_telemetry=False

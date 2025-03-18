@@ -12,7 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import json
+import logging
 
 from typing import Optional
 
@@ -27,6 +29,7 @@ from snowflake.snowpark_checkpoints_collector.utils import file_utils
 
 
 RESULTS_KEY = "results"
+LOGGER = logging.getLogger(__name__)
 
 
 class CollectionPointResultManager(metaclass=Singleton):
@@ -52,6 +55,7 @@ class CollectionPointResultManager(metaclass=Singleton):
 
         """
         result_json = result.get_collection_result_data()
+        LOGGER.debug("Adding a new collection result: %s", result_json)
         self.result_collection.append(result_json)
         self._save_result()
 
@@ -68,4 +72,5 @@ class CollectionPointResultManager(metaclass=Singleton):
 
     def _save_result(self) -> None:
         result_collection_json = self.to_json()
+        LOGGER.info("Saving collection results to '%s'", self.output_file_path)
         get_io_file_manager().write(self.output_file_path, result_collection_json)

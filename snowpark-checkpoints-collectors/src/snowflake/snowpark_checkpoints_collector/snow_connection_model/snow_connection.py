@@ -12,7 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import io
+import logging
 import os.path
 import time
 
@@ -33,6 +35,7 @@ CREATE_STAGE_STATEMENT_FORMAT = "CREATE TEMP STAGE IF NOT EXISTS {}"
 REMOVE_STAGE_FOLDER_STATEMENT_FORMAT = "REMOVE {}"
 STAGE_PATH_FORMAT = "'@{}/{}'"
 PUT_FILE_IN_STAGE_STATEMENT_FORMAT = "PUT '{}' {} AUTO_COMPRESS=FALSE"
+LOGGER = logging.getLogger(__name__)
 
 
 class SnowConnection:
@@ -44,14 +47,16 @@ class SnowConnection:
 
     """
 
-    def __init__(self, session: Session = None) -> None:
+    def __init__(self, session: Optional[Session] = None) -> None:
         """Init SnowConnection.
 
         Args:
             session (Snowpark.Session): the Snowpark session.
 
         """
-        self.session = session if session is not None else Session.builder.getOrCreate()
+        self.session = (
+            session if session is not None else self._create_snowpark_session()
+        )
         self.stage_id = int(time.time())
 
     def create_snowflake_table_from_local_parquet(
@@ -87,8 +92,8 @@ class SnowConnection:
                 stage_name, stage_path, input_path, is_parquet_file
             )
             self.create_table_from_parquet(table_name, stage_directory_path)
-
         finally:
+            LOGGER.info("Removing stage folder %s", stage_directory_path)
             self.session.sql(
                 REMOVE_STAGE_FOLDER_STATEMENT_FORMAT.format(stage_directory_path)
             ).collect()
@@ -101,6 +106,7 @@ class SnowConnection:
 
         """
         create_stage_statement = CREATE_STAGE_STATEMENT_FORMAT.format(stage_name)
+        LOGGER.info("Creating temporal stage '%s'", stage_name)
         self.session.sql(create_stage_statement).collect()
 
     def load_files_to_stage(
@@ -108,7 +114,7 @@ class SnowConnection:
         stage_name: str,
         folder_name: str,
         input_path: str,
-        filter_func: Callable = None,
+        filter_func: Optional[Callable] = None,
     ) -> None:
         """Load files to a stage in Snowflake.
 
@@ -119,6 +125,7 @@ class SnowConnection:
             filter_func (Callable): the filter function to apply to the files.
 
         """
+        LOGGER.info("Starting to load files to '%s'", stage_name)
         input_path = (
             os.path.abspath(input_path)
             if not os.path.isabs(input_path)
@@ -131,16 +138,20 @@ class SnowConnection:
             )
 
         target_dir = os.path.join(input_path, "**", "*")
+        LOGGER.debug("Searching for files in '%s'", input_path)
         files_collection = get_io_file_manager().ls(target_dir, recursive=True)
 
         files = [file for file in files_collection if filter_files(file)]
+        files_count = len(files)
 
-        if len(files) == 0:
+        if files_count == 0:
             raise Exception(f"No files were found in the input directory: {input_path}")
+
+        LOGGER.debug("Found %s files in '%s'", files_count, input_path)
 
         for file in files:
             # if file is relative path, convert to absolute path
-            # if absolute path, then try to resolve as some Win32 paths are  not in LPN.
+            # if absolute path, then try to resolve as some Win32 paths are not in LPN.
             file_full_path = (
                 str(os.path.abspath(file))
                 if not os.path.isabs(file)
@@ -150,9 +161,9 @@ class SnowConnection:
             # as Posix to convert Windows dir to posix
             new_file_path = Path(new_file_path).as_posix()
             stage_file_path = STAGE_PATH_FORMAT.format(stage_name, new_file_path)
-
             parquet_file = get_io_file_manager().read_bytes(file_full_path)
             binary_parquet = io.BytesIO(parquet_file)
+            LOGGER.info("Loading file '%s' to %s", file_full_path, stage_file_path)
             self.session.file.put_stream(binary_parquet, stage_file_path)
 
     def create_table_from_parquet(
@@ -168,8 +179,25 @@ class SnowConnection:
             Exception: No parquet files were found in the stage
 
         """
-        files = self.session.sql(f"LIST {stage_directory_path}").collect()
-        if len(files) == 0:
-            raise Exception("No parquet files were found in the stage.")
+        LOGGER.info("Starting to create table '%s' from parquet files", table_name)
+        parquet_files = self.session.sql(
+            f"LIST {stage_directory_path} PATTERN='.*{DOT_PARQUET_EXTENSION}'"
+        ).collect()
+        parquet_files_count = len(parquet_files)
+        if parquet_files_count == 0:
+            raise Exception(
+                f"No parquet files were found in the stage: {stage_directory_path}"
+            )
+
+        LOGGER.info(
+            "Reading %s parquet files from %s",
+            parquet_files_count,
+            stage_directory_path,
+        )
         dataframe = self.session.read.parquet(path=stage_directory_path)
+        LOGGER.info("Creating table '%s' from parquet files", table_name)
         dataframe.write.save_as_table(table_name=table_name, mode="overwrite")
+
+    def _create_snowpark_session(self) -> Session:
+        LOGGER.info("Creating a Snowpark session using the default connection")
+        return Session.builder.getOrCreate()

@@ -13,9 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+
+
+# Add a NullHandler to prevent logging messages from being output to
+# sys.stderr if no logging configuration is provided.
+logging.getLogger(__name__).addHandler(logging.NullHandler())
+
+# ruff: noqa: E402
+
 from snowflake.snowpark_checkpoints_configuration.checkpoint_metadata import (
     CheckpointMetadata,
 )
+
 
 __all__ = [
     "CheckpointMetadata",

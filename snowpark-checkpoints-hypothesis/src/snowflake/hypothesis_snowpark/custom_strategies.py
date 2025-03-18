@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import datetime as dt
+import logging
 
 from decimal import Decimal
 from fractions import Fraction
@@ -48,6 +49,9 @@ from snowflake.hypothesis_snowpark.strategy_register import (
     register_strategy,
     snowpark_strategies,
 )
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 @register_strategy(PYSPARK_ARRAY_TYPE)
@@ -317,6 +321,12 @@ def update_pandas_df_strategy(
                 min_size=number_of_rows,
                 max_size=number_of_rows,
             )
+        )
+        LOGGER.debug(
+            "Applied custom strategy '%s' with kwargs %s to column '%s'",
+            strategy.__name__,
+            strategy_kwargs,
+            column_name,
         )
 
     return pandas_df_copy

@@ -68,7 +68,7 @@ def test_create_snowflake_table_from_parquet(input_path):
     )
 
     assert mocked_session.method_calls[2] == call.sql(
-        f"LIST '@{stage_name}/{checkpoint_name}'"
+        f"LIST '@{stage_name}/{checkpoint_name}' PATTERN='.*.parquet'"
     )
 
     assert mocked_session.method_calls[3] == call.read.parquet(

@@ -12,6 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+import logging
+
 from pyspark.sql import DataFrame as SparkDataFrame
 from pyspark.sql.types import StructField
 
@@ -53,6 +56,9 @@ from snowflake.snowpark_checkpoints_collector.column_collection.model import (
 )
 
 
+LOGGER = logging.getLogger(__name__)
+
+
 def collector_register(cls):
     """Decorate a class with the collection type mechanism.
 
@@ -63,6 +69,7 @@ def collector_register(cls):
         The class to decorate.
 
     """
+    LOGGER.debug("Starting to register collectors from class %s", cls.__name__)
     cls._collectors = {}
     for method_name in dir(cls):
         method = getattr(cls, method_name)
@@ -70,6 +77,11 @@ def collector_register(cls):
             col_type_collection = method._column_type
             for col_type in col_type_collection:
                 cls._collectors[col_type] = method_name
+                LOGGER.debug(
+                    "Registered collector '%s' for column type '%s'",
+                    method_name,
+                    col_type,
+                )
     return cls
 
 
@@ -114,10 +126,21 @@ class ColumnCollectorManager:
         """
         clm_type = struct_field.dataType.typeName()
         if clm_type not in self._collectors:
+            LOGGER.debug(
+                "No collectors found for column '%s' of type '%s'. Skipping collection for this column.",
+                clm_name,
+                clm_type,
+            )
             return {}
 
         func_name = self._collectors[clm_type]
         func = getattr(self, func_name)
+        LOGGER.debug(
+            "Collecting custom data for column '%s' of type '%s' using collector method '%s'",
+            clm_name,
+            clm_type,
+            func_name,
+        )
         data = func(clm_name, struct_field, values)
         return data
 

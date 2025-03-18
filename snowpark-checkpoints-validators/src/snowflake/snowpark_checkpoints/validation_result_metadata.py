@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import os
 
 from typing import Optional
@@ -27,6 +28,9 @@ from snowflake.snowpark_checkpoints.validation_results import (
     ValidationResult,
     ValidationResults,
 )
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class ValidationResultsMetadata(metaclass=Singleton):
@@ -72,14 +76,26 @@ class ValidationResultsMetadata(metaclass=Singleton):
             SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
         )
 
+        LOGGER.debug(
+            "Setting validation results directory to: '%s'",
+            self.validation_results_directory,
+        )
+
         self.validation_results_file = os.path.join(
             self.validation_results_directory,
             VALIDATION_RESULTS_JSON_FILE_NAME,
         )
 
+        LOGGER.debug(
+            "Setting validation results file to: '%s'", self.validation_results_file
+        )
+
         self.validation_results = ValidationResults(results=[])
 
         if get_io_file_manager().file_exists(self.validation_results_file):
+            LOGGER.info(
+                "Loading validation results from: '%s'", self.validation_results_file
+            )
             try:
                 validation_result_json = get_io_file_manager().read(
                     self.validation_results_file
@@ -91,6 +107,11 @@ class ValidationResultsMetadata(metaclass=Singleton):
                 raise Exception(
                     f"Error reading validation results file: {self.validation_results_file} \n {e}"
                 ) from None
+        else:
+            LOGGER.info(
+                "Validation results file not found: '%s'",
+                self.validation_results_file,
+            )
 
     def clean(self):
         """Clean the validation results list.
@@ -99,6 +120,7 @@ class ValidationResultsMetadata(metaclass=Singleton):
 
         """
         if not get_io_file_manager().file_exists(self.validation_results_file):
+            LOGGER.info("Cleaning validation results...")
             self.validation_results.results = []
 
     def add_validation_result(self, validation_result: ValidationResult):
@@ -122,8 +144,16 @@ class ValidationResultsMetadata(metaclass=Singleton):
 
         """
         if not get_io_file_manager().folder_exists(self.validation_results_directory):
+            LOGGER.debug(
+                "Validation results directory '%s' does not exist. Creating it...",
+                self.validation_results_directory,
+            )
             get_io_file_manager().mkdir(self.validation_results_directory)
 
         get_io_file_manager().write(
             self.validation_results_file, self.validation_results.model_dump_json()
+        )
+        LOGGER.info(
+            "Validation results successfully saved to: '%s'",
+            self.validation_results_file,
         )

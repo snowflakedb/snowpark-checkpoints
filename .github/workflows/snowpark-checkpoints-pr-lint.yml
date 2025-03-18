@@ -14,6 +14,10 @@ permissions:
 jobs:
   pr-lint:
     runs-on: ubuntu-latest
+
+    env:
+      PR_FILES_THRESHOLD: ${{ secrets.PR_FILES_THRESHOLD}}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -56,6 +60,18 @@ jobs:
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
 
+      - name: Validate JIRA URL ticket in PR Description
+        run: |
+          MOTIVATION_SECTION=$(echo "$PR_BODY" | sed -n '/### Motivation & Context/,/### Description/p')
+          if echo "$MOTIVATION_SECTION" | grep -Eq 'https?://[a-zA-Z0-9./?=_%:-]+'; then
+            echo "URL found in the Motivation & Context section. Validation passed."
+          else
+            echo "JIRA link not found. Please add the ticket link to proceed. e.g [SNOW-01110011](https://snowflakecomputing.atlassian.net/browse/SNOW-01110011)"
+            exit 1
+          fi
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+
       - name: Check PR Size
         run: |
           echo "Base SHA: ${{ github.event.pull_request.base.sha }}"
@@ -77,8 +93,8 @@ jobs:
 
           echo "Total Python files changed: $FILE_COUNT"
 
-          if [ "$FILE_COUNT" -gt 20 ]; then
-              echo "PR includes too many Python files ($FILE_COUNT > 20). Please split it into smaller PRs."
+          if [ "$FILE_COUNT" -gt $PR_FILES_THRESHOLD ]; then
+              echo "PR includes too many Python files ($FILE_COUNT > $PR_FILES_THRESHOLD). Please split it into smaller PRs."
               exit 1
           fi
 

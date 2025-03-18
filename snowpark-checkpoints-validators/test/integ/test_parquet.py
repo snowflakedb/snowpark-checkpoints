@@ -1,9 +1,33 @@
+# Copyright 2025 Snowflake Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+# http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import logging
+import os
+import tempfile
+
 import inspect
 from datetime import datetime
+from pathlib import Path
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from pyspark.sql import SparkSession
 from pytest import fixture, raises
+from telemetry_compare_utils import validate_telemetry_file_output
+
 from snowflake.snowpark import Session
 from snowflake.snowpark.types import (
     BooleanType,
@@ -14,7 +38,6 @@ from snowflake.snowpark.types import (
     StructField,
     StructType,
 )
-
 from snowflake.snowpark_checkpoints.checkpoint import validate_dataframe_checkpoint
 from snowflake.snowpark_checkpoints.errors import SchemaValidationError
 from snowflake.snowpark_checkpoints.io_utils import IODefaultStrategy
@@ -23,20 +46,19 @@ from snowflake.snowpark_checkpoints.io_utils.io_file_manager import get_io_file_
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from snowflake.snowpark_checkpoints.utils.constants import (
     DATAFRAME_EXECUTION_MODE,
-    CheckpointMode,
     FAIL_STATUS,
     PASS_STATUS,
+    CheckpointMode,
 )
-import os
-from pathlib import Path
-import tempfile
 from snowflake.snowpark_checkpoints.utils.telemetry import (
     get_telemetry_manager,
     TelemetryManager,
 )
 from telemetry_compare_utils import validate_telemetry_file_output, reset_telemetry_util
 
+
 TELEMETRY_FOLDER = "telemetry"
+LOGGER_NAME = "snowflake.snowpark_checkpoints.checkpoint"
 
 
 @fixture(autouse=True)
@@ -296,7 +318,11 @@ def test_df_mode_dataframe(job_context, snowpark_schema, data, telemetry_output_
 
 
 def test_df_mode_dataframe_mismatch(
-    job_context, snowpark_schema, data, telemetry_output_path
+    job_context: SnowparkJobContext,
+    snowpark_schema: StructType,
+    data: list[list],
+    telemetry_output_path: str,
+    caplog: pytest.LogCaptureFixture,
 ):
     checkpoint_name = "test_mode_dataframe_checkpoint_fail"
 
@@ -309,54 +335,88 @@ def test_df_mode_dataframe_mismatch(
 
     with patch(
         "snowflake.snowpark_checkpoints.utils.utils_checks._update_validation_result"
-    ) as mocked_update:
-        with raises(
-            SchemaValidationError,
-            match=f"Data mismatch for checkpoint {checkpoint_name}",
-        ):
-            validate_dataframe_checkpoint(
-                df_spark,
-                checkpoint_name,
-                job_context=job_context,
-                mode=CheckpointMode.DATAFRAME,
-            )
+    ) as mocked_update, raises(
+        SchemaValidationError,
+        match=f"Data mismatch for checkpoint {checkpoint_name}",
+    ) as ex, caplog.at_level(
+        level=logging.ERROR, logger=LOGGER_NAME
+    ):
+        validate_dataframe_checkpoint(
+            df_spark,
+            checkpoint_name,
+            job_context=job_context,
+            mode=CheckpointMode.DATAFRAME,
+        )
 
     mocked_update.assert_called_once_with(checkpoint_name, FAIL_STATUS, None)
     validate_telemetry_file_output(
         "df_mode_dataframe_mismatch_telemetry.json", telemetry_output_path
     )
+    assert str(ex.value) in caplog.text
 
 
-def test_df_mode_dataframe_job_none(job_context, snowpark_schema, data):
+def test_df_mode_dataframe_job_none(
+    job_context: SnowparkJobContext,
+    snowpark_schema: StructType,
+    data: list[list],
+    caplog: pytest.LogCaptureFixture,
+):
     checkpoint_name = "test_mode_dataframe_checkpoint_fail"
     df_spark = job_context.snowpark_session.create_dataframe(data, snowpark_schema)
 
     with raises(
-        ValueError, match="Connectionless mode is not supported for Parquet validation"
-    ):
+        ValueError,
+        match="No job context provided. Please provide one when using DataFrame mode validation.",
+    ) as ex, caplog.at_level(level=logging.ERROR, logger=LOGGER_NAME):
         validate_dataframe_checkpoint(
             df_spark,
             checkpoint_name,
             job_context=None,
             mode=CheckpointMode.DATAFRAME,
         )
+    assert str(ex.value) in caplog.text
 
 
-def test_df_mode_dataframe_invalid_mode(job_context, snowpark_schema, data):
+def test_df_mode_dataframe_invalid_mode(
+    job_context: SnowparkJobContext,
+    snowpark_schema: StructType,
+    data: list[list],
+    caplog: pytest.LogCaptureFixture,
+):
     checkpoint_name = "test_mode_dataframe_checkpoint_fail"
     df_spark = job_context.snowpark_session.create_dataframe(data, snowpark_schema)
 
     with raises(
         ValueError,
-        match="""Invalid validation mode.
-                Please use for schema validation use a 1 or for a full data validation use a 2 for schema validation.""",
-    ):
+        match=(
+            "Invalid validation mode. "
+            "Please use 1 for schema validation or 2 for full data validation."
+        ),
+    ) as ex, caplog.at_level(level=logging.ERROR, logger=LOGGER_NAME):
         validate_dataframe_checkpoint(
             df_spark,
             checkpoint_name,
             job_context=job_context,
             mode="invalid",
         )
+    assert str(ex.value) in caplog.text
+
+
+@patch("snowflake.snowpark_checkpoints.checkpoint.is_checkpoint_enabled")
+def test_validate_dataframe_checkpoint_disabled_checkpoint(
+    mock_is_checkpoint_enabled: MagicMock, caplog: pytest.LogCaptureFixture
+):
+    mock_is_checkpoint_enabled.return_value = False
+    caplog.set_level(level=logging.WARNING, logger=LOGGER_NAME)
+
+    df = MagicMock()
+    checkpoint_name = "test_checkpoint"
+    result = validate_dataframe_checkpoint(df=df, checkpoint_name=checkpoint_name)
+
+    mock_is_checkpoint_enabled.assert_called_once_with(checkpoint_name)
+    assert result is None
+    assert "disabled" in caplog.text
+    assert checkpoint_name in caplog.text
 
 
 def test_io_strategy(job_context, snowpark_schema, data, telemetry_output_path: str):

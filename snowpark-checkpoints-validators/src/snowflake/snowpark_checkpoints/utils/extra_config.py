@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import os
 
 from typing import Optional
@@ -21,6 +22,9 @@ from snowflake.snowpark_checkpoints.io_utils.io_file_manager import get_io_file_
 from snowflake.snowpark_checkpoints.utils.constants import (
     SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH_ENV_VAR,
 )
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 # noinspection DuplicatedCode
@@ -38,10 +42,14 @@ def _get_metadata():
         )
 
         path = _get_checkpoint_contract_file_path()
+        LOGGER.debug("Loading checkpoint metadata from '%s'", path)
         metadata = CheckpointMetadata(path)
         return True, metadata
 
     except ImportError:
+        LOGGER.debug(
+            "snowpark-checkpoints-configuration is not installed. Cannot get a checkpoint metadata instance."
+        )
         return False, None
 
 
@@ -59,8 +67,7 @@ def is_checkpoint_enabled(checkpoint_name: Optional[str] = None) -> bool:
     if enabled and checkpoint_name is not None:
         config = metadata.get_checkpoint(checkpoint_name)
         return config.enabled
-    else:
-        return True
+    return True
 
 
 def get_checkpoint_file(checkpoint_name: str) -> Optional[str]:
@@ -81,7 +88,5 @@ def get_checkpoint_file(checkpoint_name: str) -> Optional[str]:
     enabled, metadata = _get_metadata()
     if enabled:
         config = metadata.get_checkpoint(checkpoint_name)
-
         return config.file
-    else:
-        return None
+    return None

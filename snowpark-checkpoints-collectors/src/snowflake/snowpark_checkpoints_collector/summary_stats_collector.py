@@ -365,7 +365,7 @@ def generate_parquet_for_spark_df(spark_df: SparkDataFrame, output_path: str) ->
     ]
     converted_df = spark_df.select(new_cols)
 
-    if os.path.exists(output_path):
+    if get_io_file_manager().folder_exists(output_path):
         LOGGER.warning(
             "Output directory '%s' already exists. Deleting it...", output_path
         )

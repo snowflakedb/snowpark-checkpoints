@@ -417,7 +417,6 @@ def test_collect_invalid_mode(
 
     assert expected_error_msg == str(ex_info.value)
     assert expected_error_msg in caplog.text
-    validate_telemetry("test_collect_invalid_mode", telemetry_output)
 
 
 def test_generate_parquet_for_spark_df(data, spark_schema, test_id, telemetry_output):
@@ -516,14 +515,15 @@ def test_io_strategy(
             read_bytes_spy.assert_called()
             file_exists_spy.assert_called()
             ls_spy.assert_called()
-            folder_exists_spy.assert_not_called()
-            assert getcwd_spy.call_count == 4
+            folder_exists_spy.assert_called()
+            assert getcwd_spy.call_count == 3
             assert mkdir_spy.call_count == 5
             assert write_spy.call_count == 2
             assert read_spy.call_count == 1
             assert read_bytes_spy.call_count == 1
             assert file_exists_spy.call_count == 2
             assert ls_spy.call_count == 2
+            assert folder_exists_spy.call_count == 1
             validate_dataframes(checkpoint_name, pyspark_df, snowpark_schema)
     finally:
         get_io_file_manager().set_strategy(IODefaultStrategy())

@@ -500,6 +500,11 @@ def test_io_strategy(
 
             temp_dir = tempfile.gettempdir()
             output_path = os.path.join(temp_dir, checkpoint_name)
+            output_parquet_path = os.path.join(
+                output_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME, checkpoint_name
+            )
+            if not os.path.exists(output_parquet_path):
+                os.makedirs(output_parquet_path)
 
             collect_dataframe_checkpoint(
                 pyspark_df,
@@ -527,6 +532,7 @@ def test_io_strategy(
             assert file_exists_spy.call_count == 2
             assert ls_spy.call_count == 2
             assert folder_exists_spy.call_count == 1
+            assert remove_dir_spy.call_count == 1
             validate_dataframes(checkpoint_name, pyspark_df, snowpark_schema)
     finally:
         get_io_file_manager().set_strategy(IODefaultStrategy())

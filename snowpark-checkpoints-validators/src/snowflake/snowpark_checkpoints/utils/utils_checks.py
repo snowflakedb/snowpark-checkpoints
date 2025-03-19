@@ -28,6 +28,7 @@ from pandera import DataFrameSchema
 
 from snowflake.snowpark import DataFrame as SnowparkDataFrame
 from snowflake.snowpark_checkpoints.errors import SchemaValidationError
+from snowflake.snowpark_checkpoints.io_utils.io_file_manager import get_io_file_manager
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from snowflake.snowpark_checkpoints.snowpark_sampler import (
     SamplingAdapter,
@@ -154,13 +155,15 @@ def _generate_schema(
     LOGGER.info(
         "Generating Pandera DataFrameSchema for checkpoint: '%s'", checkpoint_name
     )
-    current_directory_path = output_path if output_path else os.getcwd()
+    current_directory_path = (
+        output_path if output_path else get_io_file_manager().getcwd()
+    )
 
     output_directory_path = os.path.join(
         current_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME
     )
 
-    if not os.path.exists(output_directory_path):
+    if not get_io_file_manager().folder_exists(output_directory_path):
         raise ValueError(
             """Output directory snowpark-checkpoints-output does not exist.
 Please run the Snowpark checkpoint collector first."""
@@ -171,14 +174,14 @@ Please run the Snowpark checkpoint collector first."""
         CHECKPOINT_JSON_OUTPUT_FILE_FORMAT_NAME.format(checkpoint_name),
     )
 
-    if not os.path.exists(checkpoint_schema_file_path):
+    if not get_io_file_manager().file_exists(checkpoint_schema_file_path):
         raise ValueError(
             f"Checkpoint {checkpoint_name} JSON file not found. Please run the Snowpark checkpoint collector first."
         )
 
     LOGGER.info("Reading schema from file: '%s'", checkpoint_schema_file_path)
-    with open(checkpoint_schema_file_path) as schema_file:
-        checkpoint_schema_config = json.load(schema_file)
+    schema_file = get_io_file_manager().read(checkpoint_schema_file_path)
+    checkpoint_schema_config = json.loads(schema_file)
 
     if DATAFRAME_PANDERA_SCHEMA_KEY not in checkpoint_schema_config:
         raise ValueError(
@@ -354,7 +357,7 @@ def _get_relative_path(file_path: str) -> str:
         str: The relative path of the file.
 
     """
-    current_directory = os.getcwd()
+    current_directory = get_io_file_manager().getcwd()
     return os.path.relpath(file_path, current_directory)
 
 

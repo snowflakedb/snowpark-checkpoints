@@ -15,6 +15,7 @@
 
 import glob
 import os
+import shutil
 
 from typing import Optional
 
@@ -77,3 +78,10 @@ class IODefaultStrategy(EnvStrategy):
             return os.getcwd()
         except Exception:
             return ""
+
+    def remove_dir(self, path: str) -> bool:
+        try:
+            shutil.rmtree(path)
+            return True
+        except Exception:
+            return False

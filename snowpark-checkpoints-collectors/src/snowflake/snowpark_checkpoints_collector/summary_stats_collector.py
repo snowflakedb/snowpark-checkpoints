@@ -15,7 +15,6 @@
 import json
 import logging
 import os
-import shutil
 
 from typing import Optional
 
@@ -369,7 +368,7 @@ def generate_parquet_for_spark_df(spark_df: SparkDataFrame, output_path: str) ->
         LOGGER.warning(
             "Output directory '%s' already exists. Deleting it...", output_path
         )
-        shutil.rmtree(output_path)
+        get_io_file_manager().remove_dir(output_path)
 
     LOGGER.info("Writing DataFrame to parquet files at '%s'", output_path)
     converted_df.write.parquet(output_path, mode="overwrite")

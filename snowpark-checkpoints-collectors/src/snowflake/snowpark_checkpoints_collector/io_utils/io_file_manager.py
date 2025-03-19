@@ -52,6 +52,9 @@ class IOFileManager(metaclass=Singleton):
     def getcwd(self) -> str:
         return self.strategy.getcwd()
 
+    def remove_dir(self, path: str) -> bool:
+        return self.strategy.remove_dir(path)
+
     def set_strategy(self, strategy: EnvStrategy):
         """Set the strategy for file and directory operations.
 

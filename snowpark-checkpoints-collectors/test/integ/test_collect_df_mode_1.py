@@ -663,7 +663,9 @@ def test_io_strategy(spark_session, singleton, output_path):
             strategy, "file_exists", wraps=strategy.file_exists
         ) as file_exists_spy, patch.object(
             strategy, "folder_exists", wraps=strategy.folder_exists
-        ) as folder_exists_spy:
+        ) as folder_exists_spy, patch.object(
+            strategy, "remove_dir", wraps=strategy.remove_dir
+        ) as remove_dir_spy:
             telemetry_manager = reset_telemetry_util()
             telemetry_manager.set_sc_output_path(Path(output_path))
             pyspark_df = spark_session.createDataFrame(
@@ -679,7 +681,7 @@ def test_io_strategy(spark_session, singleton, output_path):
             )
 
             # Assert
-            assert len(number_of_methods) == 8
+            assert len(number_of_methods) == 9
             getcwd_spy.assert_called()
             mkdir_spy.assert_called()
             write_spy.assert_called()
@@ -688,6 +690,7 @@ def test_io_strategy(spark_session, singleton, output_path):
             file_exists_spy.assert_not_called()
             folder_exists_spy.assert_not_called()
             ls_spy.assert_not_called()
+            remove_dir_spy.assert_not_called()
             assert read_spy.call_count == 1
             assert getcwd_spy.call_count == 4
             assert mkdir_spy.call_count == 5

@@ -74,7 +74,7 @@ def test_default_folder_exists(io_file_manager):
 
 
 def test_default_folder_exists_fail(io_file_manager):
-    with tempfile.TemporaryDirectory(dir=os.getcwd()) as temp_dir:
+    with tempfile.TemporaryDirectory(dir=os.getcwd()):
         # Act
         result_not_exist = io_file_manager.folder_exists(None)
 
@@ -111,7 +111,7 @@ def test_default_file_exists(io_file_manager):
 
 
 def test_default_file_exists_fail(io_file_manager):
-    with tempfile.TemporaryDirectory(dir=os.getcwd()) as temp_dir:
+    with tempfile.TemporaryDirectory(dir=os.getcwd()):
         # Act
         result_not_exists = io_file_manager.file_exists(None)
 
@@ -249,7 +249,7 @@ def test_default_ls_case_2(io_file_manager):
 
 
 def test_default_ls_fail(io_file_manager):
-    with tempfile.TemporaryDirectory(dir=os.getcwd()) as temp_dir:
+    with tempfile.TemporaryDirectory(dir=os.getcwd()):
         # Arrange
         path = None
 
@@ -261,12 +261,27 @@ def test_default_ls_fail(io_file_manager):
 
 
 def test_default_getcwd(io_file_manager):
-    with tempfile.TemporaryDirectory(dir=os.getcwd()) as temp_dir:
+    with tempfile.TemporaryDirectory(dir=os.getcwd()):
         # Act
         result = io_file_manager.getcwd()
 
         # Assert
         assert isinstance(result, str)
+
+
+def test_default_remove_dir(io_file_manager):
+    with tempfile.TemporaryDirectory(dir=os.getcwd()) as temp_dir:
+        # Arrange
+        path = os.path.join(temp_dir, "test_dir")
+        os.makedirs(path)
+
+        # Act
+        result = io_file_manager.remove_dir(path)
+        folder_exist = os.path.exists(path)
+
+        # Assert
+        assert result is True
+        assert not folder_exist
 
 
 def test_default_set_strategy(io_file_manager):

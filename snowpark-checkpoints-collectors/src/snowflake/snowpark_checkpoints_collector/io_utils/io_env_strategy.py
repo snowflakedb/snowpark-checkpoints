@@ -124,3 +124,15 @@ class EnvStrategy(ABC):
             str: The current working directory.
 
         """
+
+    @abstractmethod
+    def remove_dir(self, path: str) -> bool:
+        """Remove a directory and all its contents.
+
+        Args:
+            path: The path to the directory to remove.
+
+        Returns:
+            bool: True if the directory and its contents were removed successfully, False otherwise.
+
+        """

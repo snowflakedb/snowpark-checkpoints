@@ -120,13 +120,10 @@ class EnvStrategy(ABC):
         """
 
     @abstractmethod
-    def remove_dir(self, path: str) -> bool:
+    def remove_dir(self, path: str) -> None:
         """Remove a directory and all its contents.
 
         Args:
             path: The path to the directory to remove.
-
-        Returns:
-            bool: True if the directory and its contents were removed successfully, False otherwise.
 
         """

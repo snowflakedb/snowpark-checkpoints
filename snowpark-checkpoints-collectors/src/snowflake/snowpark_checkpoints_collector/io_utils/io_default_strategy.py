@@ -25,7 +25,6 @@ from snowflake.snowpark_checkpoints_collector.io_utils import EnvStrategy
 class IODefaultStrategy(EnvStrategy):
     def mkdir(self, path: str, exist_ok: bool = False) -> None:
         os.makedirs(path, exist_ok=exist_ok)
-        return True
 
     def folder_exists(self, path: str) -> bool:
         return os.path.isdir(path)
@@ -37,7 +36,6 @@ class IODefaultStrategy(EnvStrategy):
         mode = "w" if overwrite else "x"
         with open(file_path, mode) as file:
             file.write(file_content)
-        return True
 
     def read(
         self, file_path: str, mode: str = "r", encoding: Optional[str] = None
@@ -55,6 +53,5 @@ class IODefaultStrategy(EnvStrategy):
     def getcwd(self) -> str:
         return os.getcwd()
 
-    def remove_dir(self, path: str) -> bool:
+    def remove_dir(self, path: str) -> None:
         shutil.rmtree(path)
-        return True

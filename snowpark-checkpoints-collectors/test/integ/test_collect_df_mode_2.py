@@ -30,7 +30,6 @@ from pyspark.sql import SparkSession
 from pyspark.sql.dataframe import DataFrame as SparkDataFrame
 from pyspark.sql.types import BooleanType, LongType, StructField, StructType
 from pytest import fixture
-from telemetry_compare_utils import validate_telemetry_file_output
 
 from snowflake.snowpark.types import (
     BooleanType,
@@ -453,13 +452,13 @@ def test_spark_df_mode_dataframe(
 
 
 def test_io_strategy(
-    spark_session,
-    data,
-    spark_schema,
-    snowpark_schema,
-    singleton,
-    test_id,
-    telemetry_output,
+    spark_session: SparkSession,
+    data: list[list],
+    spark_schema: t.StructType,
+    snowpark_schema: StructType,
+    singleton: None,
+    test_id: int,
+    telemetry_output: Path,
 ):
     try:
         checkpoint_name = f"test_io_strategy_{test_id}"

@@ -23,10 +23,10 @@ from snowflake.snowpark_checkpoints_collector.singleton import Singleton
 
 
 class IOFileManager(metaclass=Singleton):
-    def __init__(self, strategy: EnvStrategy = None):
+    def __init__(self, strategy: Optional[EnvStrategy] = None):
         self.strategy = strategy or IODefaultStrategy()
 
-    def mkdir(self, path: str, exist_ok=False) -> bool:
+    def mkdir(self, path: str, exist_ok: bool = False) -> bool:
         return self.strategy.mkdir(path, exist_ok)
 
     def folder_exists(self, path: str) -> bool:
@@ -39,7 +39,7 @@ class IOFileManager(metaclass=Singleton):
         return self.strategy.write(file_path, file_content, overwrite)
 
     def read(
-        self, file_path: str, mode: str = "r", encoding: str = None
+        self, file_path: str, mode: str = "r", encoding: Optional[str] = None
     ) -> Optional[str]:
         return self.strategy.read(file_path, mode, encoding)
 

@@ -632,7 +632,7 @@ def test_collect_dataframe_all_column_types_with_null_values(
     validate_checkpoint_file_output(output_path, checkpoint_name)
 
 
-def test_io_strategy(spark_session, singleton, output_path):
+def test_io_strategy(spark_session: SparkSession, singleton: None, output_path: str):
     try:
         # Arrange
         sample_size = 1.0

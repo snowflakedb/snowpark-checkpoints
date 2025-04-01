@@ -25,7 +25,7 @@ class EnvStrategy(ABC):
     """
 
     @abstractmethod
-    def mkdir(self, path: str, exist_ok=False) -> bool:
+    def mkdir(self, path: str, exist_ok: bool = False) -> bool:
         """Create a directory.
 
         Args:
@@ -77,7 +77,7 @@ class EnvStrategy(ABC):
 
     @abstractmethod
     def read(
-        self, file_path: str, mode: str = "r", encoding: str = None
+        self, file_path: str, mode: str = "r", encoding: Optional[str] = None
     ) -> Optional[str]:
         """Read content from a file.
 

@@ -26,7 +26,7 @@ class IOFileManager(metaclass=Singleton):
     def __init__(self, strategy: Optional[EnvStrategy] = None):
         self.strategy = strategy or IODefaultStrategy()
 
-    def mkdir(self, path: str, exist_ok: bool = False) -> bool:
+    def mkdir(self, path: str, exist_ok: bool = False) -> None:
         return self.strategy.mkdir(path, exist_ok)
 
     def folder_exists(self, path: str) -> bool:
@@ -35,7 +35,7 @@ class IOFileManager(metaclass=Singleton):
     def file_exists(self, path: str) -> bool:
         return self.strategy.file_exists(path)
 
-    def write(self, file_path: str, file_content: str, overwrite: bool = True) -> bool:
+    def write(self, file_path: str, file_content: str, overwrite: bool = True) -> None:
         return self.strategy.write(file_path, file_content, overwrite)
 
     def read(

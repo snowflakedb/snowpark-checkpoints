@@ -37,11 +37,10 @@ def test_default_mkdir(io_file_manager):
         path = os.path.join(temp_dir, "test_dir")
 
         # Act
-        result = io_file_manager.mkdir(path)
+        io_file_manager.mkdir(path)
         folder_exist = os.path.exists(path)
 
         # Assert
-        assert result is True
         assert folder_exist
 
 
@@ -50,13 +49,9 @@ def test_default_mkdir_fail(io_file_manager):
         # Arrange
         path = os.path.join(temp_dir, "test_dir\0")
 
-        # Act
-        result = io_file_manager.mkdir(path)
-        folder_exist = os.path.exists(path)
-
-        # Assert
-        assert result is False
-        assert folder_exist is False
+        # Act & Assert
+        with pytest.raises(ValueError):
+            io_file_manager.mkdir(path)
 
 
 def test_default_folder_exists(io_file_manager):
@@ -72,12 +67,11 @@ def test_default_folder_exists(io_file_manager):
 
 
 def test_default_folder_exists_fail(io_file_manager):
-    with tempfile.TemporaryDirectory(dir=os.getcwd()):
-        # Act
-        result_not_exist = io_file_manager.folder_exists(None)
+    # Act
+    result_not_exist = io_file_manager.folder_exists("")
 
-        # Assert
-        assert result_not_exist is False
+    # Assert
+    assert result_not_exist is False
 
 
 def test_default_folder_exists_fail_with_file(io_file_manager):
@@ -109,12 +103,11 @@ def test_default_file_exists(io_file_manager):
 
 
 def test_default_file_exists_fail(io_file_manager):
-    with tempfile.TemporaryDirectory(dir=os.getcwd()):
-        # Act
-        result_not_exists = io_file_manager.file_exists(None)
+    # Act
+    result_not_exists = io_file_manager.file_exists("")
 
-        # Assert
-        assert result_not_exists is False
+    # Assert
+    assert result_not_exists is False
 
 
 def test_default_file_exists_fail_with_folder(io_file_manager):
@@ -137,12 +130,11 @@ def test_default_write(io_file_manager):
         content = "test"
 
         # Act
-        result = io_file_manager.write(path, content)
+        io_file_manager.write(path, content)
         with open(path) as f:
             file_content = f.read()
 
         # Assert
-        assert result
         assert content == file_content
 
 
@@ -151,11 +143,9 @@ def test_default_write_fail(io_file_manager):
         # Arrange
         content = "test"
 
-        # Act
-        result = io_file_manager.write(temp_dir, content)
-
-        # Assert
-        assert result is False
+        # Act & Assert
+        with pytest.raises(OSError):
+            io_file_manager.write(temp_dir, content)
 
 
 def test_default_read(io_file_manager):
@@ -178,11 +168,9 @@ def test_default_read_fail(io_file_manager):
         # Arrange
         path = os.path.join(temp_dir, "test_file.txt")
 
-        # Act
-        result = io_file_manager.read(path)
-
-        # Assert
-        assert result is None
+        # Act & Assert
+        with pytest.raises(FileNotFoundError):
+            io_file_manager.read(path)
 
 
 def test_default_read_bytes(io_file_manager):
@@ -205,11 +193,9 @@ def test_default_read_bytes_fail(io_file_manager):
         # Arrange
         path = os.path.join(temp_dir, "test_file.txt")
 
-        # Act
-        result = io_file_manager.read_bytes(path)
-
-        # Assert
-        assert result is None
+        # Act & Assert
+        with pytest.raises(FileNotFoundError):
+            io_file_manager.read_bytes(path)
 
 
 def test_default_ls(io_file_manager):
@@ -252,7 +238,7 @@ def test_default_ls_fail(io_file_manager):
         path = None
 
         # Act
-        result = io_file_manager.ls(path)
+        result = io_file_manager.ls("")
 
         # Assert
         assert len(result) == 0

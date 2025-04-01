@@ -25,15 +25,12 @@ class EnvStrategy(ABC):
     """
 
     @abstractmethod
-    def mkdir(self, path: str, exist_ok=False) -> bool:
+    def mkdir(self, path: str, exist_ok: bool = False) -> None:
         """Create a directory.
 
         Args:
             path: The name of the directory to create.
             exist_ok: If False, an error is raised if the directory already exists.
-
-        Returns:
-            bool: True if the directory was created successfully, False otherwise.
 
         """
 
@@ -62,7 +59,7 @@ class EnvStrategy(ABC):
         """
 
     @abstractmethod
-    def write(self, file_path: str, file_content: str, overwrite: bool = True) -> bool:
+    def write(self, file_path: str, file_content: str, overwrite: bool = True) -> None:
         """Write content to a file.
 
         Args:
@@ -70,14 +67,11 @@ class EnvStrategy(ABC):
             file_content: The content to write to the file.
             overwrite: If True, overwrite the file if it exists.
 
-        Returns:
-            bool: True if the file was written successfully, False otherwise.
-
         """
 
     @abstractmethod
     def read(
-        self, file_path: str, mode: str = "r", encoding: str = None
+        self, file_path: str, mode: str = "r", encoding: Optional[str] = None
     ) -> Optional[str]:
         """Read content from a file.
 

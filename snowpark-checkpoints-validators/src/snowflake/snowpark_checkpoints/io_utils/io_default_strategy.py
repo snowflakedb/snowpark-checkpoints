@@ -22,58 +22,32 @@ from snowflake.snowpark_checkpoints.io_utils import EnvStrategy
 
 
 class IODefaultStrategy(EnvStrategy):
-    def mkdir(self, path: str, exist_ok=False) -> bool:
-        try:
-            os.makedirs(path, exist_ok=exist_ok)
-            return True
-        except Exception:
-            return False
+    def mkdir(self, path: str, exist_ok: bool = False) -> None:
+        os.makedirs(path, exist_ok=exist_ok)
 
     def folder_exists(self, path: str) -> bool:
-        try:
-            return os.path.isdir(path)
-        except Exception:
-            return False
+        return os.path.isdir(path)
 
     def file_exists(self, path: str) -> bool:
-        try:
-            return os.path.isfile(path)
-        except Exception:
-            return False
+        return os.path.isfile(path)
 
-    def write(self, file_path: str, file_content: str, overwrite: bool = True) -> bool:
-        try:
-            mode = "w" if overwrite else "x"
-            with open(file_path, mode) as file:
-                file.write(file_content)
-            return True
-        except Exception:
-            return False
+    def write(self, file_path: str, file_content: str, overwrite: bool = True) -> None:
+        mode = "w" if overwrite else "x"
+        with open(file_path, mode) as file:
+            file.write(file_content)
 
     def read(
-        self, file_path: str, mode: str = "r", encoding: str = None
+        self, file_path: str, mode: str = "r", encoding: Optional[str] = None
     ) -> Optional[str]:
-        try:
-            with open(file_path, mode=mode, encoding=encoding) as file:
-                return file.read()
-        except Exception:
-            return None
+        with open(file_path, mode=mode, encoding=encoding) as file:
+            return file.read()
 
     def read_bytes(self, file_path: str) -> Optional[bytes]:
-        try:
-            with open(file_path, mode="rb") as f:
-                return f.read()
-        except Exception:
-            return None
+        with open(file_path, mode="rb") as f:
+            return f.read()
 
     def ls(self, path: str, recursive: bool = False) -> list[str]:
-        try:
-            return glob.glob(path, recursive=recursive)
-        except Exception:
-            return []
+        return glob.glob(path, recursive=recursive)
 
     def getcwd(self) -> str:
-        try:
-            return os.getcwd()
-        except Exception:
-            return ""
+        return os.getcwd()

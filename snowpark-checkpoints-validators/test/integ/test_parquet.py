@@ -419,7 +419,12 @@ def test_validate_dataframe_checkpoint_disabled_checkpoint(
     assert checkpoint_name in caplog.text
 
 
-def test_io_strategy(job_context, snowpark_schema, data, telemetry_output_path: str):
+def test_io_strategy(
+    job_context: SnowparkJobContext,
+    snowpark_schema: StructType,
+    data: list[list],
+    telemetry_output_path: str,
+) -> None:
     try:
 
         class TestStrategy(IODefaultStrategy):

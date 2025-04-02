@@ -18,6 +18,7 @@ import os
 
 from typing import Optional
 
+from snowflake.snowpark_checkpoints.io_utils.io_file_manager import get_io_file_manager
 from snowflake.snowpark_checkpoints.singleton import Singleton
 from snowflake.snowpark_checkpoints.utils.constants import (
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
@@ -67,7 +68,9 @@ class ValidationResultsMetadata(metaclass=Singleton):
             Exception: If there is an error reading the validation results file.
 
         """
-        self.validation_results_directory = path if path else os.getcwd()
+        self.validation_results_directory = (
+            path if path else get_io_file_manager().getcwd()
+        )
         self.validation_results_directory = os.path.join(
             self.validation_results_directory,
             SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
@@ -89,20 +92,21 @@ class ValidationResultsMetadata(metaclass=Singleton):
 
         self.validation_results = ValidationResults(results=[])
 
-        if os.path.exists(self.validation_results_file):
+        if get_io_file_manager().file_exists(self.validation_results_file):
             LOGGER.info(
                 "Loading validation results from: '%s'", self.validation_results_file
             )
-            with open(self.validation_results_file) as file:
-                try:
-                    validation_result_json = file.read()
-                    self.validation_results = ValidationResults.model_validate_json(
-                        validation_result_json
-                    )
-                except Exception as e:
-                    raise Exception(
-                        f"Error reading validation results file: {self.validation_results_file} \n {e}"
-                    ) from None
+            try:
+                validation_result_json = get_io_file_manager().read(
+                    self.validation_results_file
+                )
+                self.validation_results = ValidationResults.model_validate_json(
+                    validation_result_json
+                )
+            except Exception as e:
+                raise Exception(
+                    f"Error reading validation results file: {self.validation_results_file} \n {e}"
+                ) from None
         else:
             LOGGER.info(
                 "Validation results file not found: '%s'",
@@ -115,7 +119,7 @@ class ValidationResultsMetadata(metaclass=Singleton):
         This method empties the validation results list.
 
         """
-        if not os.path.exists(self.validation_results_file):
+        if not get_io_file_manager().file_exists(self.validation_results_file):
             LOGGER.info("Cleaning validation results...")
             self.validation_results.results = []
 
@@ -123,7 +127,6 @@ class ValidationResultsMetadata(metaclass=Singleton):
         """Add a validation result to the pipeline result list.
 
         Args:
-            checkpoint_name (str): The name of the checkpoint.
             validation_result (dict): The validation result to be added.
 
         """
@@ -140,16 +143,17 @@ class ValidationResultsMetadata(metaclass=Singleton):
             OSError: If the directory cannot be created or the file cannot be written.
 
         """
-        if not os.path.exists(self.validation_results_directory):
+        if not get_io_file_manager().folder_exists(self.validation_results_directory):
             LOGGER.debug(
                 "Validation results directory '%s' does not exist. Creating it...",
                 self.validation_results_directory,
             )
-            os.makedirs(self.validation_results_directory)
+            get_io_file_manager().mkdir(self.validation_results_directory)
 
-        with open(self.validation_results_file, "w") as output_file:
-            output_file.write(self.validation_results.model_dump_json())
-            LOGGER.info(
-                "Validation results successfully saved to: '%s'",
-                self.validation_results_file,
-            )
+        get_io_file_manager().write(
+            self.validation_results_file, self.validation_results.model_dump_json()
+        )
+        LOGGER.info(
+            "Validation results successfully saved to: '%s'",
+            self.validation_results_file,
+        )

@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
+import os.path
 import tempfile
 from unittest.mock import MagicMock, patch, mock_open
 import unittest
@@ -448,7 +449,10 @@ class TelemetryManagerTest(unittest.TestCase):
             # Assert
             TelemetryManager._sc_validate_folder_space.assert_called_once_with(batch[0])
             open.assert_called_once_with(
-                telemetry.sc_folder_path / f"{mock_date}_telemetry_test.json", "w"
+                os.path.join(
+                    telemetry.sc_folder_path, f"{mock_date}_telemetry_test.json"
+                ),
+                "w",
             )
             open().write.assert_called_once_with(f"{event}")
 

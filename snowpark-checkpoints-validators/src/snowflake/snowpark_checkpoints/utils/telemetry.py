@@ -40,6 +40,9 @@ from snowflake.connector.telemetry import TelemetryClient
 from snowflake.snowpark import VERSION as SNOWPARK_VERSION
 from snowflake.snowpark import dataframe as snowpark_dataframe
 from snowflake.snowpark.session import Session
+from snowflake.snowpark_checkpoints.io_utils.io_file_manager import (
+    get_io_file_manager,
+)
 
 
 try:
@@ -92,7 +95,7 @@ class TelemetryManager(TelemetryClient):
             path: path to write telemetry.
 
         """
-        os.makedirs(path, exist_ok=True)
+        get_io_file_manager().mkdir(str(path), exist_ok=True)
         self.sc_folder_path = path
 
     def sc_log_error(
@@ -200,7 +203,7 @@ class TelemetryManager(TelemetryClient):
 
         """
         try:
-            os.makedirs(self.sc_folder_path, exist_ok=True)
+            get_io_file_manager().mkdir(str(self.sc_folder_path), exist_ok=True)
             for event in batch:
                 message = event.get("message")
                 if message is not None:
@@ -210,8 +213,7 @@ class TelemetryManager(TelemetryClient):
                         f'_telemetry_{message.get("type")}.json'
                     )
                     json_content = self._sc_validate_folder_space(event)
-                    with open(file_path, "w") as json_file:
-                        json_file.write(json_content)
+                    get_io_file_manager().write(str(file_path), json_content)
         except Exception:
             pass
 
@@ -239,9 +241,9 @@ class TelemetryManager(TelemetryClient):
             return
         batch = []
         for file in self.sc_folder_path.glob("*.json"):
-            with open(file) as json_file:
-                data_dict = json.load(json_file)
-                batch.append(data_dict)
+            json_content = get_io_file_manager().read(file)
+            data_dict = json.loads(json_content)
+            batch.append(data_dict)
         if batch == []:
             return
         body = {"logs": batch}
@@ -260,7 +262,9 @@ class TelemetryManager(TelemetryClient):
         is_testing = os.getenv("SNOWPARK_CHECKPOINTS_TELEMETRY_TESTING") == "true"
         if is_testing:
             local_telemetry_path = (
-                Path(os.getcwd()) / "snowpark-checkpoints-output" / "telemetry"
+                Path(get_io_file_manager().getcwd())
+                / "snowpark-checkpoints-output"
+                / "telemetry"
             )
             self.set_sc_output_path(local_telemetry_path)
             self.sc_is_enabled = True
@@ -359,7 +363,7 @@ def _get_metadata() -> dict:
     }
 
 
-def _get_version() -> str:
+def _get_version() -> Optional[str]:
     """Get the version of the package.
 
     Returns:
@@ -370,11 +374,10 @@ def _get_version() -> str:
         directory_levels_up = 1
         project_root = Path(__file__).resolve().parents[directory_levels_up]
         version_file_path = project_root / VERSION_FILE_NAME
-        with open(version_file_path) as file:
-            content = file.read()
-            version_match = re.search(VERSION_VARIABLE_PATTERN, content, re.MULTILINE)
-            if version_match:
-                return version_match.group(1)
+        content = get_io_file_manager().read(str(version_file_path))
+        version_match = re.search(VERSION_VARIABLE_PATTERN, content, re.MULTILINE)
+        if version_match:
+            return version_match.group(1)
         return None
     except Exception:
         return None
@@ -482,8 +485,8 @@ def get_load_json(json_schema: str) -> dict:
 
     """
     try:
-        with open(json_schema, encoding="utf-8") as file:
-            return json.load(file)
+        file_content = get_io_file_manager().read(json_schema, encoding="utf-8")
+        return json.loads(file_content)
     except (OSError, json.JSONDecodeError) as e:
         raise ValueError(f"Error reading JSON schema file: {e}") from None
 

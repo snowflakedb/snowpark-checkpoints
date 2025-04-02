@@ -12,12 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-import glob
 import json
 import logging
 import os
-import shutil
 
 from typing import Optional
 
@@ -53,6 +50,9 @@ from snowflake.snowpark_checkpoints_collector.column_collection import (
 )
 from snowflake.snowpark_checkpoints_collector.column_pandera_checks import (
     PanderaColumnChecksManager,
+)
+from snowflake.snowpark_checkpoints_collector.io_utils.io_file_manager import (
+    get_io_file_manager,
 )
 from snowflake.snowpark_checkpoints_collector.snow_connection_model import (
     SnowConnection,
@@ -320,8 +320,7 @@ def _generate_json_checkpoint_file(
     output_directory_path = file_utils.get_output_directory_path(output_path)
     checkpoint_file_path = os.path.join(output_directory_path, checkpoint_file_name)
     LOGGER.info("Writing DataFrame JSON schema file to '%s'", checkpoint_file_path)
-    with open(checkpoint_file_path, "w") as f:
-        f.write(dataframe_schema_contract)
+    get_io_file_manager().write(checkpoint_file_path, dataframe_schema_contract)
 
 
 @report_telemetry(params_list=["df"])
@@ -365,17 +364,17 @@ def generate_parquet_for_spark_df(spark_df: SparkDataFrame, output_path: str) ->
     ]
     converted_df = spark_df.select(new_cols)
 
-    if os.path.exists(output_path):
+    if get_io_file_manager().folder_exists(output_path):
         LOGGER.warning(
             "Output directory '%s' already exists. Deleting it...", output_path
         )
-        shutil.rmtree(output_path)
+        get_io_file_manager().remove_dir(output_path)
 
     LOGGER.info("Writing DataFrame to parquet files at '%s'", output_path)
     converted_df.write.parquet(output_path, mode="overwrite")
 
     target_dir = os.path.join(output_path, "**", f"*{DOT_PARQUET_EXTENSION}")
-    parquet_files = glob.glob(target_dir, recursive=True)
+    parquet_files = get_io_file_manager().ls(target_dir, recursive=True)
     parquet_files_count = len(parquet_files)
     if parquet_files_count == 0:
         raise Exception("No parquet files were generated.")

@@ -17,10 +17,14 @@ import os
 import json
 from deepdiff import DeepDiff
 from pathlib import Path
+from snowflake.snowpark import Session
+from snowflake.snowpark_checkpoints_collector.utils.telemetry import TelemetryManager
 
 
 def get_output_telemetry(telemetry_directory_path: Path) -> str:
-    for file in os.listdir(telemetry_directory_path):
+    files = os.listdir(telemetry_directory_path)
+    files.sort(reverse=True)
+    for file in files:
         if file.endswith(".json"):
             output_file_path = os.path.join(telemetry_directory_path, file)
             with open(output_file_path) as f:
@@ -67,3 +71,11 @@ def get_expected(file_name: str, telemetry_expected_folder: str) -> str:
 
     with open(expected_file_path) as f:
         return f.read().strip()
+
+
+def reset_telemetry_util():
+    connection = Session.builder.getOrCreate().connection
+    connection._telemetry = TelemetryManager(
+        connection._rest, connection.telemetry_enabled
+    )
+    return connection._telemetry

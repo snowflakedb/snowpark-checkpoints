@@ -28,7 +28,8 @@ def test_normalize_checkpoint_name_hyphen_case(input_value, expected_value):
 
 
 @pytest.mark.parametrize(
-    "input_value", ["_checkpoint1", "_checkpoint", "checkPoint1", "Checkpoint", "_1"]
+    "input_value",
+    ["_checkpoint1", "_checkpoint", "checkPoint1", "Checkpoint", "_1", "Dollar$Sample"],
 )
 def test_validate_checkpoint_name_valid_case(input_value):
     is_valid_checkpoint_name = checkpoint_name_utils.is_valid_checkpoint_name(
@@ -38,7 +39,8 @@ def test_validate_checkpoint_name_valid_case(input_value):
 
 
 @pytest.mark.parametrize(
-    "input_value", ["_", "5", "", "56_my_checkpoint", "my-check", "_+check"]
+    "input_value",
+    ["_", "$", "5", "", "56_my_checkpoint", "my-check", "_+check", "$DollarSample"],
 )
 def test_validate_checkpoint_name_invalid_case(input_value):
     is_valid_checkpoint_name = checkpoint_name_utils.is_valid_checkpoint_name(

@@ -95,7 +95,8 @@ def collect_dataframe_checkpoint(
 
     Raises:
         Exception: Invalid mode value.
-        Exception: Invalid checkpoint name. Checkpoint names must only contain alphanumeric characters and underscores.
+        Exception: Invalid checkpoint name. Checkpoint names must only contain alphanumeric characters
+                   , underscores and dollar signs.
 
     """
     normalized_checkpoint_name = checkpoint_name_utils.normalize_checkpoint_name(
@@ -113,7 +114,7 @@ def collect_dataframe_checkpoint(
     if not is_valid_checkpoint_name:
         raise Exception(
             f"Invalid checkpoint name: {normalized_checkpoint_name}. "
-            f"Checkpoint names must only contain alphanumeric characters and underscores."
+            "Checkpoint names must only contain alphanumeric characters, underscores and dollar signs."
         )
     if not is_checkpoint_enabled(normalized_checkpoint_name):
         LOGGER.info(

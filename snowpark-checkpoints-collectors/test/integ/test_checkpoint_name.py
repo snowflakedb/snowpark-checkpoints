@@ -56,7 +56,7 @@ def test_collect_dataframe_with_invalid_checkpoint_name(
     pyspark_df = spark_session.createDataFrame(data=[], schema=StructType())
     expected_error_msg = (
         f"Invalid checkpoint name: {checkpoint_name}. "
-        f"Checkpoint names must only contain alphanumeric characters and underscores."
+        f"Checkpoint names must only contain alphanumeric characters, underscores and dollar signs."
     )
 
     with (

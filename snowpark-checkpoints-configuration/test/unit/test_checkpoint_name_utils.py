@@ -84,7 +84,7 @@ def test_checkpoint_invalid_name(input_value: str, caplog: pytest.LogCaptureFixt
     caplog.set_level(level=logging.ERROR, logger=LOGGER_NAME)
     expected_error_msg = (
         f"Invalid checkpoint name: {input_value} in checkpoints.json file. "
-        f"Checkpoint names must only contain alphanumeric characters and underscores."
+        f"Checkpoint names must only contain alphanumeric characters, underscores and dollar signs."
     )
 
     with pytest.raises(Exception) as ex_info:

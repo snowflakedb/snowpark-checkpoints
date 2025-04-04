@@ -1,0 +1,65 @@
+{
+  "pandera_schema": {
+    "schema_type": "dataframe",
+    "version": "0.20.4",
+    "columns": {
+      "array_column": {
+        "title": null,
+        "description": null,
+        "dtype": "object",
+        "nullable": false,
+        "checks": null,
+        "unique": false,
+        "coerce": false,
+        "required": true,
+        "regex": false
+      }
+    },
+    "checks": null,
+    "index": [
+      {
+        "title": null,
+        "description": null,
+        "dtype": "int64",
+        "nullable": false,
+        "checks": {
+          "greater_than_or_equal_to": 0.0,
+          "less_than_or_equal_to": 99.0
+        },
+        "name": null,
+        "unique": false,
+        "coerce": false
+      }
+    ],
+    "dtype": null,
+    "coerce": true,
+    "strict": false,
+    "name": null,
+    "ordered": false,
+    "unique": null,
+    "report_duplicates": "all",
+    "unique_column_names": false,
+    "add_missing_columns": false,
+    "title": null,
+    "description": null
+  },
+  "custom_data": {
+    "columns": [
+      {
+        "name": "array_column",
+        "type": "array",
+        "nullable": false,
+        "rows_count": 3,
+        "rows_not_null_count": 3,
+        "rows_null_count": 0,
+        "value_type": "integer",
+        "allow_null": false,
+        "null_value_proportion": 0.0,
+        "max_size": 5,
+        "min_size": 5,
+        "mean_size": 5,
+        "is_unique_size": true
+      }
+    ]
+  }
+}

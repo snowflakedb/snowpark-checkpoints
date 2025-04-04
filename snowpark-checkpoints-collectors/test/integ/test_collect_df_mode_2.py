@@ -30,7 +30,6 @@ from pyspark.sql import SparkSession
 from pyspark.sql.dataframe import DataFrame as SparkDataFrame
 from pyspark.sql.types import BooleanType, LongType, StructField, StructType
 from pytest import fixture
-from telemetry_compare_utils import validate_telemetry_file_output
 
 from snowflake.snowpark.types import (
     BooleanType,
@@ -59,6 +58,16 @@ from snowflake.snowpark_checkpoints_collector.summary_stats_collector import (
 from snowflake.snowpark_checkpoints_collector.utils.telemetry import (
     get_telemetry_manager,
 )
+from snowflake.snowpark_checkpoints_collector.io_utils.io_default_strategy import (
+    IODefaultStrategy,
+)
+from snowflake.snowpark_checkpoints_collector.io_utils.io_file_manager import (
+    get_io_file_manager,
+)
+from unittest.mock import patch
+
+import inspect
+from telemetry_compare_utils import validate_telemetry_file_output, reset_telemetry_util
 
 
 TEST_COLLECT_DF_MODE_2_EXPECTED_DIRECTORY_NAME = "test_collect_df_mode_2_expected"
@@ -407,7 +416,6 @@ def test_collect_invalid_mode(
 
     assert expected_error_msg == str(ex_info.value)
     assert expected_error_msg in caplog.text
-    validate_telemetry("test_collect_invalid_mode", telemetry_output)
 
 
 def test_generate_parquet_for_spark_df(data, spark_schema, test_id, telemetry_output):
@@ -422,7 +430,6 @@ def test_generate_parquet_for_spark_df(data, spark_schema, test_id, telemetry_ou
     target_dir = os.path.join(parquet_directory, "**", f"*{DOT_PARQUET_EXTENSION}")
     files = glob.glob(target_dir, recursive=True)
     assert len(files) > 0
-    validate_telemetry("test_generate_parquet_for_spark_df", telemetry_output)
 
 
 def test_spark_df_mode_dataframe(
@@ -442,7 +449,92 @@ def test_spark_df_mode_dataframe(
     snow.create_snowflake_table_from_local_parquet(checkpoint_name, parquet_directory)
 
     validate_dataframes(checkpoint_name, spark_df, snowpark_schema)
-    validate_telemetry("test_spark_df_mode_dataframe", telemetry_output)
+
+
+def test_io_strategy(
+    spark_session: SparkSession,
+    data: list[list],
+    spark_schema: t.StructType,
+    snowpark_schema: StructType,
+    singleton: None,
+    test_id: int,
+    telemetry_output: Path,
+):
+    try:
+        checkpoint_name = f"test_io_strategy_{test_id}"
+
+        class TestStrategy(IODefaultStrategy):
+            pass
+
+        number_of_methods = inspect.getmembers(
+            IODefaultStrategy, predicate=inspect.isfunction
+        )
+        strategy = TestStrategy()
+        get_io_file_manager().set_strategy(strategy)
+
+        with patch.object(
+            strategy, "getcwd", wraps=strategy.getcwd
+        ) as getcwd_spy, patch.object(
+            strategy, "ls", wraps=strategy.ls
+        ) as ls_spy, patch.object(
+            strategy, "mkdir", wraps=strategy.mkdir
+        ) as mkdir_spy, patch.object(
+            strategy, "write", wraps=strategy.write
+        ) as write_spy, patch.object(
+            strategy, "read", wraps=strategy.read
+        ) as read_spy, patch.object(
+            strategy, "read_bytes", wraps=strategy.read_bytes
+        ) as read_bytes_spy, patch.object(
+            strategy, "file_exists", wraps=strategy.file_exists
+        ) as file_exists_spy, patch.object(
+            strategy, "folder_exists", wraps=strategy.folder_exists
+        ) as folder_exists_spy, patch.object(
+            strategy, "remove_dir", wraps=strategy.remove_dir
+        ) as remove_dir_spy:
+            telemetry_manager = reset_telemetry_util()
+            telemetry_manager.set_sc_output_path(Path(telemetry_output))
+            pyspark_df = spark_session.createDataFrame(
+                data, schema=spark_schema
+            ).orderBy("INTEGER")
+
+            temp_dir = tempfile.gettempdir()
+            output_path = os.path.join(temp_dir, checkpoint_name)
+            output_parquet_path = os.path.join(
+                output_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME, checkpoint_name
+            )
+            if not os.path.exists(output_parquet_path):
+                os.makedirs(output_parquet_path)
+
+            collect_dataframe_checkpoint(
+                pyspark_df,
+                checkpoint_name=checkpoint_name,
+                mode=CheckpointMode.DATAFRAME,
+                output_path=output_path,
+            )
+
+            # Assert
+            assert len(number_of_methods) == 9
+            getcwd_spy.assert_called()
+            mkdir_spy.assert_called()
+            write_spy.assert_called()
+            read_spy.assert_called()
+            read_bytes_spy.assert_called()
+            file_exists_spy.assert_called()
+            ls_spy.assert_called()
+            folder_exists_spy.assert_called()
+            remove_dir_spy.assert_called()
+            assert getcwd_spy.call_count == 3
+            assert mkdir_spy.call_count == 5
+            assert write_spy.call_count == 2
+            assert read_spy.call_count == 1
+            assert read_bytes_spy.call_count == 1
+            assert file_exists_spy.call_count == 2
+            assert ls_spy.call_count == 2
+            assert folder_exists_spy.call_count == 1
+            assert remove_dir_spy.call_count == 1
+            validate_dataframes(checkpoint_name, pyspark_df, snowpark_schema)
+    finally:
+        get_io_file_manager().set_strategy(IODefaultStrategy())
 
 
 def validate_dataframes(

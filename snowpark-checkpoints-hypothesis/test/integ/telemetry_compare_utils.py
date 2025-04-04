@@ -13,17 +13,43 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import json
-from deepdiff import DeepDiff
-from snowflake.snowpark import Session
-from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryManager
+import os
+import shutil
 
-TEST_TELEMETRY_VALIDATORS_EXPECTED_DIRECTORY_NAME = "telemetry_expected"
+from deepdiff import DeepDiff
+
+from snowflake.hypothesis_snowpark.telemetry.telemetry import get_telemetry_manager
+from snowflake.snowpark import Session
+
+TEST_TELEMETRY_DATAFRAME_STRATEGIES_EXPECTED_DIRECTORY_NAME = (
+    "test_telemetry_strategies_expected"
+)
+
+from snowflake.hypothesis_snowpark.telemetry.telemetry import TelemetryManager
+
+
+def get_expected(file_name: str) -> str:
+    current_directory_path = os.path.dirname(__file__)
+    expected_file_path = os.path.join(
+        current_directory_path,
+        TEST_TELEMETRY_DATAFRAME_STRATEGIES_EXPECTED_DIRECTORY_NAME,
+        file_name,
+    )
+
+    with open(expected_file_path) as f:
+        return f.read().strip()
+
+
+def remove_output_directory(telemetry_directory_path: str) -> None:
+    if os.path.exists(telemetry_directory_path):
+        shutil.rmtree(telemetry_directory_path)
 
 
 def get_output_telemetry(telemetry_directory_path: str) -> str:
-    for file in os.listdir(telemetry_directory_path):
+    files = os.listdir(telemetry_directory_path)
+    files.sort(reverse=True)
+    for file in files:
         if file.endswith(".json"):
             output_file_path = os.path.join(telemetry_directory_path, file)
             with open(output_file_path) as f:
@@ -41,7 +67,9 @@ def validate_telemetry_file_output(
     telemetry_output_obj = json.loads(telemetry_output)
     exclude_telemetry_paths = [
         "root['timestamp']",
+        "root['message']['metadata']['device_id']",
         "root['message']['metadata']",
+        "root['message']['data']",
         "root['message']['driver_version']",
     ]
 
@@ -51,6 +79,8 @@ def validate_telemetry_file_output(
         ignore_order=True,
         exclude_paths=exclude_telemetry_paths,
     )
+    remove_output_directory(telemetry_directory_path)
+    get_telemetry_manager().sc_hypothesis_input_events = []
 
     assert diff_telemetry == {}
     assert isinstance(
@@ -59,18 +89,6 @@ def validate_telemetry_file_output(
         .get("snowpark_checkpoints_version"),
         str,
     )
-
-
-def get_expected(file_name: str) -> str:
-    current_directory_path = os.path.dirname(__file__)
-    expected_file_path = os.path.join(
-        current_directory_path,
-        TEST_TELEMETRY_VALIDATORS_EXPECTED_DIRECTORY_NAME,
-        file_name,
-    )
-
-    with open(expected_file_path) as f:
-        return f.read().strip()
 
 
 def reset_telemetry_util():

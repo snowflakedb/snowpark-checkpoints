@@ -63,7 +63,8 @@ def test_normalize_checkpoint_name_hyphen_case(input_value, expected_value):
 
 
 @pytest.mark.parametrize(
-    "input_value", ["_checkpoint1", "_checkpoint", "checkPoint1", "Checkpoint", "_1"]
+    "input_value",
+    ["_checkpoint1", "_checkpoint", "checkPoint1", "Checkpoint", "_1", "Dollar$Sample"],
 )
 def test_validate_checkpoint_name_valid_case(input_value):
     checkpoint = Checkpoint(
@@ -79,12 +80,14 @@ def test_validate_checkpoint_name_valid_case(input_value):
     assert checkpoint.name == input_value
 
 
-@pytest.mark.parametrize("input_value", ["_", "5", "", "56_my_checkpoint", "_+check"])
+@pytest.mark.parametrize(
+    "input_value", ["_", "$", "5", "", "56_my_checkpoint", "_+check", "$DollarSample"]
+)
 def test_checkpoint_invalid_name(input_value: str, caplog: pytest.LogCaptureFixture):
     caplog.set_level(level=logging.ERROR, logger=LOGGER_NAME)
     expected_error_msg = (
         f"Invalid checkpoint name: {input_value} in checkpoints.json file. "
-        f"Checkpoint names must only contain alphanumeric characters and underscores."
+        f"Checkpoint names must only contain alphanumeric characters, underscores and dollar signs."
     )
 
     with pytest.raises(Exception) as ex_info:

@@ -56,7 +56,7 @@ class Checkpoint(BaseModel):
         if not is_valid_checkpoint_name:
             error_msg = (
                 f"Invalid checkpoint name: {name} in checkpoints.json file. "
-                f"Checkpoint names must only contain alphanumeric characters and underscores."
+                f"Checkpoint names must only contain alphanumeric characters, underscores and dollar signs."
             )
             LOGGER.error(error_msg)
             raise Exception(error_msg)

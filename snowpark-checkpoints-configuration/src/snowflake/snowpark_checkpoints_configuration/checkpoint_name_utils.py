@@ -16,7 +16,7 @@
 import re as regx
 
 
-CHECKPOINT_NAME_REGEX_PATTERN = r"[a-zA-Z_][a-zA-Z0-9_]+"
+CHECKPOINT_NAME_REGEX_PATTERN = r"[a-zA-Z_][a-zA-Z0-9_$]+"
 TRANSLATION_TABLE = str.maketrans({" ": "_", "-": "_"})
 
 
@@ -39,7 +39,7 @@ def is_valid_checkpoint_name(checkpoint_name: str) -> bool:
 
     A valid checkpoint name must:
     - Start with a letter (a-z, A-Z) or an underscore (_)
-    - Be followed by any combination of letters, digits (0-9) and underscores (_).
+    - Be followed by any combination of letters, digits (0-9), underscores (_), and dollar signs ($).
 
     Args:
         checkpoint_name (str): The checkpoint name to validate.

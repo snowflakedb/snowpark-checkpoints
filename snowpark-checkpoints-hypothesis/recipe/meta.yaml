@@ -22,7 +22,7 @@ requirements:
     - hatchling
   run:
     - python<3.12,>=3.9
-    - hypothesis
+    - hypothesis==6.130.3
     - snowflake-snowpark-python>=1.23.0
   run_constrained:
     - pandera ==0.20.4

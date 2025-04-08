@@ -29,6 +29,7 @@ dependencies = [
   "snowflake-snowpark-python>=1.23.0",
   "snowflake-connector-python[pandas]",
   "pandera[io]==0.20.4",
+  "pydantic>=2.0"
 ]
 description = "Migration tools for Snowpark"
 dynamic = ['version']

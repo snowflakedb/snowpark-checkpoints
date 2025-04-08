@@ -16,7 +16,6 @@ import os
 from pathlib import Path
 from unittest import mock
 from unittest.mock import MagicMock, call
-
 import pytest
 
 from snowflake.snowpark_checkpoints_collector.snow_connection_model import (
@@ -54,25 +53,21 @@ def test_create_snowflake_table_from_parquet(input_path):
 
     with mock.patch("glob.glob") as glob_mock:
         with mock.patch("os.path.isfile") as isfile_mock:
-            isfile_mock.return_value = True
-            glob_mock.return_value = [parquet_file_path]
-            snow_connection = SnowConnection(mocked_session)
-            snow_connection.create_snowflake_table_from_local_parquet(
-                checkpoint_name, input_path, stage_path=checkpoint_name
-            )
+            with mock.patch(
+                "snowflake.snowpark_checkpoints_collector.io_utils.io_default_strategy.IODefaultStrategy.read_bytes"
+            ) as read_bytes_mock:
+                read_bytes_mock.return_value = b"test"
+                isfile_mock.return_value = True
+                glob_mock.return_value = [parquet_file_path]
+                snow_connection = SnowConnection(mocked_session)
+                snow_connection.create_snowflake_table_from_local_parquet(
+                    checkpoint_name, input_path, stage_path=checkpoint_name
+                )
 
     stage_name = stage_name.format(snow_connection.stage_id)
 
     assert mocked_session.method_calls[0] == call.sql(
         f"CREATE TEMP STAGE IF NOT EXISTS {stage_name}"
-    )
-
-    expected_file = Path(output_directory_path_full) / "dir1" / "file1.parquet"
-    expected_file = Path(expected_file.as_posix()).as_uri()
-    assert mocked_session.method_calls[1] == call.sql(
-        f"PUT '{expected_file}' "
-        f"'@{stage_name}/{checkpoint_name}/dir1/file1.parquet' "
-        "AUTO_COMPRESS=FALSE"
     )
 
     assert mocked_session.method_calls[2] == call.sql(
@@ -83,13 +78,15 @@ def test_create_snowflake_table_from_parquet(input_path):
         path=f"'@{stage_name}/{checkpoint_name}'"
     )
 
-    assert mock_df.method_calls[3] == call.write.save_as_table(
+    assert mock_df.method_calls[2] == call.write.save_as_table(
         table_name="checkpoint_name_test", mode="overwrite"
     )
 
     assert mocked_session.method_calls[4] == call.sql(
         f"REMOVE '@{stage_name}/{checkpoint_name}'"
     )
+
+    assert read_bytes_mock.call_count == 1
 
 
 def test_create_snowflake_table_from_parquet_exception():

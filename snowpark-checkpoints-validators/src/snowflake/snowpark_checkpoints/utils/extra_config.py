@@ -34,6 +34,45 @@ def _get_checkpoint_contract_file_path() -> str:
     )
 
 
+def _set_conf_io_strategy() -> None:
+    try:
+        from snowflake.snowpark_checkpoints.io_utils.io_default_strategy import (
+            IODefaultStrategy,
+        )
+        from snowflake.snowpark_checkpoints_configuration.io_utils.io_file_manager import (
+            EnvStrategy as ConfEnvStrategy,
+        )
+        from snowflake.snowpark_checkpoints_configuration.io_utils.io_file_manager import (
+            get_io_file_manager as get_conf_io_file_manager,
+        )
+
+        is_default_strategy = isinstance(
+            get_io_file_manager().strategy, IODefaultStrategy
+        )
+
+        if is_default_strategy:
+            return
+
+        class CustomConfEnvStrategy(ConfEnvStrategy):
+            def file_exists(self, path: str) -> bool:
+                return get_io_file_manager().file_exists(path)
+
+            def read(
+                self, file_path: str, mode: str = "r", encoding: Optional[str] = None
+            ) -> Optional[str]:
+                return get_io_file_manager().read(file_path, mode, encoding)
+
+            def getcwd(self) -> str:
+                return get_io_file_manager().getcwd()
+
+        get_conf_io_file_manager().set_strategy(CustomConfEnvStrategy())
+
+    except ImportError:
+        LOGGER.debug(
+            "snowpark-checkpoints-configuration is not installed. Cannot get a checkpoint metadata instance."
+        )
+
+
 # noinspection DuplicatedCode
 def _get_metadata():
     try:
@@ -42,6 +81,7 @@ def _get_metadata():
         )
 
         path = _get_checkpoint_contract_file_path()
+        _set_conf_io_strategy()
         LOGGER.debug("Loading checkpoint metadata from '%s'", path)
         metadata = CheckpointMetadata(path)
         return True, metadata

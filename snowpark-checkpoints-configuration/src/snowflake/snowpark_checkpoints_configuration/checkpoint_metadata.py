@@ -18,6 +18,9 @@ import os
 
 from typing import Optional
 
+from snowflake.snowpark_checkpoints_configuration.io_utils.io_file_manager import (
+    get_io_file_manager,
+)
 from snowflake.snowpark_checkpoints_configuration.model.checkpoints import (
     Checkpoint,
     Checkpoints,
@@ -42,16 +45,13 @@ class CheckpointMetadata(metaclass=Singleton):
 
     def __init__(self, path: Optional[str] = None):
         self.checkpoint_model: Checkpoints = Checkpoints(type="", pipelines=[])
-        directory = path if path is not None else os.getcwd()
+        directory = path if path is not None else get_io_file_manager().getcwd()
         checkpoints_file = os.path.join(directory, "checkpoints.json")
-        if os.path.exists(checkpoints_file):
+        if get_io_file_manager().file_exists(checkpoints_file):
             LOGGER.info("Reading checkpoints file: '%s'", checkpoints_file)
             try:
-                with open(checkpoints_file) as f:
-                    checkpoint_json = f.read()
-                    self.checkpoint_model = Checkpoints.model_validate_json(
-                        checkpoint_json
-                    )
+                checkpoint_json = get_io_file_manager().read(checkpoints_file)
+                self.checkpoint_model = Checkpoints.model_validate_json(checkpoint_json)
                 LOGGER.info(
                     "Successfully read and validated checkpoints file: '%s'",
                     checkpoints_file,

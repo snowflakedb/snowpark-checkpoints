@@ -104,7 +104,7 @@ def test_default_set_strategy(io_file_manager):
     try:
         # Arrange
         with patch(
-            "snowflake.snowpark_checkpoints.io_utils.EnvStrategy"
+            "snowflake.snowpark_checkpoints_configuration.io_utils.EnvStrategy"
         ) as MockStrategy:
             strategy = MockStrategy()
 

@@ -34,7 +34,7 @@ def _get_checkpoint_contract_file_path() -> str:
     )
 
 
-def _set_conf_io_strategy():
+def _set_conf_io_strategy() -> None:
     try:
         from snowflake.snowpark_checkpoints.io_utils.io_default_strategy import (
             IODefaultStrategy,
@@ -71,7 +71,6 @@ def _set_conf_io_strategy():
         LOGGER.debug(
             "snowpark-checkpoints-configuration is not installed. Cannot get a checkpoint metadata instance."
         )
-        return False, None
 
 
 # noinspection DuplicatedCode

@@ -513,7 +513,7 @@ def test_io_strategy(
             )
 
             # Assert
-            assert len(number_of_methods) == 9
+            assert len(number_of_methods) == 10
             getcwd_spy.assert_called()
             mkdir_spy.assert_called()
             write_spy.assert_called()
@@ -529,7 +529,7 @@ def test_io_strategy(
             assert read_spy.call_count == 1
             assert read_bytes_spy.call_count == 1
             assert file_exists_spy.call_count == 2
-            assert ls_spy.call_count == 2
+            assert ls_spy.call_count == 3
             assert folder_exists_spy.call_count == 1
             assert remove_dir_spy.call_count == 1
             validate_dataframes(checkpoint_name, pyspark_df, snowpark_schema)

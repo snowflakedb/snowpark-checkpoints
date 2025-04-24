@@ -107,14 +107,14 @@ def test_io_strategy_from_json(
             # Assert
             assert df.schema == expected_schema
             assert isinstance(df, DataFrame)
-            assert len(number_of_methods) == 8
+            assert len(number_of_methods) == 9
             file_exists_spy.assert_called()
             read_spy.assert_called()
             write_spy.assert_called()
             mkdir_spy.assert_called()
             getcwd_spy.assert_called()
+            ls_spy.assert_called()
             read_bytes_spy.assert_not_called()
-            ls_spy.assert_not_called()
             folder_exists_spy.assert_not_called()
 
             assert file_exists_spy.call_count == 1
@@ -122,6 +122,7 @@ def test_io_strategy_from_json(
             assert write_spy.call_count == 1
             assert mkdir_spy.call_count == 3
             assert getcwd_spy.call_count == 1
+            assert ls_spy.call_count == 1
             validate_telemetry_file_output(
                 "test_io_strategy_from_json_telemetry.json", str(telemetry_output_path)
             )
@@ -181,7 +182,7 @@ def test_io_strategy_from_object(
             # Assert
             assert df.schema == expected_schema
             assert isinstance(df, DataFrame)
-            assert len(number_of_methods) == 8
+            assert len(number_of_methods) == 9
             read_spy.assert_called()
             write_spy.assert_called()
             mkdir_spy.assert_called()
@@ -195,6 +196,7 @@ def test_io_strategy_from_object(
             assert write_spy.call_count == 1
             assert mkdir_spy.call_count == 3
             assert getcwd_spy.call_count == 1
+            assert ls_spy.call_count == 1
             validate_telemetry_file_output(
                 "test_io_strategy_from_object_telemetry.json",
                 str(telemetry_output_path),

@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Optional
 
 
@@ -116,5 +117,14 @@ class EnvStrategy(ABC):
 
         Returns:
             str: The current working directory.
+
+        """
+
+    @abstractmethod
+    def telemetry_path_files(self, path: str) -> Path:
+        """Get the path to the telemetry files.
+
+        Returns:
+            str: The path to the telemetry files.
 
         """

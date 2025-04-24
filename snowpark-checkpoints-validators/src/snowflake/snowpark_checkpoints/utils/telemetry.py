@@ -240,7 +240,7 @@ class TelemetryManager(TelemetryClient):
         if not self.sc_is_enabled or self.sc_is_testing or not self._rest:
             return
         batch = []
-        for file in self.sc_folder_path.glob("*.json"):
+        for file in get_io_file_manager().ls(f"{self.sc_folder_path}/*.json"):
             json_content = get_io_file_manager().read(file)
             data_dict = json.loads(json_content)
             batch.append(data_dict)
@@ -255,7 +255,8 @@ class TelemetryManager(TelemetryClient):
             timeout=5,
         )
         if ret.get("success"):
-            for file in self.sc_folder_path.glob("*.json"):
+            for file_path in get_io_file_manager().ls(f"{self.sc_folder_path}/*.json"):
+                file = get_io_file_manager().telemetry_path_files(file_path)
                 file.unlink()
 
     def _sc_is_telemetry_testing(self) -> bool:
@@ -393,7 +394,10 @@ def _get_folder_size(folder_path: Path) -> int:
         int: The size of the folder in bytes.
 
     """
-    return sum(f.stat().st_size for f in folder_path.glob("*.json") if f.is_file())
+    sum_size = 0
+    for f in get_io_file_manager().ls(f"{folder_path}/*.json"):
+        sum_size += get_io_file_manager().telemetry_path_files(f).stat().st_size
+    return sum_size
 
 
 def _free_up_space(folder_path: Path, max_size: int) -> None:
@@ -404,9 +408,13 @@ def _free_up_space(folder_path: Path, max_size: int) -> None:
         max_size (int): The maximum allowed size of the folder in bytes.
 
     """
-    files = sorted(folder_path.glob("*.json"), key=lambda f: f.stat().st_mtime)
+    files = sorted(
+        get_io_file_manager().ls(f"{folder_path}/*.json"),
+        key=lambda f: f.stat().st_mtime,
+    )
     current_size = _get_folder_size(folder_path)
-    for file in files:
+    for file_path in files:
+        file = get_io_file_manager().telemetry_path_files(file_path)
         if current_size <= max_size:
             break
         current_size -= file.stat().st_size
@@ -854,7 +862,8 @@ def report_telemetry(
                     telemetry_m,
                     return_indexes,
                 )
-            except Exception:
+            except Exception as e:
+                print(e)
                 pass
             finally:
                 if func_exception is not None:

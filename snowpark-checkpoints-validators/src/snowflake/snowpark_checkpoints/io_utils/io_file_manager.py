@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
 from typing import Optional
 
 from snowflake.snowpark_checkpoints.io_utils import (
@@ -51,6 +52,9 @@ class IOFileManager(metaclass=Singleton):
 
     def getcwd(self) -> str:
         return self.strategy.getcwd()
+
+    def telemetry_path_files(self, path: str) -> Path:
+        return self.strategy.telemetry_path_files(path)
 
     def set_strategy(self, strategy: EnvStrategy):
         """Set the strategy for file and directory operations.

@@ -187,9 +187,9 @@ def test_io_strategy_from_object(
             write_spy.assert_called()
             mkdir_spy.assert_called()
             getcwd_spy.assert_called()
+            ls_spy.assert_called()
             file_exists_spy.assert_not_called()
             read_bytes_spy.assert_not_called()
-            ls_spy.assert_not_called()
             folder_exists_spy.assert_not_called()
 
             assert read_spy.call_count == 1

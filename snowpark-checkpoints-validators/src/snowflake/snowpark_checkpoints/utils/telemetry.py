@@ -862,8 +862,7 @@ def report_telemetry(
                     telemetry_m,
                     return_indexes,
                 )
-            except Exception as e:
-                print(e)
+            except Exception:
                 pass
             finally:
                 if func_exception is not None:

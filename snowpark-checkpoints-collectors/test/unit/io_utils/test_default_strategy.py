@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import os
+from pathlib import Path
 import tempfile
 from unittest.mock import patch
 import pytest
@@ -267,6 +268,18 @@ def test_default_remove_dir(io_file_manager):
 
         # Assert
         assert not folder_exist
+
+
+def test_default_telemetry_path_files(io_file_manager):
+    with tempfile.TemporaryDirectory(dir=os.getcwd()) as temp_dir:
+        # Arrange
+        path = os.path.join(temp_dir, "test_dir")
+
+        # Act
+        result = io_file_manager.telemetry_path_files(path)
+
+        # Assert
+        assert result == Path(path)
 
 
 def test_default_set_strategy(io_file_manager):

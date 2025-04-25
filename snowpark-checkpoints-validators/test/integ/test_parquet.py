@@ -476,19 +476,20 @@ def test_io_strategy(
             )
 
             # Assert
-            assert len(number_of_methods) == 8
+            assert len(number_of_methods) == 9
             getcwd_spy.assert_called()
             mkdir_spy.assert_called()
             write_spy.assert_called()
             read_spy.assert_called()
+            ls_spy.assert_called()
             read_bytes_spy.assert_not_called()
             file_exists_spy.assert_not_called()
-            ls_spy.assert_not_called()
             folder_exists_spy.assert_not_called()
             assert getcwd_spy.call_count == 3
             assert mkdir_spy.call_count == 4
             assert write_spy.call_count == 1
             assert read_spy.call_count == 2
+            assert ls_spy.call_count == 1
             mocked_update.assert_called_once_with(checkpoint_name, PASS_STATUS, None)
             mocked_session.assert_called_once_with(
                 checkpoint_name, DATAFRAME_EXECUTION_MODE

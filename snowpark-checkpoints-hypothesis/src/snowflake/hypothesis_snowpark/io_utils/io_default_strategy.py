@@ -16,6 +16,7 @@
 import glob
 import os
 
+from pathlib import Path
 from typing import Optional
 
 from snowflake.hypothesis_snowpark.io_utils import EnvStrategy
@@ -51,3 +52,6 @@ class IODefaultStrategy(EnvStrategy):
 
     def getcwd(self) -> str:
         return os.getcwd()
+
+    def telemetry_path_files(self, path: str) -> Path:
+        return Path(path)

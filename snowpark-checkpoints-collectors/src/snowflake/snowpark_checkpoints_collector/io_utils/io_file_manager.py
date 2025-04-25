@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
 from typing import Optional
 
 from snowflake.snowpark_checkpoints_collector.io_utils import (
@@ -54,6 +55,9 @@ class IOFileManager(metaclass=Singleton):
 
     def remove_dir(self, path: str) -> None:
         return self.strategy.remove_dir(path)
+
+    def telemetry_path_files(self, path: str) -> Path:
+        return self.strategy.telemetry_path_files(path)
 
     def set_strategy(self, strategy: EnvStrategy):
         """Set the strategy for file and directory operations.

@@ -681,20 +681,21 @@ def test_io_strategy(spark_session: SparkSession, singleton: None, output_path: 
             )
 
             # Assert
-            assert len(number_of_methods) == 9
+            assert len(number_of_methods) == 10
             getcwd_spy.assert_called()
             mkdir_spy.assert_called()
             write_spy.assert_called()
             read_spy.assert_called()
+            ls_spy.assert_called()
             read_bytes_spy.assert_not_called()
             file_exists_spy.assert_not_called()
             folder_exists_spy.assert_not_called()
-            ls_spy.assert_not_called()
             remove_dir_spy.assert_not_called()
             assert read_spy.call_count == 1
             assert getcwd_spy.call_count == 4
             assert mkdir_spy.call_count == 5
             assert write_spy.call_count == 3
+            assert ls_spy.call_count == 1
             validate_checkpoint_file_output(
                 output_path, checkpoint_name, test_telemetry=False
             )

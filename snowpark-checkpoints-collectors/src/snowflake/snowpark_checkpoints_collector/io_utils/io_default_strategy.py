@@ -17,6 +17,7 @@ import glob
 import os
 import shutil
 
+from pathlib import Path
 from typing import Optional
 
 from snowflake.snowpark_checkpoints_collector.io_utils import EnvStrategy
@@ -55,3 +56,6 @@ class IODefaultStrategy(EnvStrategy):
 
     def remove_dir(self, path: str) -> None:
         shutil.rmtree(path)
+
+    def telemetry_path_files(self, path: str) -> Path:
+        return Path(path)

@@ -74,9 +74,21 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
     TIMESTAMP_COLUMN_TYPE,
 )
 from snowflake.snowpark_checkpoints_collector.singleton import Singleton
+from snowflake.snowpark_checkpoints_collector.io_utils.io_default_strategy import (
+    IODefaultStrategy,
+)
+from snowflake.snowpark_checkpoints_collector.io_utils.io_file_manager import (
+    get_io_file_manager,
+)
+from unittest.mock import patch
+import inspect
+
+import tempfile
+
 from snowflake.snowpark_checkpoints_collector.utils.telemetry import (
     get_telemetry_manager,
 )
+from telemetry_compare_utils import validate_telemetry_file_output, reset_telemetry_util
 
 
 TEST_COLLECT_DF_MODE_1_EXPECTED_DIRECTORY_NAME = "test_collect_df_mode_1_expected"
@@ -620,11 +632,79 @@ def test_collect_dataframe_all_column_types_with_null_values(
     validate_checkpoint_file_output(output_path, checkpoint_name)
 
 
+def test_io_strategy(spark_session: SparkSession, singleton: None, output_path: str):
+    try:
+        # Arrange
+        sample_size = 1.0
+        checkpoint_name = "test_io_strategy"
+
+        class TestStrategy(IODefaultStrategy):
+            pass
+
+        number_of_methods = inspect.getmembers(
+            IODefaultStrategy, predicate=inspect.isfunction
+        )
+        strategy = TestStrategy()
+        get_io_file_manager().set_strategy(strategy)
+
+        with patch.object(
+            strategy, "getcwd", wraps=strategy.getcwd
+        ) as getcwd_spy, patch.object(
+            strategy, "ls", wraps=strategy.ls
+        ) as ls_spy, patch.object(
+            strategy, "mkdir", wraps=strategy.mkdir
+        ) as mkdir_spy, patch.object(
+            strategy, "write", wraps=strategy.write
+        ) as write_spy, patch.object(
+            strategy, "read", wraps=strategy.read
+        ) as read_spy, patch.object(
+            strategy, "read_bytes", wraps=strategy.read_bytes
+        ) as read_bytes_spy, patch.object(
+            strategy, "file_exists", wraps=strategy.file_exists
+        ) as file_exists_spy, patch.object(
+            strategy, "folder_exists", wraps=strategy.folder_exists
+        ) as folder_exists_spy, patch.object(
+            strategy, "remove_dir", wraps=strategy.remove_dir
+        ) as remove_dir_spy:
+            telemetry_manager = reset_telemetry_util()
+            telemetry_manager.set_sc_output_path(Path(output_path))
+            pyspark_df = spark_session.createDataFrame(
+                [("Roberto", 21)], schema="name string, age integer"
+            )
+
+            # Act
+            collect_dataframe_checkpoint(
+                pyspark_df,
+                checkpoint_name=checkpoint_name,
+                sample=sample_size,
+                output_path=output_path,
+            )
+
+            # Assert
+            assert len(number_of_methods) == 10
+            read_bytes_spy.assert_not_called()
+            file_exists_spy.assert_not_called()
+            folder_exists_spy.assert_not_called()
+            remove_dir_spy.assert_not_called()
+            assert read_spy.call_count == 1
+            assert getcwd_spy.call_count == 4
+            assert mkdir_spy.call_count == 5
+            assert write_spy.call_count == 3
+            assert ls_spy.call_count == 1
+            validate_checkpoint_file_output(
+                output_path, checkpoint_name, test_telemetry=False
+            )
+    finally:
+        get_io_file_manager().set_strategy(IODefaultStrategy())
+
+
 def get_checkpoint_file_name(checkpoint_name) -> str:
     return CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(checkpoint_name)
 
 
-def validate_checkpoint_file_output(output_path: str, checkpoint_name: str) -> None:
+def validate_checkpoint_file_output(
+    output_path: str, checkpoint_name: str, test_telemetry: bool = True
+) -> None:
     checkpoint_file_name = CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT.format(
         checkpoint_name
     )
@@ -641,7 +721,8 @@ def validate_checkpoint_file_output(output_path: str, checkpoint_name: str) -> N
         expected_obj, actual_obj, ignore_order=True, exclude_paths=[exclude_paths]
     )
     assert diff == {}
-    validate_telemetry(checkpoint_name, output_path)
+    if test_telemetry:
+        validate_telemetry(checkpoint_name, output_path)
 
 
 def validate_telemetry(checkpoint_name: str, output_path: str) -> None:

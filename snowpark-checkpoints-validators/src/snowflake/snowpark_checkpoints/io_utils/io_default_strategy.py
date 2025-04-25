@@ -39,11 +39,11 @@ class IODefaultStrategy(EnvStrategy):
 
     def read(
         self, file_path: str, mode: str = "r", encoding: Optional[str] = None
-    ) -> Optional[str]:
+    ) -> str:
         with open(file_path, mode=mode, encoding=encoding) as file:
             return file.read()
 
-    def read_bytes(self, file_path: str) -> Optional[bytes]:
+    def read_bytes(self, file_path: str) -> bytes:
         with open(file_path, mode="rb") as f:
             return f.read()
 

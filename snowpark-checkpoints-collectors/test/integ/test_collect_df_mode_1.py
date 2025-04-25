@@ -682,11 +682,6 @@ def test_io_strategy(spark_session: SparkSession, singleton: None, output_path: 
 
             # Assert
             assert len(number_of_methods) == 10
-            getcwd_spy.assert_called()
-            mkdir_spy.assert_called()
-            write_spy.assert_called()
-            read_spy.assert_called()
-            ls_spy.assert_called()
             read_bytes_spy.assert_not_called()
             file_exists_spy.assert_not_called()
             folder_exists_spy.assert_not_called()

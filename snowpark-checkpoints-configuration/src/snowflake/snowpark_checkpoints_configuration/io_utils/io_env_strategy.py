@@ -39,7 +39,7 @@ class EnvStrategy(ABC):
     @abstractmethod
     def read(
         self, file_path: str, mode: str = "r", encoding: Optional[str] = None
-    ) -> Optional[str]:
+    ) -> str:
         """Read content from a file.
 
         Args:
@@ -48,7 +48,7 @@ class EnvStrategy(ABC):
             encoding: The encoding to use for reading the file.
 
         Returns:
-            Optional[str]: The content of the file, or None if an error occurred.
+            str: The content of the file.
 
         """
 

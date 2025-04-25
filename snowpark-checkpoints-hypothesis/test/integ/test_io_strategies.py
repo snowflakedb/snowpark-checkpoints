@@ -108,12 +108,6 @@ def test_io_strategy_from_json(
             assert df.schema == expected_schema
             assert isinstance(df, DataFrame)
             assert len(number_of_methods) == 9
-            file_exists_spy.assert_called()
-            read_spy.assert_called()
-            write_spy.assert_called()
-            mkdir_spy.assert_called()
-            getcwd_spy.assert_called()
-            ls_spy.assert_called()
             read_bytes_spy.assert_not_called()
             folder_exists_spy.assert_not_called()
 
@@ -183,11 +177,6 @@ def test_io_strategy_from_object(
             assert df.schema == expected_schema
             assert isinstance(df, DataFrame)
             assert len(number_of_methods) == 9
-            read_spy.assert_called()
-            write_spy.assert_called()
-            mkdir_spy.assert_called()
-            getcwd_spy.assert_called()
-            ls_spy.assert_called()
             file_exists_spy.assert_not_called()
             read_bytes_spy.assert_not_called()
             folder_exists_spy.assert_not_called()

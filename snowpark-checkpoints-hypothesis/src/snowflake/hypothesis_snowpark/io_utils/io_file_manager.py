@@ -41,10 +41,10 @@ class IOFileManager(metaclass=Singleton):
 
     def read(
         self, file_path: str, mode: str = "r", encoding: Optional[str] = None
-    ) -> Optional[str]:
+    ) -> str:
         return self.strategy.read(file_path, mode, encoding)
 
-    def read_bytes(self, file_path: str) -> Optional[bytes]:
+    def read_bytes(self, file_path: str) -> bytes:
         return self.strategy.read_bytes(file_path)
 
     def ls(self, path: str, recursive: bool = False) -> list[str]:

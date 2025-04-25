@@ -31,7 +31,7 @@ class IOFileManager(metaclass=Singleton):
 
     def read(
         self, file_path: str, mode: str = "r", encoding: Optional[str] = None
-    ) -> Optional[str]:
+    ) -> str:
         return self.strategy.read(file_path, mode, encoding)
 
     def getcwd(self) -> str:

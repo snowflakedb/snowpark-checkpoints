@@ -514,15 +514,6 @@ def test_io_strategy(
 
             # Assert
             assert len(number_of_methods) == 10
-            getcwd_spy.assert_called()
-            mkdir_spy.assert_called()
-            write_spy.assert_called()
-            read_spy.assert_called()
-            read_bytes_spy.assert_called()
-            file_exists_spy.assert_called()
-            ls_spy.assert_called()
-            folder_exists_spy.assert_called()
-            remove_dir_spy.assert_called()
             assert getcwd_spy.call_count == 3
             assert mkdir_spy.call_count == 5
             assert write_spy.call_count == 2

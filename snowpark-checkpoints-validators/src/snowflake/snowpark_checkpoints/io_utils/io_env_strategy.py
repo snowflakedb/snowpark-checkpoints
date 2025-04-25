@@ -73,7 +73,7 @@ class EnvStrategy(ABC):
     @abstractmethod
     def read(
         self, file_path: str, mode: str = "r", encoding: Optional[str] = None
-    ) -> Optional[str]:
+    ) -> str:
         """Read content from a file.
 
         Args:
@@ -82,19 +82,19 @@ class EnvStrategy(ABC):
             encoding: The encoding to use for reading the file.
 
         Returns:
-            Optional[str]: The content of the file, or None if an error occurred.
+            str: The content of the file.
 
         """
 
     @abstractmethod
-    def read_bytes(self, file_path: str) -> Optional[bytes]:
+    def read_bytes(self, file_path: str) -> bytes:
         """Read binary content from a file.
 
         Args:
             file_path: The path to the file to read from.
 
         Returns:
-            Optional[BinaryIO]: The binary content of the file, or None if an error occurred.
+            bytes: The binary content of the file.
 
         """
 
@@ -124,7 +124,10 @@ class EnvStrategy(ABC):
     def telemetry_path_files(self, path: str) -> Path:
         """Get the path to the telemetry files.
 
+        Args:
+            path: The path to the telemetry directory.
+
         Returns:
-            str: The path to the telemetry files.
+            Path: The path object representing the telemetry files.
 
         """

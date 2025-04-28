@@ -37,6 +37,8 @@ jobs:
       HADOOP_HOME: "${{ github.workspace }}\\hadoop"
       HADOOP_VERSION: "3.3.6"
       JAVA_VERSION: "21"
+      SNOWFLAKE_OCSP_RESPONSE_CACHE_SERVER_ENABLED: false
+      SF_OCSP_FAIL_OPEN: true
 
     strategy:
       fail-fast: false
@@ -50,12 +52,12 @@ jobs:
           - os: ubuntu-latest
             python-version: "3.10"
             cloud-provider: aws
-            snow_cli_version: "3.7.1"
+            snow_cli_version: "3.2.2"
             download_name: linux
           - os: ubuntu-latest
             python-version: "3.11"
             cloud-provider: aws
-            snow_cli_version: "3.7.1"
+            snow_cli_version: "3.2.2"
             download_name: linux
 
     steps:

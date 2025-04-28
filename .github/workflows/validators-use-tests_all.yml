@@ -21,6 +21,8 @@ jobs:
       SNOWFLAKE_CONNECTIONS_MYCONNECTION_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
       SNOWFLAKE_CONNECTIONS_MYCONNECTION_PRIVATE_KEY_RAW: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_RAW }}
       SNOWPARK_CHECKPOINTS_TELEMETRY_TESTING: "true"
+      SNOWFLAKE_OCSP_RESPONSE_CACHE_SERVER_ENABLED: false
+      SF_OCSP_FAIL_OPEN: true
 
     strategy:
       fail-fast: false
@@ -34,17 +36,17 @@ jobs:
           - os: ubuntu-latest
             python-version: "3.10"
             cloud-provider: aws
-            snow_cli_version: "3.7.1"
+            snow_cli_version: "3.2.2"
             download_name: linux
           - os: ubuntu-latest
             python-version: "3.11"
             cloud-provider: aws
-            snow_cli_version: "3.7.1"
+            snow_cli_version: "3.2.2"
             download_name: linux
           - os: windows-latest
             python-version: "3.10"
             cloud-provider: aws
-            snow_cli_version: "3.7.1"
+            snow_cli_version: "3.2.2"
             download_name: windows
 
     steps:

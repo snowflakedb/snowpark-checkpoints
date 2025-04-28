@@ -41,7 +41,7 @@ jobs:
           - os: ubuntu-latest
             python-version: "3.11"
             cloud-provider: aws
-            snow_cli_version: "3.2.2"
+            snow_cli_version: "3.7.1"
             download_name: linux
 
     steps:

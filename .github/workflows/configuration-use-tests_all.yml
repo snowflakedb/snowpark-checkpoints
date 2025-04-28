@@ -24,8 +24,6 @@ jobs:
       HADOOP_HOME: "${{ github.workspace }}\\hadoop"
       HADOOP_VERSION: "3.3.6"
       JAVA_VERSION: "21"
-      SNOWFLAKE_OCSP_RESPONSE_CACHE_SERVER_ENABLED: false
-      SF_OCSP_FAIL_OPEN: true
 
     strategy:
       fail-fast: false
@@ -56,6 +54,18 @@ jobs:
       - name: Check out the repository
         uses: actions/checkout@v4
 
+      - name: Set environment variables for no SSL validation
+        if: runner.os != 'Windows'
+        run: |
+          export CURL_CA_BUNDLE=""
+          export REQUESTS_CA_BUNDLE=""
+
+      - name: Set environment variables for no SSL validation (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:CURL_CA_BUNDLE=""
+          $env:REQUESTS_CA_BUNDLE=""
       - name: Set up Python
         uses: actions/setup-python@v5
         with:

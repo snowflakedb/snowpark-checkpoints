@@ -30,19 +30,35 @@ from sys import platform
 from typing import Any, Callable, Optional, TypeVar
 from uuid import getnode
 
-from snowflake.connector import (
-    SNOWFLAKE_CONNECTOR_VERSION,
-    time_util,
-)
-from snowflake.connector.constants import DIRS as SNOWFLAKE_DIRS
-from snowflake.connector.network import SnowflakeRestful
-from snowflake.connector.telemetry import TelemetryClient
+from snowflake.connector.description import PLATFORM as CONNECTOR_PLATFORM
 from snowflake.snowpark import VERSION as SNOWPARK_VERSION
 from snowflake.snowpark import dataframe as snowpark_dataframe
 from snowflake.snowpark.session import Session
 from snowflake.snowpark_checkpoints.io_utils.io_file_manager import (
     get_io_file_manager,
 )
+
+
+try:
+    """
+    The following imports are used to log telemetry events in the Snowflake Connector.
+    """
+    from snowflake.connector import (
+        SNOWFLAKE_CONNECTOR_VERSION,
+        time_util,
+    )
+    from snowflake.connector.constants import DIRS as SNOWFLAKE_DIRS
+    from snowflake.connector.network import SnowflakeRestful
+    from snowflake.connector.telemetry import TelemetryClient
+except Exception:
+    """
+    Set default import values for the Snowflake Connector when using snowpark-checkpoints in stored procedures.
+    """
+    SNOWFLAKE_CONNECTOR_VERSION = ""
+    time_util = None
+    SNOWFLAKE_DIRS = ""
+    SnowflakeRestful = None
+    TelemetryClient = None
 
 
 try:
@@ -499,6 +515,16 @@ def get_load_json(json_schema: str) -> dict:
         raise ValueError(f"Error reading JSON schema file: {e}") from None
 
 
+def _is_in_stored_procedure() -> bool:
+    """Check if the code is running in a stored procedure.
+
+    Returns:
+        bool: True if the code is running in a stored procedure, False otherwise.
+
+    """
+    return CONNECTOR_PLATFORM == "XP"
+
+
 def extract_parameters(
     func: Callable, args: tuple, kwargs: dict, params_list: Optional[list[str]]
 ) -> dict:
@@ -846,7 +872,10 @@ def report_telemetry(
             except Exception as err:
                 func_exception = err
 
-            if os.getenv("SNOWPARK_CHECKPOINTS_TELEMETRY_ENABLED") == "false":
+            if (
+                os.getenv("SNOWPARK_CHECKPOINTS_TELEMETRY_ENABLED") == "false"
+                or _is_in_stored_procedure()
+            ):
                 return result
             telemetry_event = None
             data = None

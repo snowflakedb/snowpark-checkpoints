@@ -31,6 +31,7 @@ from typing import Any, Callable, Optional, TypeVar
 from uuid import getnode
 
 from snowflake.connector.description import PLATFORM as CONNECTOR_PLATFORM
+from snowflake.connector.telemetry import TelemetryClient
 from snowflake.hypothesis_snowpark.io_utils.io_file_manager import (
     get_io_file_manager,
 )
@@ -49,7 +50,6 @@ try:
     )
     from snowflake.connector.constants import DIRS as SNOWFLAKE_DIRS
     from snowflake.connector.network import SnowflakeRestful
-    from snowflake.connector.telemetry import TelemetryClient
 except Exception:
     """
     Set default import values for the Snowflake Connector when using snowpark-checkpoints in stored procedures.
@@ -58,7 +58,6 @@ except Exception:
     time_util = None
     SNOWFLAKE_DIRS = ""
     SnowflakeRestful = None
-    TelemetryClient = None
 
 
 try:

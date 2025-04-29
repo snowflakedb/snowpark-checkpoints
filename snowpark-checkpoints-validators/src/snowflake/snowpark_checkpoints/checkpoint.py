@@ -33,6 +33,7 @@ from snowflake.snowpark_checkpoints.snowpark_sampler import (
 from snowflake.snowpark_checkpoints.utils.constants import (
     FAIL_STATUS,
     PASS_STATUS,
+    SKIP_STATUS,
     CheckpointMode,
 )
 from snowflake.snowpark_checkpoints.utils.extra_config import is_checkpoint_enabled
@@ -92,11 +93,10 @@ def validate_dataframe_checkpoint(
     checkpoint_name = _replace_special_characters(checkpoint_name)
 
     if not is_checkpoint_enabled(checkpoint_name):
-        LOGGER.warning(
-            "Checkpoint '%s' is disabled. Skipping DataFrame checkpoint validation.",
-            checkpoint_name,
+        raise Exception(
+            f"Checkpoint '{checkpoint_name}' is disabled. Please enable it in the checkpoints.json file.",
+            "In case you want to skip it, use the skip_validate_dataframe_checkpoint method instead.",
         )
-        return None
 
     LOGGER.info(
         "Starting DataFrame checkpoint validation for checkpoint '%s'", checkpoint_name
@@ -130,6 +130,48 @@ def validate_dataframe_checkpoint(
             "Please use 1 for schema validation or 2 for full data validation."
         ),
     )
+
+
+@log
+def skip_validate_dataframe_checkpoint(
+    df: SnowparkDataFrame,
+    checkpoint_name: str,
+    job_context: Optional[SnowparkJobContext] = None,
+    mode: Optional[CheckpointMode] = CheckpointMode.SCHEMA,
+    custom_checks: Optional[dict[Any, Any]] = None,
+    skip_checks: Optional[dict[Any, Any]] = None,
+    sample_frac: Optional[float] = 1.0,
+    sample_number: Optional[int] = None,
+    sampling_strategy: Optional[SamplingStrategy] = SamplingStrategy.RANDOM_SAMPLE,
+    output_path: Optional[str] = None,
+) -> Union[tuple[bool, PandasDataFrame], None]:
+    """Skips the validation of a Snowpark DataFrame against a specified checkpoint.
+
+    Args:
+        df (SnowparkDataFrame): The DataFrame to validate.
+        checkpoint_name (str): The name of the checkpoint to validate against.
+        job_context (SnowparkJobContext, optional): The job context for the validation. Required for PARQUET mode.
+        mode (CheckpointMode): The mode of validation (e.g., SCHEMA, PARQUET). Defaults to SCHEMA.
+        custom_checks (Optional[dict[Any, Any]], optional): Custom checks to apply during validation.
+        skip_checks (Optional[dict[Any, Any]], optional): Checks to skip during validation.
+        sample_frac (Optional[float], optional): Fraction of the DataFrame to sample for validation. Defaults to 0.1.
+        sample_number (Optional[int], optional): Number of rows to sample for validation.
+        sampling_strategy (Optional[SamplingStrategy], optional): Strategy to use for sampling.
+            Defaults to RANDOM_SAMPLE.
+        output_path (Optional[str], optional): The output path for the validation results.
+
+    Raises:
+        ValueError: If an invalid validation mode is provided or if job_context is None for PARQUET mode.
+
+    """
+    checkpoint_name = _replace_special_characters(checkpoint_name)
+
+    LOGGER.warning(
+        "Checkpoint '%s' is disabled. Skipping DataFrame checkpoint validation.",
+        checkpoint_name,
+    )
+
+    _update_validation_result(checkpoint_name, SKIP_STATUS, output_path)
 
 
 def _check_dataframe_schema_file(

@@ -50,21 +50,23 @@ def test_collect_dataframe_checkpoint_disabled_checkpoint(
     pyspark_df = MagicMock()
     checkpoint_name = "my_checkpoint"
     module_name = "snowflake.snowpark_checkpoints_collector.summary_stats_collector"
-    expected_log_msg = (
-        f"Checkpoint '{checkpoint_name}' is disabled. Skipping collection."
-    )
-
-    with (
-        caplog.at_level(
-            level=logging.INFO,
-            logger=module_name,
-        ),
-        patch(
-            f"{module_name}.is_checkpoint_enabled",
-            return_value=False,
-        ) as mock_is_checkpoint_enabled,
-    ):
-        collect_dataframe_checkpoint(pyspark_df, checkpoint_name)
-
-    mock_is_checkpoint_enabled.assert_called_once_with(checkpoint_name)
-    assert expected_log_msg in caplog.messages
+    expected_exception_error_msg = "Checkpoint 'my_checkpoint' is disabled. Please enable it in the checkpoints.json file."
+    expected_fix_suggestion_msg = "In case you want to skip it, use the skip_collect_dataframe_checkpoint method instead."
+    try:
+        with (
+            caplog.at_level(
+                level=logging.INFO,
+                logger=module_name,
+            ),
+            patch(
+                f"{module_name}.is_checkpoint_enabled",
+                return_value=False,
+            ) as mock_is_checkpoint_enabled,
+        ):
+            collect_dataframe_checkpoint(pyspark_df, checkpoint_name)
+    except Exception as e:
+        mock_is_checkpoint_enabled.assert_called_once_with(checkpoint_name)
+        error_msg = e.args[0]
+        fix_suggestion_msg = e.args[1]
+        assert error_msg == expected_exception_error_msg
+        assert fix_suggestion_msg == expected_fix_suggestion_msg

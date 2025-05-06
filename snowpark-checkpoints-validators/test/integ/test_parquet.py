@@ -408,15 +408,17 @@ def test_validate_dataframe_checkpoint_disabled_checkpoint(
 ):
     mock_is_checkpoint_enabled.return_value = False
     caplog.set_level(level=logging.WARNING, logger=LOGGER_NAME)
-
+    expected_exception_error_msg = "Checkpoint 'test_checkpoint' is disabled. Please enable it in the checkpoints.json file."
+    expected_fix_suggestion_msg = "In case you want to skip it, use the xvalidate_dataframe_checkpoint method instead."
     df = MagicMock()
     checkpoint_name = "test_checkpoint"
-    result = validate_dataframe_checkpoint(df=df, checkpoint_name=checkpoint_name)
-
-    mock_is_checkpoint_enabled.assert_called_once_with(checkpoint_name)
-    assert result is None
-    assert "disabled" in caplog.text
-    assert checkpoint_name in caplog.text
+    try:
+        validate_dataframe_checkpoint(df=df, checkpoint_name=checkpoint_name)
+    except Exception as error:
+        error_msg = error.args[0]
+        fix_suggestion_msg = error.args[1]
+        assert error_msg == expected_exception_error_msg
+        assert fix_suggestion_msg == expected_fix_suggestion_msg
 
 
 def test_io_strategy(

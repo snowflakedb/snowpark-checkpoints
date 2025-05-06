@@ -95,7 +95,7 @@ def validate_dataframe_checkpoint(
     if not is_checkpoint_enabled(checkpoint_name):
         raise Exception(
             f"Checkpoint '{checkpoint_name}' is disabled. Please enable it in the checkpoints.json file.",
-            "In case you want to skip it, use the x_validate_dataframe_checkpoint method instead.",
+            "In case you want to skip it, use the xvalidate_dataframe_checkpoint method instead.",
         )
 
     LOGGER.info(
@@ -133,7 +133,7 @@ def validate_dataframe_checkpoint(
 
 
 @log
-def x_validate_dataframe_checkpoint(
+def xvalidate_dataframe_checkpoint(
     df: SnowparkDataFrame,
     checkpoint_name: str,
     job_context: Optional[SnowparkJobContext] = None,

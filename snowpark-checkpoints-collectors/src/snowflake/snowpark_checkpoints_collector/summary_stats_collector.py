@@ -119,7 +119,7 @@ def collect_dataframe_checkpoint(
     if not is_checkpoint_enabled(normalized_checkpoint_name):
         raise Exception(
             f"Checkpoint '{normalized_checkpoint_name}' is disabled. Please enable it in the checkpoints.json file.",
-            "In case you want to skip it, use the x_collect_dataframe_checkpoint method instead.",
+            "In case you want to skip it, use the xcollect_dataframe_checkpoint method instead.",
         )
 
     LOGGER.info("Starting to collect checkpoint '%s'", normalized_checkpoint_name)
@@ -184,7 +184,7 @@ def collect_dataframe_checkpoint(
 
 
 @log
-def x_collect_dataframe_checkpoint(
+def xcollect_dataframe_checkpoint(
     df: SparkDataFrame,
     checkpoint_name: str,
     sample: Optional[float] = None,

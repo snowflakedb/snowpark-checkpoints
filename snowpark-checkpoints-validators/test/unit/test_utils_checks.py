@@ -19,7 +19,7 @@ from unittest.mock import call, patch, mock_open
 from numpy import float64
 
 from pytest import mark, param, raises
-from snowflake.snowpark_checkpoints.checkpoint import x_validate_dataframe_checkpoint
+from snowflake.snowpark_checkpoints.checkpoint import xvalidate_dataframe_checkpoint
 from snowflake.snowpark_checkpoints.errors import SchemaValidationError
 from snowflake.snowpark_checkpoints.utils.constants import (
     BOOLEAN_TYPE,
@@ -484,7 +484,7 @@ def test_replace_special_characters_invalid(name):
         _replace_special_characters(name)
 
 
-def test_x_validate_dataframe_checkpoint():
+def test_xvalidate_dataframe_checkpoint():
     checkpoint_name = "my_checkpoint"
     module_name = "snowflake.snowpark_checkpoints.validation_result_metadata"
     validation_results_metadata = ValidationResultsMetadata("some/dummy/path")
@@ -497,7 +497,7 @@ def test_x_validate_dataframe_checkpoint():
         pyspark_df = MagicMock()
         checkpoint_name = "my_checkpoint"
 
-        x_validate_dataframe_checkpoint(pyspark_df, checkpoint_name)
+        xvalidate_dataframe_checkpoint(pyspark_df, checkpoint_name)
 
         validation_results = validation_results_metadata.validation_results
         validation_results = validation_results.model_dump()

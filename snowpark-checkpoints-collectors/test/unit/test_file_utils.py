@@ -61,18 +61,24 @@ def test_get_collection_point_source_file_path_scenario_python_source_file():
 
 
 def test_get_collection_point_source_file_path_scenario_notebook_source_file():
-    with mock.patch(
-        "snowflake.snowpark_checkpoints_collector.utils.file_utils._is_temporal_path",
-        return_value=True,
-    ):
-        with mock.patch(
+    with (
+        mock.patch(
+            "snowflake.snowpark_checkpoints_collector.utils.file_utils._is_temporal_path",
+            return_value=True,
+        ),
+        mock.patch(
+            "snowflake.snowpark_checkpoints_collector.utils.file_utils._get_stack_frame",
+            return_value=mock.MagicMock(filename="abc.ipynb", lineno=1),
+        ),
+        mock.patch(
             "snowflake.snowpark_checkpoints_collector.utils.file_utils._get_ipynb_file_path_collection",
             return_value=["abc.ipynb"],
-        ):
-            collection_point_source_file_path = (
-                file_utils.get_collection_point_source_file_path()
-            )
-            assert collection_point_source_file_path != UNKNOWN_SOURCE_FILE
+        ),
+    ):
+        collection_point_source_file_path = (
+            file_utils.get_collection_point_source_file_path()
+        )
+        assert collection_point_source_file_path != UNKNOWN_SOURCE_FILE
 
 
 def test_get_collection_point_source_file_path_scenario_unknown_source_file():
@@ -102,8 +108,12 @@ def test_get_collection_point_source_file_path_scenario_exception():
 
 
 def test_get_collection_point_line_of_code_scenario_python_source_file():
-    collection_point_line_of_code = file_utils.get_collection_point_line_of_code()
-    assert collection_point_line_of_code != UNKNOWN_LINE_OF_CODE
+    with mock.patch(
+        "snowflake.snowpark_checkpoints_collector.utils.file_utils._get_stack_frame",
+        return_value=mock.MagicMock(filename=__file__, lineno=1),
+    ):
+        collection_point_line_of_code = file_utils.get_collection_point_line_of_code()
+        assert collection_point_line_of_code != UNKNOWN_LINE_OF_CODE
 
 
 def test_get_collection_point_line_of_code_scenario_notebook_source_file():

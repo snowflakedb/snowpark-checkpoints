@@ -19,7 +19,7 @@ from unittest.mock import call, patch, mock_open
 from numpy import float64
 
 from pytest import mark, param, raises
-from snowflake.snowpark_checkpoints.checkpoint import skip_validate_dataframe_checkpoint
+from snowflake.snowpark_checkpoints.checkpoint import _handle_disabled_checkpoint
 from snowflake.snowpark_checkpoints.errors import SchemaValidationError
 from snowflake.snowpark_checkpoints.utils.constants import (
     BOOLEAN_TYPE,
@@ -484,7 +484,7 @@ def test_replace_special_characters_invalid(name):
         _replace_special_characters(name)
 
 
-def test_skip_validate_dataframe_checkpoint():
+def test_handle_Disabled_checkpoint():
     checkpoint_name = "my_checkpoint"
     module_name = "snowflake.snowpark_checkpoints.validation_result_metadata"
     validation_results_metadata = ValidationResultsMetadata("some/dummy/path")
@@ -492,12 +492,15 @@ def test_skip_validate_dataframe_checkpoint():
         patch(
             f"{module_name}.ValidationResultsMetadata",
             return_value=validation_results_metadata,
-        )
+        ),
+        patch(
+            "snowflake.snowpark_checkpoints.utils.extra_config.get_checkpoint_file",
+            return_value="path/checkpoints.json",
+        ),
     ):
-        pyspark_df = MagicMock()
         checkpoint_name = "my_checkpoint"
 
-        skip_validate_dataframe_checkpoint(pyspark_df, checkpoint_name)
+        _handle_disabled_checkpoint(checkpoint_name)
 
         validation_results = validation_results_metadata.validation_results
         validation_results = validation_results.model_dump()

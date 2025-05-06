@@ -402,27 +402,6 @@ def test_df_mode_dataframe_invalid_mode(
     assert str(ex.value) in caplog.text
 
 
-@patch("snowflake.snowpark_checkpoints.checkpoint.is_checkpoint_enabled")
-def test_validate_dataframe_checkpoint_disabled_checkpoint(
-    mock_is_checkpoint_enabled: MagicMock, caplog: pytest.LogCaptureFixture
-):
-    expected_exception_error_msg = "Checkpoint 'test_checkpoint' is disabled. Please enable it in the checkpoints.json file."
-    expected_fix_suggestion_msg = "In case you want to skip it, use the skip_validate_dataframe_checkpoint method instead."
-    mock_is_checkpoint_enabled.return_value = False
-    caplog.set_level(level=logging.WARNING, logger=LOGGER_NAME)
-
-    df = MagicMock()
-    checkpoint_name = "test_checkpoint"
-    try:
-        result = validate_dataframe_checkpoint(df=df, checkpoint_name=checkpoint_name)
-    except Exception as e:
-        error_msg = e.args[0]
-        fix_suggestion_msg = e.args[1]
-        mock_is_checkpoint_enabled.assert_called_once_with(checkpoint_name)
-        assert error_msg == expected_exception_error_msg
-        assert fix_suggestion_msg == expected_fix_suggestion_msg
-
-
 def test_io_strategy(
     job_context: SnowparkJobContext,
     snowpark_schema: StructType,

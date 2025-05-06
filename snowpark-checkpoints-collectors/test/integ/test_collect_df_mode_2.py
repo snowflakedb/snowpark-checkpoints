@@ -514,9 +514,9 @@ def test_io_strategy(
 
             # Assert
             assert len(number_of_methods) == 10
-            assert getcwd_spy.call_count == 3
-            assert mkdir_spy.call_count == 5
-            assert write_spy.call_count == 2
+            assert getcwd_spy.call_count == 2
+            assert mkdir_spy.call_count == 3
+            assert write_spy.call_count == 1
             assert read_spy.call_count == 1
             assert read_bytes_spy.call_count == 1
             assert file_exists_spy.call_count == 2

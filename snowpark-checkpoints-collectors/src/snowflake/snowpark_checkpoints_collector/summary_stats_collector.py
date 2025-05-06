@@ -80,6 +80,7 @@ def collect_dataframe_checkpoint(
     sample: Optional[float] = None,
     mode: Optional[CheckpointMode] = None,
     output_path: Optional[str] = None,
+    enabled: Optional[bool] = True,
 ) -> None:
     """Collect a DataFrame checkpoint.
 
@@ -88,15 +89,17 @@ def collect_dataframe_checkpoint(
         checkpoint_name (str): The name of the checkpoint.
         sample (float, optional): Fraction of DataFrame to sample for schema inference.
             Defaults to 1.0.
-        mode (CheckpointMode): The mode to execution the collection.
-            Defaults to CheckpointMode.Schema
+        mode (CheckpointMode): The mode to execute the collection.
+            Defaults to CheckpointMode.Schema.
         output_path (str, optional): The output path to save the checkpoint.
-            Defaults to Current working Directory.
+            Defaults to the current working directory.
+        enabled (bool, optional): Whether the checkpoint collection is enabled.
+            Defaults to True.
 
     Raises:
         Exception: Invalid mode value.
-        Exception: Invalid checkpoint name. Checkpoint names must only contain alphanumeric characters
-                   , underscores and dollar signs.
+        Exception: Invalid checkpoint name. Checkpoint names must only contain alphanumeric characters,
+                   underscores, and dollar signs.
 
     """
     normalized_checkpoint_name = checkpoint_name_utils.normalize_checkpoint_name(
@@ -116,15 +119,6 @@ def collect_dataframe_checkpoint(
             f"Invalid checkpoint name: {normalized_checkpoint_name}. "
             "Checkpoint names must only contain alphanumeric characters, underscores and dollar signs."
         )
-    if not is_checkpoint_enabled(normalized_checkpoint_name):
-        raise Exception(
-            f"Checkpoint '{normalized_checkpoint_name}' is disabled. Please enable it in the checkpoints.json file.",
-            "In case you want to skip it, use the skip_collect_dataframe_checkpoint method instead.",
-        )
-
-    LOGGER.info("Starting to collect checkpoint '%s'", normalized_checkpoint_name)
-    LOGGER.debug("DataFrame size: %s rows", df.count())
-    LOGGER.debug("DataFrame schema: %s", df.schema)
 
     collection_point_file_path = file_utils.get_collection_point_source_file_path()
     collection_point_line_of_code = file_utils.get_collection_point_line_of_code()
@@ -133,6 +127,16 @@ def collect_dataframe_checkpoint(
         collection_point_line_of_code,
         normalized_checkpoint_name,
     )
+
+    if not is_checkpoint_enabled(normalized_checkpoint_name) or not enabled:
+        _handle_disabled_checkpoint(
+            collection_point_result, normalized_checkpoint_name, output_path
+        )
+        return
+
+    LOGGER.info("Starting to collect checkpoint '%s'", normalized_checkpoint_name)
+    LOGGER.debug("DataFrame size: %s rows", df.count())
+    LOGGER.debug("DataFrame schema: %s", df.schema)
 
     try:
         if _is_empty_dataframe_without_schema(df):
@@ -183,61 +187,25 @@ def collect_dataframe_checkpoint(
         collection_point_result_manager.add_result(collection_point_result)
 
 
-@log
-def skip_collect_dataframe_checkpoint(
-    df: SparkDataFrame,
+def _handle_disabled_checkpoint(
+    collection_point_result: CollectionPointResult,
     checkpoint_name: str,
-    sample: Optional[float] = None,
-    mode: Optional[CheckpointMode] = None,
     output_path: Optional[str] = None,
 ) -> None:
-    """Skips the collection of metadata from a Dataframe checkpoint.
+    """Handle the case when a checkpoint is disabled.
+
+    In case it is disabled, it will skip the collection and add the result to the collection point result manager.
+    The result will be marked as SKIP.
 
     Args:
-        df (SparkDataFrame): The input Spark DataFrame to skip.
+        collection_point_result (CollectionPointResult): The result object for the collection point.
         checkpoint_name (str): The name of the checkpoint.
-        sample (float, optional): Fraction of DataFrame to sample for schema inference.
-            Defaults to 1.0.
-        mode (CheckpointMode): The mode to execution the collection.
-            Defaults to CheckpointMode.Schema
         output_path (str, optional): The output path to save the checkpoint.
-            Defaults to Current working Directory.
-
-    Raises:
-        Exception: Invalid mode value.
-        Exception: Invalid checkpoint name. Checkpoint names must only contain alphanumeric characters,
-                     underscores and dollar signs.
 
     """
-    normalized_checkpoint_name = checkpoint_name_utils.normalize_checkpoint_name(
-        checkpoint_name
-    )
-    if normalized_checkpoint_name != checkpoint_name:
-        LOGGER.warning(
-            "Checkpoint name '%s' was normalized to '%s'",
-            checkpoint_name,
-            normalized_checkpoint_name,
-        )
-    is_valid_checkpoint_name = checkpoint_name_utils.is_valid_checkpoint_name(
-        normalized_checkpoint_name
-    )
-    if not is_valid_checkpoint_name:
-        raise Exception(
-            f"Invalid checkpoint name: {normalized_checkpoint_name}. "
-            "Checkpoint names must only contain alphanumeric characters, underscores and dollar signs."
-        )
-
     LOGGER.warning(
         "Checkpoint '%s' is disabled. Skipping collection.",
-        normalized_checkpoint_name,
-    )
-
-    collection_point_file_path = file_utils.get_collection_point_source_file_path()
-    collection_point_line_of_code = file_utils.get_collection_point_line_of_code()
-    collection_point_result = CollectionPointResult(
-        collection_point_file_path,
-        collection_point_line_of_code,
-        normalized_checkpoint_name,
+        checkpoint_name,
     )
 
     collection_point_result.result = CollectionResult.SKIP

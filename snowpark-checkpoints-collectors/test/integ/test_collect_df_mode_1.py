@@ -687,9 +687,9 @@ def test_io_strategy(spark_session: SparkSession, singleton: None, output_path: 
             folder_exists_spy.assert_not_called()
             remove_dir_spy.assert_not_called()
             assert read_spy.call_count == 1
-            assert getcwd_spy.call_count == 4
-            assert mkdir_spy.call_count == 5
-            assert write_spy.call_count == 3
+            assert getcwd_spy.call_count == 3
+            assert mkdir_spy.call_count == 3
+            assert write_spy.call_count == 2
             assert ls_spy.call_count == 1
             validate_checkpoint_file_output(
                 output_path, checkpoint_name, test_telemetry=False

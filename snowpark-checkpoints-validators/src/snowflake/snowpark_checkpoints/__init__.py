@@ -39,7 +39,6 @@ __all__ = [
     "check_dataframe_schema",
     "check_output_schema",
     "check_input_schema",
-    "skip_validate_dataframe_checkpoint",
     "validate_dataframe_checkpoint",
     "CheckpointMode",
 ]

@@ -97,6 +97,13 @@ def test_collect_with_exception(
     validate_collection_point_result_file(CollectionResult.FAIL, output_path)
 
 
+def test_collect_disabled_checkpoint(spark_session, output_path):
+    collect_disabled_checkpoint(
+        spark_session, "df_collect_disabled", CheckpointMode.SCHEMA, output_path
+    )
+    validate_collection_point_result_file(CollectionResult.SKIP, output_path)
+
+
 def collect_dataframe_1(spark_session, checkpoint_name, mode, output_path):
     pyspark_df = spark_session.createDataFrame(
         [("Mario", "Bros"), ("Bruce", "Wayne"), ("Richard", "Grayson")],
@@ -131,6 +138,20 @@ def collect_dataframe_3(spark_session, checkpoint_name, mode, output_path):
 
     collect_dataframe_checkpoint(
         pyspark_df, checkpoint_name=checkpoint_name, mode=mode, output_path=output_path
+    )
+
+
+def collect_disabled_checkpoint(spark_session, checkpoint_name, mode, output_path):
+    pyspark_df = spark_session.createDataFrame(
+        [(101, True), (102, False), (103, True)], schema="id integer, status boolean"
+    )
+
+    collect_dataframe_checkpoint(
+        pyspark_df,
+        checkpoint_name=checkpoint_name,
+        mode=mode,
+        output_path=output_path,
+        enabled=False,
     )
 
 

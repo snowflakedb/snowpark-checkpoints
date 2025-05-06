@@ -51,7 +51,7 @@ def test_collect_dataframe_checkpoint_disabled_checkpoint(
     checkpoint_name = "my_checkpoint"
     module_name = "snowflake.snowpark_checkpoints_collector.summary_stats_collector"
     expected_exception_error_msg = "Checkpoint 'my_checkpoint' is disabled. Please enable it in the checkpoints.json file."
-    expected_fix_suggestion_msg = "In case you want to skip it, use the skip_collect_dataframe_checkpoint method instead."
+    expected_fix_suggestion_msg = "In case you want to skip it, use the x_collect_dataframe_checkpoint method instead."
     try:
         with (
             caplog.at_level(

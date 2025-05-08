@@ -30,6 +30,7 @@ CHECKPOINT_NAME_KEY = "checkpoint_name"
 class CollectionResult(Enum):
     FAIL = "FAIL"
     PASS = "PASS"
+    SKIP = "SKIP"
 
 
 class CollectionPointResult:

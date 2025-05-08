@@ -32,13 +32,10 @@ from snowflake.snowpark_checkpoints.utils.constants import (
     FLOAT_TYPE,
     MEAN_KEY,
     NAME_KEY,
-    NULL_COUNT_KEY,
     OVERWRITE_MODE,
     PASS_STATUS,
-    ROWS_COUNT_KEY,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
     TYPE_KEY,
-    SKIP_ALL,
     MARGIN_ERROR_KEY,
 )
 from pandera import Column, Check, DataFrameSchema

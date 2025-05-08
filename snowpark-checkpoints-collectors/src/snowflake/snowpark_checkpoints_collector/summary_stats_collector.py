@@ -117,11 +117,10 @@ def collect_dataframe_checkpoint(
             "Checkpoint names must only contain alphanumeric characters, underscores and dollar signs."
         )
     if not is_checkpoint_enabled(normalized_checkpoint_name):
-        LOGGER.info(
-            "Checkpoint '%s' is disabled. Skipping collection.",
-            normalized_checkpoint_name,
+        raise Exception(
+            f"Checkpoint '{normalized_checkpoint_name}' is disabled. Please enable it in the checkpoints.json file.",
+            "In case you want to skip it, use the xcollect_dataframe_checkpoint method instead.",
         )
-        return
 
     LOGGER.info("Starting to collect checkpoint '%s'", normalized_checkpoint_name)
     LOGGER.debug("DataFrame size: %s rows", df.count())
@@ -182,6 +181,68 @@ def collect_dataframe_checkpoint(
     finally:
         collection_point_result_manager = CollectionPointResultManager(output_path)
         collection_point_result_manager.add_result(collection_point_result)
+
+
+@log
+def xcollect_dataframe_checkpoint(
+    df: SparkDataFrame,
+    checkpoint_name: str,
+    sample: Optional[float] = None,
+    mode: Optional[CheckpointMode] = None,
+    output_path: Optional[str] = None,
+) -> None:
+    """Skips the collection of metadata from a Dataframe checkpoint.
+
+    Args:
+        df (SparkDataFrame): The input Spark DataFrame to skip.
+        checkpoint_name (str): The name of the checkpoint.
+        sample (float, optional): Fraction of DataFrame to sample for schema inference.
+            Defaults to 1.0.
+        mode (CheckpointMode): The mode to execution the collection.
+            Defaults to CheckpointMode.Schema
+        output_path (str, optional): The output path to save the checkpoint.
+            Defaults to Current working Directory.
+
+    Raises:
+        Exception: Invalid mode value.
+        Exception: Invalid checkpoint name. Checkpoint names must only contain alphanumeric characters,
+                     underscores and dollar signs.
+
+    """
+    normalized_checkpoint_name = checkpoint_name_utils.normalize_checkpoint_name(
+        checkpoint_name
+    )
+    if normalized_checkpoint_name != checkpoint_name:
+        LOGGER.warning(
+            "Checkpoint name '%s' was normalized to '%s'",
+            checkpoint_name,
+            normalized_checkpoint_name,
+        )
+    is_valid_checkpoint_name = checkpoint_name_utils.is_valid_checkpoint_name(
+        normalized_checkpoint_name
+    )
+    if not is_valid_checkpoint_name:
+        raise Exception(
+            f"Invalid checkpoint name: {normalized_checkpoint_name}. "
+            "Checkpoint names must only contain alphanumeric characters, underscores and dollar signs."
+        )
+
+    LOGGER.warning(
+        "Checkpoint '%s' is disabled. Skipping collection.",
+        normalized_checkpoint_name,
+    )
+
+    collection_point_file_path = file_utils.get_collection_point_source_file_path()
+    collection_point_line_of_code = file_utils.get_collection_point_line_of_code()
+    collection_point_result = CollectionPointResult(
+        collection_point_file_path,
+        collection_point_line_of_code,
+        normalized_checkpoint_name,
+    )
+
+    collection_point_result.result = CollectionResult.SKIP
+    collection_point_result_manager = CollectionPointResultManager(output_path)
+    collection_point_result_manager.add_result(collection_point_result)
 
 
 @report_telemetry(params_list=["column_type_dict"])

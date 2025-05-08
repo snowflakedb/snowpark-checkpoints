@@ -273,4 +273,37 @@ sp_dataframe = session.create_dataframe(df)
 preprocessed_dataframe = preprocessor(sp_dataframe)
 ```
 
+### Skip validation
+The method `xvalidate_dataframe_checkpoint` can be used to avoid the validation of the checkpoint defined.
+The result of the checkpoint will be `SKIP` and a message will be logged in the terminal. The method contains the same signature of `validate_dataframe_checkpoint`.
+
+#### Usage Example
+
+```python
+from snowflake.snowpark import Session
+from snowflake.snowpark_checkpoints.utils.constant import (
+    CheckpointMode,
+)
+from snowflake.snowpark_checkpoints.checkpoint import validate_dataframe_checkpoint
+from snowflake.snowpark_checkpoints.spark_migration import SamplingStrategy
+from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
+from pyspark.sql import SparkSession
+
+session = Session.builder.getOrCreate()
+job_context = SnowparkJobContext(
+    session, SparkSession.builder.getOrCreate(), "job_context", True
+)
+df = session.read.format("csv").load("data.csv")
+
+xvalidate_dataframe_checkpoint(
+    df,
+    "schema_checkpoint",
+    job_context=job_context,
+    mode=CheckpointMode.SCHEMA,
+    sample_frac=0.1,
+    sampling_strategy=SamplingStrategy.RANDOM_SAMPLE
+)
+```
+
+
 ------

@@ -39,6 +39,7 @@ STACK_POSITION_CHECKPOINT: Final[int] = 6
 # Validation status
 PASS_STATUS: Final[str] = "PASS"
 FAIL_STATUS: Final[str] = "FAIL"
+SKIP_STATUS: Final[str] = "SKIP"
 
 # Validation result keys
 DEFAULT_KEY: Final[str] = "default"

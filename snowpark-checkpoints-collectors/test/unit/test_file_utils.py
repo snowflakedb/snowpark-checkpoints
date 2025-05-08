@@ -54,10 +54,14 @@ def test_get_output_file_path_create():
 
 
 def test_get_collection_point_source_file_path_scenario_python_source_file():
-    collection_point_source_file_path = (
-        file_utils.get_collection_point_source_file_path()
-    )
-    assert collection_point_source_file_path != UNKNOWN_SOURCE_FILE
+    with mock.patch(
+        "snowflake.snowpark_checkpoints_collector.utils.file_utils._get_stack_frame",
+        return_value=mock.MagicMock(filename="abc.py", lineno=1),
+    ):
+        collection_point_source_file_path = (
+            file_utils.get_collection_point_source_file_path()
+        )
+        assert collection_point_source_file_path != UNKNOWN_SOURCE_FILE
 
 
 def test_get_collection_point_source_file_path_scenario_notebook_source_file():

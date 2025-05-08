@@ -134,7 +134,7 @@ def _is_temporal_path(path: str) -> bool:
 def _get_stack_frame() -> inspect.FrameInfo:
     batch = inspect.stack()[:7]
     batch.reverse()
-    collect_frame_regex = r"(validate_dataframe_checkpoint)"
+    collect_frame_regex = r"(collect_dataframe_checkpoint)"
 
     for frame in batch:
         if (

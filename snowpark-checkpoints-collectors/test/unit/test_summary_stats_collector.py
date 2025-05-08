@@ -18,6 +18,7 @@ import os
 import tempfile
 
 from datetime import datetime
+from typing import get_type_hints
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -25,6 +26,7 @@ import pytest
 from snowflake.snowpark_checkpoints_collector.summary_stats_collector import (
     collect_dataframe_checkpoint,
     generate_parquet_for_spark_df,
+    xcollect_dataframe_checkpoint,
 )
 
 
@@ -70,3 +72,29 @@ def test_collect_dataframe_checkpoint_disabled_checkpoint(
         fix_suggestion_msg = e.args[1]
         assert error_msg == expected_exception_error_msg
         assert fix_suggestion_msg == expected_fix_suggestion_msg
+
+
+def test_skip_collector_parameters_commutability():
+    collect_hints = get_type_hints(collect_dataframe_checkpoint)
+    x_collect_hints = get_type_hints(xcollect_dataframe_checkpoint)
+
+    collect_params = {
+        name: hint for name, hint in collect_hints.items() if name != "return"
+    }
+    x_collect_params = {
+        name: hint for name, hint in x_collect_hints.items() if name != "return"
+    }
+    assert (
+        collect_params == x_collect_params
+    ), "The parameters of collect_dataframe_checkpoint and xcollect_dataframe_checkpoint must be the same."
+
+
+def test_skip_collector_return_type_commutability():
+    collect_hints = get_type_hints(collect_dataframe_checkpoint)
+    x_collect_hints = get_type_hints(xcollect_dataframe_checkpoint)
+
+    collect_return = collect_hints.get("return")
+    x_collect_return = x_collect_hints.get("return")
+    assert (
+        collect_return == x_collect_return
+    ), "The return type of collect_dataframe_checkpoint and xcollect_dataframe_checkpoint must be the same."

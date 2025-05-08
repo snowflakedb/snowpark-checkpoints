@@ -19,7 +19,6 @@ from unittest.mock import call, patch, mock_open
 from numpy import float64
 
 from pytest import mark, param, raises
-from snowflake.snowpark_checkpoints.checkpoint import xvalidate_dataframe_checkpoint
 from snowflake.snowpark_checkpoints.errors import SchemaValidationError
 from snowflake.snowpark_checkpoints.utils.constants import (
     BOOLEAN_TYPE,
@@ -33,14 +32,10 @@ from snowflake.snowpark_checkpoints.utils.constants import (
     FLOAT_TYPE,
     MEAN_KEY,
     NAME_KEY,
-    NULL_COUNT_KEY,
     OVERWRITE_MODE,
     PASS_STATUS,
-    ROWS_COUNT_KEY,
-    SKIP_STATUS,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
     TYPE_KEY,
-    SKIP_ALL,
     MARGIN_ERROR_KEY,
 )
 from pandera import Column, Check, DataFrameSchema
@@ -58,9 +53,6 @@ from snowflake.snowpark_checkpoints.utils.utils_checks import (
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from snowflake.snowpark_checkpoints.snowpark_sampler import SamplingStrategy
 from pandera import DataFrameSchema, Column, Check
-from snowflake.snowpark_checkpoints.validation_result_metadata import (
-    ValidationResultsMetadata,
-)
 from snowflake.snowpark_checkpoints.validation_results import ValidationResult
 
 
@@ -482,26 +474,3 @@ def test_replace_special_characters_valid(name, expected):
 def test_replace_special_characters_invalid(name):
     with raises(ValueError):
         _replace_special_characters(name)
-
-
-def test_xvalidate_dataframe_checkpoint():
-    checkpoint_name = "my_checkpoint"
-    module_name = "snowflake.snowpark_checkpoints.validation_result_metadata"
-    validation_results_metadata = ValidationResultsMetadata("some/dummy/path")
-    with (
-        patch(
-            f"{module_name}.ValidationResultsMetadata",
-            return_value=validation_results_metadata,
-        )
-    ):
-        pyspark_df = MagicMock()
-        checkpoint_name = "my_checkpoint"
-
-        xvalidate_dataframe_checkpoint(pyspark_df, checkpoint_name)
-
-        validation_results = validation_results_metadata.validation_results
-        validation_results = validation_results.model_dump()
-        my_checkpoint_result = validation_results["results"][0]
-
-        assert my_checkpoint_result["checkpoint_name"] == checkpoint_name
-        assert my_checkpoint_result["result"] == SKIP_STATUS

@@ -53,26 +53,26 @@ def test_xvalidate_dataframe_checkpoint():
 
 
 def test_skip_validator_parameters_commutability():
-    collect_hints = get_type_hints(validate_dataframe_checkpoint)
-    x_collect_hints = get_type_hints(xvalidate_dataframe_checkpoint)
+    validation_hints = get_type_hints(validate_dataframe_checkpoint)
+    x_validation_hints = get_type_hints(xvalidate_dataframe_checkpoint)
 
-    collect_params = {
-        name: hint for name, hint in collect_hints.items() if name != "return"
+    validate_params = {
+        name: hint for name, hint in validation_hints.items() if name != "return"
     }
-    x_collect_params = {
-        name: hint for name, hint in x_collect_hints.items() if name != "return"
+    x_validate_params = {
+        name: hint for name, hint in x_validation_hints.items() if name != "return"
     }
     assert (
-        collect_params == x_collect_params
+        validate_params == x_validate_params
     ), "The parameters of validate_dataframe_checkpoint and xvalidate_dataframe_checkpoint must be the same."
 
 
 def test_skip_validator_return_type_commutability():
-    collect_hints = get_type_hints(validate_dataframe_checkpoint)
-    x_collect_hints = get_type_hints(xvalidate_dataframe_checkpoint)
+    validation_hints = get_type_hints(validate_dataframe_checkpoint)
+    x_validation_hints = get_type_hints(xvalidate_dataframe_checkpoint)
 
-    collect_return = collect_hints.get("return")
-    x_collect_return = x_collect_hints.get("return")
+    validate_return = validation_hints.get("return")
+    x_validate_return = x_validation_hints.get("return")
     assert (
-        collect_return == x_collect_return
+        validate_return == x_validate_return
     ), "The return type of validate_dataframe_checkpoint and xvalidate_dataframe_checkpoint must be the same."

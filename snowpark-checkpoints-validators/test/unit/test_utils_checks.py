@@ -474,3 +474,13 @@ def test_replace_special_characters_valid(name, expected):
 def test_replace_special_characters_invalid(name):
     with raises(ValueError):
         _replace_special_characters(name)
+
+
+def test_invalid_xvalidate_import():
+    try:
+        from snowflake.snowpark_checkpoints import xvalidate_dataframe_checkpoint
+    except ImportError as e:
+        assert (
+            str(e)
+            == "xvalidate_dataframe_checkpoint is not available in the specified package."
+        )

@@ -21,6 +21,10 @@ import pandas
 
 from snowflake.snowpark import DataFrame as SnowparkDataFrame
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
+from snowflake.snowpark_checkpoints.utils.constants import (
+    INTEGER_TYPE_COLLECTION,
+    PANDAS_LONG_TYPE,
+)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -73,17 +77,17 @@ class SamplingAdapter:
                             "Applying random sampling with fraction %s",
                             self.sample_frac,
                         )
-                        df_sample = arg.sample(frac=self.sample_frac).to_pandas()
+                        df_sample = _to_pandas(arg.sample(frac=self.sample_frac))
                     else:
                         LOGGER.info(
                             "Applying random sampling with size %s", self.sample_number
                         )
-                        df_sample = arg.sample(n=self.sample_number).to_pandas()
+                        df_sample = _to_pandas(arg.sample(n=self.sample_number))
                 else:
                     LOGGER.info(
                         "Applying limit sampling with size %s", self.sample_number
                     )
-                    df_sample = arg.limit(self.sample_number).to_pandas()
+                    df_sample = _to_pandas(arg.limit(self.sample_number))
 
                 LOGGER.info(
                     "Successfully sampled the DataFrame. Resulting DataFrame shape: %s",
@@ -122,3 +126,19 @@ class SamplingAdapter:
             else:
                 pyspark_sample_args.append(arg)
         return pyspark_sample_args
+
+
+def _to_pandas(sampled_df: SnowparkDataFrame) -> pandas.DataFrame:
+    LOGGER.debug("Converting Snowpark DataFrame to Pandas DataFrame")
+    pandas_df = sampled_df.toPandas()
+    for field in sampled_df.schema.fields:
+        has_nan = pandas_df[field.name].isna().any()
+        is_integer = field.dataType.typeName() in INTEGER_TYPE_COLLECTION
+        if has_nan and is_integer:
+            LOGGER.debug(
+                "Converting column '%s' to '%s' type",
+                field.name,
+                PANDAS_LONG_TYPE,
+            )
+            pandas_df[field.name] = pandas_df[field.name].astype(PANDAS_LONG_TYPE)
+    return pandas_df

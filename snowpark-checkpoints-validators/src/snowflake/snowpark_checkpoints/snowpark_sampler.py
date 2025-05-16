@@ -133,7 +133,7 @@ def _to_pandas(sampled_df: SnowparkDataFrame) -> pandas.DataFrame:
     pandas_df = sampled_df.toPandas()
     for field in sampled_df.schema.fields:
         has_nan = pandas_df[field.name].isna().any()
-        is_integer = field.dataType.typeName() in INTEGER_TYPE_COLLECTION
+        is_integer = field.datatype.typeName() in INTEGER_TYPE_COLLECTION
         if has_nan and is_integer:
             LOGGER.debug(
                 "Converting column '%s' to '%s' type",

@@ -23,9 +23,9 @@ import pandera as pa
 
 from pyspark.sql import DataFrame as SparkDataFrame
 from pyspark.sql.functions import col
+from pyspark.sql.types import BooleanType, FloatType, IntegerType, StructField
 from pyspark.sql.types import DoubleType as SparkDoubleType
 from pyspark.sql.types import StringType as SparkStringType
-from pyspark.sql.types import StructField
 
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT,
@@ -71,6 +71,14 @@ from snowflake.snowpark_checkpoints_collector.utils.telemetry import report_tele
 
 
 LOGGER = logging.getLogger(__name__)
+
+default_null_types = {
+    IntegerType(): 0,
+    FloatType(): 0.0,
+    SparkDoubleType(): 0.0,
+    SparkStringType(): "",
+    BooleanType(): False,
+}
 
 
 @log
@@ -253,6 +261,7 @@ def _collect_dataframe_checkpoint_mode_schema(
     column_type_dict: dict[str, any],
     output_path: Optional[str] = None,
 ) -> None:
+    df = _normalize_missing_values(df)
     sampled_df = df.sample(sample)
     if sampled_df.isEmpty():
         LOGGER.warning("Sampled DataFrame is empty. Collecting full DataFrame.")
@@ -325,6 +334,14 @@ def _collect_dataframe_checkpoint_mode_schema(
     _generate_json_checkpoint_file(
         checkpoint_name, dataframe_schema_contract_json, output_path
     )
+
+
+def _normalize_missing_values(df: SparkDataFrame) -> SparkDataFrame:
+    for field in df.schema.fields:
+        default_value = default_null_types.get(field.dataType, None)
+        if default_value is not None:
+            df = df.fillna({field.name: default_value})
+    return df
 
 
 def _get_spark_column_types(df: SparkDataFrame) -> dict[str, StructField]:

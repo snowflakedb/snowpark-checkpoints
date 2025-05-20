@@ -20,6 +20,13 @@ from typing import Optional
 import pandas
 
 from snowflake.snowpark import DataFrame as SnowparkDataFrame
+from snowflake.snowpark.types import (
+    BooleanType,
+    DoubleType,
+    FloatType,
+    IntegerType,
+    StringType,
+)
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from snowflake.snowpark_checkpoints.utils.constants import (
     INTEGER_TYPE_COLLECTION,
@@ -28,6 +35,14 @@ from snowflake.snowpark_checkpoints.utils.constants import (
 
 
 LOGGER = logging.getLogger(__name__)
+
+default_null_types = {
+    IntegerType(): 0,
+    FloatType(): 0.0,
+    DoubleType(): 0.0,
+    StringType(): "",
+    BooleanType(): False,
+}
 
 
 class SamplingStrategy:
@@ -129,16 +144,29 @@ class SamplingAdapter:
 
 
 def _to_pandas(sampled_df: SnowparkDataFrame) -> pandas.DataFrame:
+    """Convert a Snowpark DataFrame to a Pandas DataFrame, handling missing values and type conversions."""
     LOGGER.debug("Converting Snowpark DataFrame to Pandas DataFrame")
+    sampled_df = _normalize_missing_values(sampled_df)
     pandas_df = sampled_df.toPandas()
     for field in sampled_df.schema.fields:
-        has_nan = pandas_df[field.name].isna().any()
+        field_name = field.name.replace('"', "") if "-" in field.name else field.name
+        has_nan = pandas_df[field_name].isna().any()
         is_integer = field.datatype.typeName() in INTEGER_TYPE_COLLECTION
         if has_nan and is_integer:
             LOGGER.debug(
                 "Converting column '%s' to '%s' type",
-                field.name,
+                field_name,
                 PANDAS_LONG_TYPE,
             )
-            pandas_df[field.name] = pandas_df[field.name].astype(PANDAS_LONG_TYPE)
+            pandas_df[field_name] = pandas_df[field_name].astype(PANDAS_LONG_TYPE)
+    pandas_df = pandas_df.fillna(0).fillna(0.0).fillna("").fillna(False)
     return pandas_df
+
+
+def _normalize_missing_values(df: SnowparkDataFrame) -> SnowparkDataFrame:
+    """Normalize missing values in a DataFrame to ensure consistent handling of NaN values."""
+    for field in df.schema.fields:
+        default_value = default_null_types.get(field.datatype, None)
+        if default_value is not None:
+            df = df.fillna({field.name: default_value})
+    return df

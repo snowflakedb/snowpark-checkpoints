@@ -261,7 +261,7 @@ def _collect_dataframe_checkpoint_mode_schema(
     column_type_dict: dict[str, any],
     output_path: Optional[str] = None,
 ) -> None:
-    df = _normalize_missing_values(df)
+    df = normalize_missing_values(df)
     sampled_df = df.sample(sample)
     if sampled_df.isEmpty():
         LOGGER.warning("Sampled DataFrame is empty. Collecting full DataFrame.")
@@ -336,7 +336,8 @@ def _collect_dataframe_checkpoint_mode_schema(
     )
 
 
-def _normalize_missing_values(df: SparkDataFrame) -> SparkDataFrame:
+def normalize_missing_values(df: SparkDataFrame) -> SparkDataFrame:
+    """Normalize missing values in a PySpark DataFrame to ensure consistent handling of NA values."""
     for field in df.schema.fields:
         default_value = default_null_types.get(field.dataType, None)
         if default_value is not None:

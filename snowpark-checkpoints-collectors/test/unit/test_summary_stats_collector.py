@@ -22,10 +22,22 @@ from typing import get_type_hints
 from unittest.mock import MagicMock, patch
 
 import pytest
+from pyspark.sql import SparkSession
+from pyspark.sql.types import (
+    StructField,
+    StructType,
+    IntegerType,
+    FloatType,
+    DoubleType,
+    StringType,
+    BooleanType,
+    TimestampType,
+)
 
 from snowflake.snowpark_checkpoints_collector.summary_stats_collector import (
     collect_dataframe_checkpoint,
     generate_parquet_for_spark_df,
+    normalize_missing_values,
     xcollect_dataframe_checkpoint,
 )
 
@@ -98,3 +110,70 @@ def test_skip_collector_return_type_commutability():
     assert (
         collect_return == x_collect_return
     ), "The return type of collect_dataframe_checkpoint and xcollect_dataframe_checkpoint must be the same."
+
+
+@pytest.fixture(scope="module")
+def spark():
+    spark = SparkSession.builder.master("local[1]").appName("pytest").getOrCreate()
+    yield spark
+    spark.stop()
+
+
+def test_normalize_missing_values_integer_and_float(spark):
+    schema = StructType(
+        [
+            StructField("a", IntegerType()),
+            StructField("b", FloatType()),
+            StructField("c", DoubleType()),
+        ]
+    )
+    data = [
+        (None, None, None),
+        (1, 2.0, 3.0),
+    ]
+    df = spark.createDataFrame(data, schema)
+    result_df = normalize_missing_values(df)
+    result = result_df.collect()
+    assert result[0]["a"] == 0
+    assert result[0]["b"] == 0.0
+    assert result[0]["c"] == 0.0
+    assert result[1]["a"] == 1
+    assert result[1]["b"] == 2.0
+    assert result[1]["c"] == 3.0
+
+
+def test_normalize_missing_values_string_and_bool(spark):
+    schema = StructType(
+        [
+            StructField("s", StringType(), True),
+            StructField("b", BooleanType(), True),
+        ]
+    )
+    data = [
+        (None, None),
+        ("foo", True),
+    ]
+    df = spark.createDataFrame(data, schema)
+    result_df = normalize_missing_values(df)
+    result = result_df.collect()
+    assert result[0]["s"] == ""
+    assert result[0]["b"] is False
+    assert result[1]["s"] == "foo"
+    assert result[1]["b"] is True
+
+
+def test_normalize_missing_values_unhandled_type(spark):
+    schema = StructType(
+        [
+            StructField("t", TimestampType(), True),
+            StructField("i", IntegerType(), True),
+        ]
+    )
+    data = [
+        (None, None),
+    ]
+    df = spark.createDataFrame(data, schema)
+    result_df = normalize_missing_values(df)
+    result = result_df.collect()
+    assert result[0]["t"] is None
+    assert result[0]["i"] == 0

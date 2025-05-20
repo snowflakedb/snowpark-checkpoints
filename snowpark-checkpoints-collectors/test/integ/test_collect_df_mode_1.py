@@ -378,7 +378,7 @@ def test_collect_dataframe_with_null_values(
         )
 
     validate_checkpoint_file_output(output_path, checkpoint_name)
-    assert "Converting column 'age' to 'Int64' type" in caplog.messages
+    assert "Collecting column 'age' of type 'integer'" in caplog.messages
 
 
 def test_collect_sampled_dataframe(spark_session, output_path):

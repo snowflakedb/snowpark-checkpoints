@@ -19,6 +19,11 @@ jobs:
       PR_FILES_THRESHOLD: ${{ secrets.PR_FILES_THRESHOLD}}
 
     steps:
+      - name: Skip dependabot PR
+        if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
+        run: |
+          echo "PR opened by dependabot. Skipping workflow."
+          exit 0
       - name: Checkout repository
         uses: actions/checkout@v4
         with:

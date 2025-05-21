@@ -56,6 +56,7 @@ dependencies = [
   "hypothesis",
   "snowflake-snowpark-python>=1.23.0",
   "snowflake-connector-python",
+  "pydantic>=2.0"
 ]
 
 [project.optional-dependencies]
@@ -73,6 +74,7 @@ development = [
   "pyarrow>=18.0.0",
   "deepdiff>=8.0.0",
   "pyspark>=3.5.0",
+  "certifi==2025.1.31",
 ]
 
 [project.urls]

@@ -104,3 +104,39 @@ def test_get_checkpoint_contract_file_path_env_var_not_set():
     )
 
     assert _get_checkpoint_contract_file_path() == os.getcwd()
+
+
+def test_set_conf_io_strategy_default():
+    with patch(
+        "snowflake.snowpark_checkpoints_configuration.io_utils.io_file_manager.get_io_file_manager"
+    ) as mock_get_conf_io_file_manager:
+        from snowflake.snowpark_checkpoints.utils.extra_config import (
+            _set_conf_io_strategy,
+        )
+
+        # Act
+        _set_conf_io_strategy()
+
+        # Assert
+        mock_get_conf_io_file_manager().set_strategy.assert_not_called()
+
+
+def test_set_conf_io_strategy_custom():
+    # Arrange
+    from snowflake.snowpark_checkpoints.utils.extra_config import (
+        _set_conf_io_strategy,
+    )
+
+    mock_file_manager = MagicMock()
+    mock_file_manager.strategy = MagicMock()
+    with patch(
+        "snowflake.snowpark_checkpoints_configuration.io_utils.io_file_manager.get_io_file_manager"
+    ) as mock_get_conf_io_file_manager, patch(
+        "snowflake.snowpark_checkpoints.utils.extra_config.get_io_file_manager",
+        return_value=mock_file_manager,
+    ):
+        # Act
+        _set_conf_io_strategy()
+
+        # Assert
+        mock_get_conf_io_file_manager().set_strategy.assert_called_once()

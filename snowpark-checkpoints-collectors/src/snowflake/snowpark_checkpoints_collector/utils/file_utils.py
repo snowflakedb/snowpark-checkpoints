@@ -14,6 +14,7 @@
 # limitations under the License.
 import inspect
 import os
+import re
 import tempfile
 
 from typing import Optional
@@ -24,6 +25,9 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
     UNKNOWN_LINE_OF_CODE,
     UNKNOWN_SOURCE_FILE,
+)
+from snowflake.snowpark_checkpoints_collector.io_utils.io_file_manager import (
+    get_io_file_manager,
 )
 
 
@@ -63,11 +67,13 @@ def get_output_directory_path(output_path: Optional[str] = None) -> str:
         str: returns the output directory path.
 
     """
-    current_working_directory_path = output_path if output_path else os.getcwd()
+    current_working_directory_path = (
+        output_path if output_path else get_io_file_manager().getcwd()
+    )
     checkpoints_output_directory_path = os.path.join(
         current_working_directory_path, SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME
     )
-    os.makedirs(checkpoints_output_directory_path, exist_ok=True)
+    get_io_file_manager().mkdir(checkpoints_output_directory_path, exist_ok=True)
     return checkpoints_output_directory_path
 
 
@@ -79,7 +85,10 @@ def get_collection_point_source_file_path() -> str:
 
     """
     try:
-        collection_point_file_path = inspect.stack()[2].filename
+        stack_frame = _get_stack_frame()
+        if not stack_frame:
+            return UNKNOWN_SOURCE_FILE
+        collection_point_file_path = stack_frame.filename
         is_temporal_file_path = _is_temporal_path(collection_point_file_path)
         if is_temporal_file_path:
             ipynb_file_path_collection = _get_ipynb_file_path_collection()
@@ -95,15 +104,18 @@ def get_collection_point_source_file_path() -> str:
 
 
 def get_collection_point_line_of_code() -> int:
-    """Find the line of code of the source file where collection point it is.
+    """Find the line of code of the source file where collection point is.
 
     Returns:
         int: returns the line of code of the source file where collection point it is.
 
     """
     try:
-        collection_point_file_path = inspect.stack()[2].filename
-        collection_point_line_of_code = inspect.stack()[2].lineno
+        stack_frame = _get_stack_frame()
+        if not stack_frame:
+            return UNKNOWN_LINE_OF_CODE
+        collection_point_file_path = stack_frame.filename
+        collection_point_line_of_code = stack_frame.lineno
         is_temporal_file_path = _is_temporal_path(collection_point_file_path)
         if is_temporal_file_path:
             collection_point_line_of_code = UNKNOWN_LINE_OF_CODE
@@ -119,9 +131,24 @@ def _is_temporal_path(path: str) -> bool:
     return is_temporal_path
 
 
+def _get_stack_frame() -> inspect.FrameInfo:
+    batch = inspect.stack()[:7]
+    batch.reverse()
+    collect_frame_regex = r"(collect_dataframe_checkpoint)"
+
+    for frame in batch:
+        if (
+            frame.code_context is not None
+            and len(frame.code_context) >= 0
+            and re.search(collect_frame_regex, frame.code_context[0])
+        ):
+            return frame
+    return None
+
+
 def _get_ipynb_file_path_collection() -> list[str]:
-    current_working_directory_path = os.getcwd()
-    cwd_file_name_collection = os.listdir(current_working_directory_path)
+    current_working_directory_path = get_io_file_manager().getcwd()
+    cwd_file_name_collection = get_io_file_manager().ls(current_working_directory_path)
     ipynb_file_path_collection = []
     for file_name in cwd_file_name_collection:
         is_ipynb_file = file_name.endswith(DOT_IPYNB_EXTENSION)

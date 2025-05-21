@@ -54,6 +54,28 @@ def collect_dataframe_checkpoint(
 - `output_path`: The output path to save the checkpoint, defaults to current working directory.
 
 
+### Skip DataFrame Checkpoint Collection
+
+
+
+```python
+from pyspark.sql import DataFrame as SparkDataFrame
+from snowflake.snowpark_checkpoints_collector.collection_common import CheckpointMode
+from typing import Optional
+
+# Signature of the function
+def xcollect_dataframe_checkpoint(
+    df: SparkDataFrame,
+    checkpoint_name: str,
+    sample: Optional[float] = None,
+    mode: Optional[CheckpointMode] = None,
+    output_path: Optional[str] = None,
+) -> None:
+    ...
+```
+
+The signature of the method is the same of `collect_dataframe_checkpoint`.
+
 ## Usage Example
 
 ### Schema mode

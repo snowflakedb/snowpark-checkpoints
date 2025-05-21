@@ -21,6 +21,9 @@ from typing import Optional
 from snowflake.snowpark_checkpoints_collector.collection_result.model import (
     CollectionPointResult,
 )
+from snowflake.snowpark_checkpoints_collector.io_utils.io_file_manager import (
+    get_io_file_manager,
+)
 from snowflake.snowpark_checkpoints_collector.singleton import Singleton
 from snowflake.snowpark_checkpoints_collector.utils import file_utils
 
@@ -70,5 +73,4 @@ class CollectionPointResultManager(metaclass=Singleton):
     def _save_result(self) -> None:
         result_collection_json = self.to_json()
         LOGGER.info("Saving collection results to '%s'", self.output_file_path)
-        with open(self.output_file_path, "w") as f:
-            f.write(result_collection_json)
+        get_io_file_manager().write(self.output_file_path, result_collection_json)

@@ -16,6 +16,8 @@
 import os
 import json
 from deepdiff import DeepDiff
+from snowflake.snowpark import Session
+from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryManager
 
 TEST_TELEMETRY_VALIDATORS_EXPECTED_DIRECTORY_NAME = "telemetry_expected"
 
@@ -69,3 +71,11 @@ def get_expected(file_name: str) -> str:
 
     with open(expected_file_path) as f:
         return f.read().strip()
+
+
+def reset_telemetry_util():
+    connection = Session.builder.getOrCreate().connection
+    connection._telemetry = TelemetryManager(
+        connection._rest, connection.telemetry_enabled
+    )
+    return connection._telemetry

@@ -17,6 +17,7 @@ import logging
 import os
 import tempfile
 
+import inspect
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -39,6 +40,9 @@ from snowflake.snowpark.types import (
 )
 from snowflake.snowpark_checkpoints.checkpoint import validate_dataframe_checkpoint
 from snowflake.snowpark_checkpoints.errors import SchemaValidationError
+from snowflake.snowpark_checkpoints.io_utils import IODefaultStrategy
+from snowflake.snowpark_checkpoints.singleton import Singleton
+from snowflake.snowpark_checkpoints.io_utils.io_file_manager import get_io_file_manager
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from snowflake.snowpark_checkpoints.utils.constants import (
     DATAFRAME_EXECUTION_MODE,
@@ -48,11 +52,18 @@ from snowflake.snowpark_checkpoints.utils.constants import (
 )
 from snowflake.snowpark_checkpoints.utils.telemetry import (
     get_telemetry_manager,
+    TelemetryManager,
 )
+from telemetry_compare_utils import validate_telemetry_file_output, reset_telemetry_util
 
 
 TELEMETRY_FOLDER = "telemetry"
 LOGGER_NAME = "snowflake.snowpark_checkpoints.checkpoint"
+
+
+@fixture(autouse=True)
+def singleton():
+    Singleton._instances = {}
 
 
 @fixture(scope="function")
@@ -397,12 +408,88 @@ def test_validate_dataframe_checkpoint_disabled_checkpoint(
 ):
     mock_is_checkpoint_enabled.return_value = False
     caplog.set_level(level=logging.WARNING, logger=LOGGER_NAME)
-
+    expected_exception_error_msg = "Checkpoint 'test_checkpoint' is disabled. Please enable it in the checkpoints.json file."
+    expected_fix_suggestion_msg = "In case you want to skip it, use the xvalidate_dataframe_checkpoint method instead."
     df = MagicMock()
     checkpoint_name = "test_checkpoint"
-    result = validate_dataframe_checkpoint(df=df, checkpoint_name=checkpoint_name)
+    try:
+        validate_dataframe_checkpoint(df=df, checkpoint_name=checkpoint_name)
+    except Exception as error:
+        error_msg = error.args[0]
+        fix_suggestion_msg = error.args[1]
+        assert error_msg == expected_exception_error_msg
+        assert fix_suggestion_msg == expected_fix_suggestion_msg
 
-    mock_is_checkpoint_enabled.assert_called_once_with(checkpoint_name)
-    assert result is None
-    assert "disabled" in caplog.text
-    assert checkpoint_name in caplog.text
+
+def test_io_strategy(
+    job_context: SnowparkJobContext,
+    snowpark_schema: StructType,
+    data: list[list],
+    telemetry_output_path: str,
+) -> None:
+    try:
+
+        class TestStrategy(IODefaultStrategy):
+            pass
+
+        number_of_methods = inspect.getmembers(
+            IODefaultStrategy, predicate=inspect.isfunction
+        )
+        strategy = TestStrategy()
+        get_io_file_manager().set_strategy(strategy)
+
+        with (
+            patch.object(strategy, "getcwd", wraps=strategy.getcwd) as getcwd_spy,
+            patch.object(strategy, "ls", wraps=strategy.ls) as ls_spy,
+            patch.object(strategy, "mkdir", wraps=strategy.mkdir) as mkdir_spy,
+            patch.object(strategy, "write", wraps=strategy.write) as write_spy,
+            patch.object(strategy, "read", wraps=strategy.read) as read_spy,
+            patch.object(
+                strategy, "read_bytes", wraps=strategy.read_bytes
+            ) as read_bytes_spy,
+            patch.object(
+                strategy, "file_exists", wraps=strategy.file_exists
+            ) as file_exists_spy,
+            patch.object(
+                strategy, "folder_exists", wraps=strategy.folder_exists
+            ) as folder_exists_spy,
+            patch(
+                "snowflake.snowpark_checkpoints.utils.utils_checks._update_validation_result"
+            ) as mocked_update,
+            patch(
+                "snowflake.snowpark_checkpoints.utils.telemetry.get_telemetry_manager",
+                return_value=TelemetryManager(),
+            ),
+        ):
+            telemetry_manager = reset_telemetry_util()
+            telemetry_manager.set_sc_output_path(Path(telemetry_output_path))
+            checkpoint_name = "test_io_strategy_validator_mode_dataframe"
+            df = job_context.snowpark_session.create_dataframe(data, snowpark_schema)
+            df.write.save_as_table(checkpoint_name, mode="overwrite")
+
+            mocked_session = MagicMock()
+            job_context._mark_pass = mocked_session
+
+            validate_dataframe_checkpoint(
+                df,
+                checkpoint_name,
+                job_context=job_context,
+                mode=CheckpointMode.DATAFRAME,
+            )
+
+            # Assert
+            assert len(number_of_methods) == 9
+            read_bytes_spy.assert_not_called()
+            file_exists_spy.assert_not_called()
+            folder_exists_spy.assert_not_called()
+            assert getcwd_spy.call_count == 3
+            assert mkdir_spy.call_count == 4
+            assert write_spy.call_count == 1
+            assert read_spy.call_count == 2
+            assert ls_spy.call_count == 1
+            mocked_update.assert_called_once_with(checkpoint_name, PASS_STATUS, None)
+            mocked_session.assert_called_once_with(
+                checkpoint_name, DATAFRAME_EXECUTION_MODE
+            )
+    finally:
+        get_io_file_manager().set_strategy(IODefaultStrategy())

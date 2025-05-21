@@ -39,6 +39,7 @@ STACK_POSITION_CHECKPOINT: Final[int] = 6
 # Validation status
 PASS_STATUS: Final[str] = "PASS"
 FAIL_STATUS: Final[str] = "FAIL"
+SKIP_STATUS: Final[str] = "SKIP"
 
 # Validation result keys
 DEFAULT_KEY: Final[str] = "default"
@@ -132,3 +133,16 @@ VALIDATION_RESULTS_JSON_FILE_NAME: Final[str] = "checkpoint_validation_results.j
 SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH_ENV_VAR: Final[
     str
 ] = "SNOWFLAKE_CHECKPOINT_CONTRACT_FILE_PATH"
+
+BYTE_COLUMN_TYPE = "byte"
+INTEGER_COLUMN_TYPE = "integer"
+LONG_COLUMN_TYPE = "long"
+SHORT_COLUMN_TYPE = "short"
+
+PANDAS_LONG_TYPE = "Int64"
+INTEGER_TYPE_COLLECTION = [
+    BYTE_COLUMN_TYPE,
+    INTEGER_COLUMN_TYPE,
+    LONG_COLUMN_TYPE,
+    SHORT_COLUMN_TYPE,
+]

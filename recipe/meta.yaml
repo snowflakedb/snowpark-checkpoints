@@ -1,5 +1,5 @@
 {% set name = "snowpark-checkpoints" %}
-{% set version = "0.2.1" %}
+{% set version = "0.3.3" %}
 
 package:
   name: {{ name|lower }}
@@ -25,7 +25,7 @@ requirements:
     - snowflake-connector-python
     - snowflake-snowpark-python>=1.23.0
     - pyspark>=3.5.0
-    - pydantic>=1.8.2
+    - pydantic>=2.0
     - hypothesis
   run_constrained:
     - pandera ==0.20.4

@@ -12,12 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-import glob
 import json
 import logging
 import os
-import shutil
 
 from typing import Optional
 
@@ -26,9 +23,9 @@ import pandera as pa
 
 from pyspark.sql import DataFrame as SparkDataFrame
 from pyspark.sql.functions import col
+from pyspark.sql.types import BooleanType, FloatType, IntegerType, StructField
 from pyspark.sql.types import DoubleType as SparkDoubleType
 from pyspark.sql.types import StringType as SparkStringType
-from pyspark.sql.types import StructField
 
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT,
@@ -54,6 +51,9 @@ from snowflake.snowpark_checkpoints_collector.column_collection import (
 from snowflake.snowpark_checkpoints_collector.column_pandera_checks import (
     PanderaColumnChecksManager,
 )
+from snowflake.snowpark_checkpoints_collector.io_utils.io_file_manager import (
+    get_io_file_manager,
+)
 from snowflake.snowpark_checkpoints_collector.snow_connection_model import (
     SnowConnection,
 )
@@ -71,6 +71,14 @@ from snowflake.snowpark_checkpoints_collector.utils.telemetry import report_tele
 
 
 LOGGER = logging.getLogger(__name__)
+
+default_null_types = {
+    IntegerType(): 0,
+    FloatType(): 0.0,
+    SparkDoubleType(): 0.0,
+    SparkStringType(): "",
+    BooleanType(): False,
+}
 
 
 @log
@@ -117,11 +125,10 @@ def collect_dataframe_checkpoint(
             "Checkpoint names must only contain alphanumeric characters, underscores and dollar signs."
         )
     if not is_checkpoint_enabled(normalized_checkpoint_name):
-        LOGGER.info(
-            "Checkpoint '%s' is disabled. Skipping collection.",
-            normalized_checkpoint_name,
+        raise Exception(
+            f"Checkpoint '{normalized_checkpoint_name}' is disabled. Please enable it in the checkpoints.json file.",
+            "In case you want to skip it, use the xcollect_dataframe_checkpoint method instead.",
         )
-        return
 
     LOGGER.info("Starting to collect checkpoint '%s'", normalized_checkpoint_name)
     LOGGER.debug("DataFrame size: %s rows", df.count())
@@ -184,6 +191,68 @@ def collect_dataframe_checkpoint(
         collection_point_result_manager.add_result(collection_point_result)
 
 
+@log
+def xcollect_dataframe_checkpoint(
+    df: SparkDataFrame,
+    checkpoint_name: str,
+    sample: Optional[float] = None,
+    mode: Optional[CheckpointMode] = None,
+    output_path: Optional[str] = None,
+) -> None:
+    """Skips the collection of metadata from a Dataframe checkpoint.
+
+    Args:
+        df (SparkDataFrame): The input Spark DataFrame to skip.
+        checkpoint_name (str): The name of the checkpoint.
+        sample (float, optional): Fraction of DataFrame to sample for schema inference.
+            Defaults to 1.0.
+        mode (CheckpointMode): The mode to execution the collection.
+            Defaults to CheckpointMode.Schema
+        output_path (str, optional): The output path to save the checkpoint.
+            Defaults to Current working Directory.
+
+    Raises:
+        Exception: Invalid mode value.
+        Exception: Invalid checkpoint name. Checkpoint names must only contain alphanumeric characters,
+                     underscores and dollar signs.
+
+    """
+    normalized_checkpoint_name = checkpoint_name_utils.normalize_checkpoint_name(
+        checkpoint_name
+    )
+    if normalized_checkpoint_name != checkpoint_name:
+        LOGGER.warning(
+            "Checkpoint name '%s' was normalized to '%s'",
+            checkpoint_name,
+            normalized_checkpoint_name,
+        )
+    is_valid_checkpoint_name = checkpoint_name_utils.is_valid_checkpoint_name(
+        normalized_checkpoint_name
+    )
+    if not is_valid_checkpoint_name:
+        raise Exception(
+            f"Invalid checkpoint name: {normalized_checkpoint_name}. "
+            "Checkpoint names must only contain alphanumeric characters, underscores and dollar signs."
+        )
+
+    LOGGER.warning(
+        "Checkpoint '%s' is disabled. Skipping collection.",
+        normalized_checkpoint_name,
+    )
+
+    collection_point_file_path = file_utils.get_collection_point_source_file_path()
+    collection_point_line_of_code = file_utils.get_collection_point_line_of_code()
+    collection_point_result = CollectionPointResult(
+        collection_point_file_path,
+        collection_point_line_of_code,
+        normalized_checkpoint_name,
+    )
+
+    collection_point_result.result = CollectionResult.SKIP
+    collection_point_result_manager = CollectionPointResultManager(output_path)
+    collection_point_result_manager.add_result(collection_point_result)
+
+
 @report_telemetry(params_list=["column_type_dict"])
 def _collect_dataframe_checkpoint_mode_schema(
     checkpoint_name: str,
@@ -192,6 +261,7 @@ def _collect_dataframe_checkpoint_mode_schema(
     column_type_dict: dict[str, any],
     output_path: Optional[str] = None,
 ) -> None:
+    df = normalize_missing_values(df)
     sampled_df = df.sample(sample)
     if sampled_df.isEmpty():
         LOGGER.warning("Sampled DataFrame is empty. Collecting full DataFrame.")
@@ -266,6 +336,15 @@ def _collect_dataframe_checkpoint_mode_schema(
     )
 
 
+def normalize_missing_values(df: SparkDataFrame) -> SparkDataFrame:
+    """Normalize missing values in a PySpark DataFrame to ensure consistent handling of NA values."""
+    for field in df.schema.fields:
+        default_value = default_null_types.get(field.dataType, None)
+        if default_value is not None:
+            df = df.fillna({field.name: default_value})
+    return df
+
+
 def _get_spark_column_types(df: SparkDataFrame) -> dict[str, StructField]:
     schema = df.schema
     column_type_collection = {}
@@ -321,8 +400,7 @@ def _generate_json_checkpoint_file(
     output_directory_path = file_utils.get_output_directory_path(output_path)
     checkpoint_file_path = os.path.join(output_directory_path, checkpoint_file_name)
     LOGGER.info("Writing DataFrame JSON schema file to '%s'", checkpoint_file_path)
-    with open(checkpoint_file_path, "w") as f:
-        f.write(dataframe_schema_contract)
+    get_io_file_manager().write(checkpoint_file_path, dataframe_schema_contract)
 
 
 @report_telemetry(params_list=["df"])
@@ -366,17 +444,17 @@ def generate_parquet_for_spark_df(spark_df: SparkDataFrame, output_path: str) ->
     ]
     converted_df = spark_df.select(new_cols)
 
-    if os.path.exists(output_path):
+    if get_io_file_manager().folder_exists(output_path):
         LOGGER.warning(
             "Output directory '%s' already exists. Deleting it...", output_path
         )
-        shutil.rmtree(output_path)
+        get_io_file_manager().remove_dir(output_path)
 
     LOGGER.info("Writing DataFrame to parquet files at '%s'", output_path)
     converted_df.write.parquet(output_path, mode="overwrite")
 
     target_dir = os.path.join(output_path, "**", f"*{DOT_PARQUET_EXTENSION}")
-    parquet_files = glob.glob(target_dir, recursive=True)
+    parquet_files = get_io_file_manager().ls(target_dir, recursive=True)
     parquet_files_count = len(parquet_files)
     if parquet_files_count == 0:
         raise Exception("No parquet files were generated.")

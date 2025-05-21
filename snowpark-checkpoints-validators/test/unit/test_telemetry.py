@@ -13,12 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
+import os.path
 import tempfile
 from unittest.mock import MagicMock, patch, mock_open
 import unittest
 from deepdiff import DeepDiff
 
 from snowflake.snowpark_checkpoints.utils.telemetry import report_telemetry
+from snowflake.snowpark_checkpoints.io_utils.io_default_strategy import (
+    IODefaultStrategy,
+)
+from snowflake.snowpark_checkpoints.io_utils.io_file_manager import get_io_file_manager
 
 
 class TelemetryManagerTest(unittest.TestCase):
@@ -193,36 +198,80 @@ class TelemetryManagerTest(unittest.TestCase):
             assert result == expected_id
 
     def test_free_up_space(self):
-        # Arrange
-        with patch(
-            "snowflake.snowpark_checkpoints.utils.telemetry._get_folder_size",
-            return_value=100,
-        ):
-            from snowflake.snowpark_checkpoints.utils.telemetry import _free_up_space
+        try:
+            # Arrange
+            class TestStrategy(IODefaultStrategy):
+                pass
 
-            folder_path, json_path = mock_folder_path(MagicMock(st_size=50, st_mtime=1))
-            max_size = 50
+            strategy = TestStrategy()
+            get_io_file_manager().set_strategy(strategy)
 
-            # Act
-            _free_up_space(folder_path, max_size)
+            with (
+                patch(
+                    "snowflake.snowpark_checkpoints.utils.telemetry._get_folder_size",
+                    return_value=100,
+                ),
+                patch.object(strategy, "ls", wraps=strategy.ls) as ls_spy,
+                patch.object(
+                    strategy,
+                    "telemetry_path_files",
+                    wraps=strategy.telemetry_path_files,
+                ) as telemetry_path_files_spy,
+            ):
+                from snowflake.snowpark_checkpoints.utils.telemetry import (
+                    _free_up_space,
+                )
 
-            # Assert
-            folder_path.glob.assert_called_once_with("*.json")
-            json_path.unlink.assert_called_once()
+                folder_path, json_path = mock_folder_path(
+                    MagicMock(st_size=50, st_mtime=1)
+                )
+                ls_spy.return_value = [json_path, json_path]
+                telemetry_path_files_spy.return_value = json_path
+                max_size = 50
+
+                # Act
+                _free_up_space(folder_path, max_size)
+
+                # Assert
+                json_path.unlink.assert_called_once()
+        finally:
+            get_io_file_manager().set_strategy(IODefaultStrategy())
 
     def test_get_folder_size(self):
-        # Arrange
-        folder_path, json_path = mock_folder_path(MagicMock(st_size=50))
-        from snowflake.snowpark_checkpoints.utils.telemetry import _get_folder_size
+        try:
+            # Arrange
+            class TestStrategy(IODefaultStrategy):
+                pass
 
-        expected_value = 100
+            strategy = TestStrategy()
+            get_io_file_manager().set_strategy(strategy)
 
-        # Act
-        result = _get_folder_size(folder_path)
+            with (
+                patch.object(strategy, "ls", wraps=strategy.ls) as ls_spy,
+                patch.object(
+                    strategy,
+                    "telemetry_path_files",
+                    wraps=strategy.telemetry_path_files,
+                ) as telemetry_path_files_spy,
+            ):
 
-        # Assert
-        assert result == expected_value
-        assert result == expected_value
+                folder_path, json_path = mock_folder_path(MagicMock(st_size=50))
+                ls_spy.return_value = [json_path, json_path]
+                telemetry_path_files_spy.return_value = json_path
+                from snowflake.snowpark_checkpoints.utils.telemetry import (
+                    _get_folder_size,
+                )
+
+                expected_value = 100
+
+                # Act
+                result = _get_folder_size(folder_path)
+
+                # Assert
+                assert result == expected_value
+                assert result == expected_value
+        finally:
+            get_io_file_manager().set_strategy(IODefaultStrategy())
 
     def test_generate_event(self):
         # Arrange
@@ -264,74 +313,110 @@ class TelemetryManagerTest(unittest.TestCase):
             assert result.get("message").get("driver_version") == "0.0.0"
 
     def test_telemetry_manager_upload_local_telemetry_success(self):
-        # Arrange
-        from pathlib import Path
+        try:
+            # Arrange
+            class TestStrategy(IODefaultStrategy):
+                pass
 
-        rest_mock, mock_DIRS = mock_before_telemetry_import()
+            strategy = TestStrategy()
+            get_io_file_manager().set_strategy(strategy)
 
-        _, json_path = mock_folder_path(MagicMock(st_size=50))
+            from pathlib import Path
 
-        with (
-            patch(
-                "snowflake.snowpark_checkpoints.utils.telemetry.SNOWFLAKE_DIRS",
-                mock_DIRS,
-            ),
-            patch(
-                "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_testing",
-                return_value=False,
-            ),
-            patch("builtins.open", mock_open(read_data='{"foo": "bar"}')),
-            patch.object(Path, "glob", return_value=[json_path]),
-        ):
+            rest_mock, mock_DIRS = mock_before_telemetry_import()
 
-            from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryManager
+            _, json_path = mock_folder_path(MagicMock(st_size=50))
 
-            # Act
-            # Calls the upload_local_telemetry method in the __init__ method
-            TelemetryManager(rest_mock)
+            with (
+                patch(
+                    "snowflake.snowpark_checkpoints.utils.telemetry.SNOWFLAKE_DIRS",
+                    mock_DIRS,
+                ),
+                patch(
+                    "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_testing",
+                    return_value=False,
+                ),
+                patch("builtins.open", mock_open(read_data='{"foo": "bar"}')),
+                patch.object(strategy, "ls", wraps=strategy.ls) as ls_spy,
+                patch.object(
+                    strategy,
+                    "telemetry_path_files",
+                    wraps=strategy.telemetry_path_files,
+                ) as telemetry_path_files_spy,
+            ):
 
-            # Assert
-            rest_mock.request.assert_called_with(
-                "/telemetry/send",
-                body={"logs": [{"foo": "bar"}]},
-                method="post",
-                client=None,
-                timeout=5,
-            )
-            json_path.unlink.assert_called_once()
+                from snowflake.snowpark_checkpoints.utils.telemetry import (
+                    TelemetryManager,
+                )
+
+                ls_spy.return_value = [json_path]
+                telemetry_path_files_spy.return_value = json_path
+                # Act
+                # Calls the upload_local_telemetry method in the __init__ method
+                TelemetryManager(rest_mock)
+
+                # Assert
+                rest_mock.request.assert_called_with(
+                    "/telemetry/send",
+                    body={"logs": [{"foo": "bar"}]},
+                    method="post",
+                    client=None,
+                    timeout=5,
+                )
+                json_path.unlink.assert_called_once()
+        finally:
+            get_io_file_manager().set_strategy(IODefaultStrategy())
 
     def test_telemetry_manager_upload_local_telemetry_failed(self):
-        # Arrange
-        from pathlib import Path
+        try:
 
-        rest_mock, mock_DIRS = mock_before_telemetry_import(request_return=False)
-        _, json_path = mock_folder_path(MagicMock(st_size=50))
-        with patch(
-            "snowflake.snowpark_checkpoints.utils.telemetry.SNOWFLAKE_DIRS", mock_DIRS
-        ), patch(
-            "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_testing",
-            return_value=False,
-        ), patch(
-            "builtins.open", mock_open(read_data='{"foo": "bar"}')
-        ), patch.object(
-            Path, "glob", return_value=[json_path]
-        ):
+            # Arrange
+            class TestStrategy(IODefaultStrategy):
+                pass
 
-            from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryManager
+            strategy = TestStrategy()
+            get_io_file_manager().set_strategy(strategy)
 
-            # Act
-            # Calls the upload_local_telemetry method in the __init__ method
-            TelemetryManager(rest_mock)
+            from pathlib import Path
 
-            # Assert
-            rest_mock.request.assert_called_with(
-                "/telemetry/send",
-                body={"logs": [{"foo": "bar"}]},
-                method="post",
-                client=None,
-                timeout=5,
-            )
-            json_path.unlink.assert_not_called()
+            rest_mock, mock_DIRS = mock_before_telemetry_import(request_return=False)
+            _, json_path = mock_folder_path(MagicMock(st_size=50))
+            with patch(
+                "snowflake.snowpark_checkpoints.utils.telemetry.SNOWFLAKE_DIRS",
+                mock_DIRS,
+            ), patch(
+                "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_is_telemetry_testing",
+                return_value=False,
+            ), patch(
+                "builtins.open", mock_open(read_data='{"foo": "bar"}')
+            ), patch.object(
+                strategy, "ls", wraps=strategy.ls
+            ) as ls_spy, patch.object(
+                strategy, "telemetry_path_files", wraps=strategy.telemetry_path_files
+            ) as telemetry_path_files_spy:
+
+                from snowflake.snowpark_checkpoints.utils.telemetry import (
+                    TelemetryManager,
+                )
+
+                ls_spy.return_value = [json_path]
+                telemetry_path_files_spy.return_value = json_path
+
+                # Act
+                # Calls the upload_local_telemetry method in the __init__ method
+                TelemetryManager(rest_mock)
+
+                # Assert
+                rest_mock.request.assert_called_with(
+                    "/telemetry/send",
+                    body={"logs": [{"foo": "bar"}]},
+                    method="post",
+                    client=None,
+                    timeout=5,
+                )
+                json_path.unlink.assert_not_called()
+        finally:
+            get_io_file_manager().set_strategy(IODefaultStrategy())
 
     def test_telemetry_manager_is_telemetry_enabled(self):
         # Arrange
@@ -448,7 +533,10 @@ class TelemetryManagerTest(unittest.TestCase):
             # Assert
             TelemetryManager._sc_validate_folder_space.assert_called_once_with(batch[0])
             open.assert_called_once_with(
-                telemetry.sc_folder_path / f"{mock_date}_telemetry_test.json", "w"
+                os.path.join(
+                    telemetry.sc_folder_path, f"{mock_date}_telemetry_test.json"
+                ),
+                "w",
             )
             open().write.assert_called_once_with(f"{event}")
 
@@ -969,7 +1057,6 @@ def mock_folder_path(stat):
     json_path = MagicMock()
     json_path.stat.return_value = stat
     json_path.is_file.return_value = True
-    folder_path.glob.return_value = [json_path, json_path]
 
     return folder_path, json_path
 

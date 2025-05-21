@@ -21,6 +21,10 @@ import pandas
 
 from snowflake.snowpark import DataFrame as SnowparkDataFrame
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
+from snowflake.snowpark_checkpoints.utils.constants import (
+    INTEGER_TYPE_COLLECTION,
+    PANDAS_LONG_TYPE,
+)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -73,17 +77,17 @@ class SamplingAdapter:
                             "Applying random sampling with fraction %s",
                             self.sample_frac,
                         )
-                        df_sample = arg.sample(frac=self.sample_frac).to_pandas()
+                        df_sample = to_pandas(arg.sample(frac=self.sample_frac))
                     else:
                         LOGGER.info(
                             "Applying random sampling with size %s", self.sample_number
                         )
-                        df_sample = arg.sample(n=self.sample_number).to_pandas()
+                        df_sample = to_pandas(arg.sample(n=self.sample_number))
                 else:
                     LOGGER.info(
                         "Applying limit sampling with size %s", self.sample_number
                     )
-                    df_sample = arg.limit(self.sample_number).to_pandas()
+                    df_sample = to_pandas(arg.limit(self.sample_number))
 
                 LOGGER.info(
                     "Successfully sampled the DataFrame. Resulting DataFrame shape: %s",
@@ -122,3 +126,26 @@ class SamplingAdapter:
             else:
                 pyspark_sample_args.append(arg)
         return pyspark_sample_args
+
+
+def to_pandas(sampled_df: SnowparkDataFrame) -> pandas.DataFrame:
+    """Convert a Snowpark DataFrame to a Pandas DataFrame, handling missing values and type conversions."""
+    LOGGER.debug("Converting Snowpark DataFrame to Pandas DataFrame")
+    pandas_df = sampled_df.toPandas()
+    pandas_df = normalize_missing_values_pandas(pandas_df)
+    return pandas_df
+
+
+def normalize_missing_values_pandas(df: pandas.DataFrame) -> pandas.DataFrame:
+    """Normalize missing values in a Pandas DataFrame to ensure consistent handling of NA values."""
+    fill_values = {}
+    for col, dtype in df.dtypes.items():
+        if dtype in INTEGER_TYPE_COLLECTION or str(dtype) in PANDAS_LONG_TYPE:
+            fill_values[col] = 0
+        elif dtype is float or dtype == "float64":
+            fill_values[col] = 0.0
+        elif dtype is bool or dtype == "bool" or dtype == "boolean":
+            fill_values[col] = False
+        elif dtype is object or dtype == "object" or dtype is str:
+            fill_values[col] = ""
+    return df.fillna(value=fill_values)

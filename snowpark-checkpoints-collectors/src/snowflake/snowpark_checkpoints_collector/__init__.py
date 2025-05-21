@@ -22,9 +22,14 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 # ruff: noqa: E402
 
-__all__ = ["collect_dataframe_checkpoint", "CheckpointMode"]
+__all__ = [
+    "collect_dataframe_checkpoint",
+    "CheckpointMode",
+    "xcollect_dataframe_checkpoint",
+]
 
 from snowflake.snowpark_checkpoints_collector.collection_common import CheckpointMode
 from snowflake.snowpark_checkpoints_collector.summary_stats_collector import (
     collect_dataframe_checkpoint,
+    xcollect_dataframe_checkpoint,
 )

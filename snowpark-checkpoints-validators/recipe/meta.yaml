@@ -1,5 +1,5 @@
 {% set name = "snowpark-checkpoints-validators" %}
-{% set version = "0.2.1" %}
+{% set version = "0.3.3" %}
 
 package:
   name: {{ name|lower }}
@@ -26,15 +26,19 @@ requirements:
     - snowflake-snowpark-python>=1.23.0
     - snowflake-connector-python
     - pyspark>=3.5.0
+    - pydantic>=2.0
   run_constrained:
     - pandera ==0.20.4
 
 test:
+  requires:
+    - pydantic
   commands:
     - pip install pandera[io]==0.20.4
     - pip check
     - pip list --verbose
     - python -c "import pandera"
+    - python -c "import pydantic"
     - python -c "from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext"
 
 about:

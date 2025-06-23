@@ -16,7 +16,7 @@ from snowflake.snowpark_checkpoints.validation_results import (
 )
 from pandas import DataFrame as PandasDataFrame, testing as PandasTesting
 from pandera import DataFrameSchema, Column, Check
-from snowflake.snowpark_checkpoints.checkpoint import _validate
+from snowflake.snowpark_checkpoints.checkpoint import validate
 
 
 @fixture()
@@ -204,7 +204,7 @@ def test_clean_with_no_file():
 
 def test_validate_valid_schema(sample_data):
     df, valid_schema, _ = sample_data
-    is_valid, result = _validate(valid_schema, df)
+    is_valid, result = validate(valid_schema, df)
     assert is_valid
     assert isinstance(result, PandasDataFrame)
     PandasTesting.assert_frame_equal(result, df)
@@ -212,7 +212,7 @@ def test_validate_valid_schema(sample_data):
 
 def test_validate_invalid_schema(sample_data):
     df, _, invalid_schema = sample_data
-    is_valid, result = _validate(invalid_schema, df)
+    is_valid, result = validate(invalid_schema, df)
     assert not is_valid
     assert isinstance(result, PandasDataFrame)
     assert "failure_case" in result.columns

@@ -24,6 +24,7 @@ from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from snowflake.snowpark_checkpoints.utils.constants import (
     INTEGER_TYPE_COLLECTION,
     PANDAS_LONG_TYPE,
+    PANDAS_STRING_TYPE,
 )
 
 
@@ -142,10 +143,27 @@ def normalize_missing_values_pandas(df: pandas.DataFrame) -> pandas.DataFrame:
     for col, dtype in df.dtypes.items():
         if dtype in INTEGER_TYPE_COLLECTION or str(dtype) in PANDAS_LONG_TYPE:
             fill_values[col] = 0
+            df[col] = df[col].astype(PANDAS_LONG_TYPE)
         elif dtype is float or dtype == "float64":
             fill_values[col] = 0.0
         elif dtype is bool or dtype == "bool" or dtype == "boolean":
             fill_values[col] = False
         elif dtype is object or dtype == "object" or dtype is str:
             fill_values[col] = ""
+            df[col] = df[col].astype(PANDAS_STRING_TYPE)
+        elif pandas.api.types.is_datetime64_any_dtype(dtype):
+            df[col] = convert_all_to_utc_naive(df[col])
     return df.fillna(value=fill_values)
+
+
+def convert_all_to_utc_naive(series: pandas.Series) -> pandas.Series:
+    """Normalize timestamps to be ready for comparison."""
+
+    def convert(ts):
+        if pandas.isna(ts):
+            return ts
+        if ts.tz is None:
+            ts = ts.tz_localize("UTC")
+        return ts.tz_convert("UTC").tz_localize(None)
+
+    return series.apply(convert)

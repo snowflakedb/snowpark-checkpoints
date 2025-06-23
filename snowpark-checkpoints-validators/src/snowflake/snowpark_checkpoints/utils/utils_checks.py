@@ -127,7 +127,7 @@ def _process_sampling(
     pandera_schema_upper = pandera_schema_upper.add_columns(new_columns)
 
     sample_df = sampler.get_sampled_pandas_args()[0]
-    sample_df.index = np.ones(sample_df.count().iloc[0])
+    sample_df.index = np.ones(sample_df.count().iloc[0], dtype=int)
 
     return pandera_schema_upper, sample_df
 
@@ -191,6 +191,7 @@ Please run the Snowpark checkpoint collector first."""
     schema_dict = checkpoint_schema_config.get(DATAFRAME_PANDERA_SCHEMA_KEY)
     schema_dict_str = json.dumps(schema_dict)
     schema = DataFrameSchema.from_json(schema_dict_str)
+    schema.coerce = False  # Disable coercion to ensure strict validation
 
     if DATAFRAME_CUSTOM_DATA_KEY not in checkpoint_schema_config:
         LOGGER.info(

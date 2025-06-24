@@ -23,8 +23,10 @@ import pandera as pa
 
 from pyspark.sql import DataFrame as SparkDataFrame
 from pyspark.sql.functions import col
-from pyspark.sql.types import BooleanType, FloatType, IntegerType, StructField
+from pyspark.sql.types import BinaryType as SparkBinaryType
+from pyspark.sql.types import BooleanType, IntegerType, StructField
 from pyspark.sql.types import DoubleType as SparkDoubleType
+from pyspark.sql.types import FloatType as SparkFloatType
 from pyspark.sql.types import StringType as SparkStringType
 from pyspark.sql.types import TimestampType as SparkTimestampType
 
@@ -37,6 +39,7 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
     DOT_PARQUET_EXTENSION,
     INTEGER_TYPE_COLLECTION,
     NULL_COLUMN_TYPE,
+    PANDAS_FLOAT_TYPE,
     PANDAS_LONG_TYPE,
     PANDAS_OBJECT_TYPE_COLLECTION,
     PANDAS_STRING_TYPE,
@@ -76,7 +79,7 @@ LOGGER = logging.getLogger(__name__)
 
 default_null_types = {
     IntegerType(): 0,
-    FloatType(): 0.0,
+    SparkFloatType(): 0.0,
     SparkDoubleType(): 0.0,
     SparkStringType(): "",
     BooleanType(): False,
@@ -479,7 +482,9 @@ def _to_pandas(sampled_df: SparkDataFrame) -> pandas.DataFrame:
     for field in sampled_df.schema.fields:
         is_integer = field.dataType.typeName() in INTEGER_TYPE_COLLECTION
         is_spark_string = isinstance(field.dataType, SparkStringType)
+        is_spark_binary = isinstance(field.dataType, SparkBinaryType)
         is_spark_timestamp = isinstance(field.dataType, SparkTimestampType)
+        is_spark_float = isinstance(field.dataType, SparkFloatType)
         if is_integer:
             LOGGER.debug(
                 "Converting Spark integer column '%s' to Pandas nullable '%s' type",
@@ -487,7 +492,7 @@ def _to_pandas(sampled_df: SparkDataFrame) -> pandas.DataFrame:
                 PANDAS_LONG_TYPE,
             )
             pandas_df[field.name] = pandas_df[field.name].astype(PANDAS_LONG_TYPE)
-        elif is_spark_string:
+        elif is_spark_string or is_spark_binary:
             LOGGER.debug(
                 "Converting Spark string column '%s' to Pandas nullable '%s' type",
                 field.name,
@@ -500,6 +505,12 @@ def _to_pandas(sampled_df: SparkDataFrame) -> pandas.DataFrame:
                 field.name,
             )
             pandas_df[field.name] = convert_all_to_utc_naive(pandas_df[field.name])
+        elif is_spark_float:
+            LOGGER.debug(
+                "Converting Spark float column '%s' to Pandas nullable float",
+                field.name,
+            )
+            pandas_df[field.name] = pandas_df[field.name].astype(PANDAS_FLOAT_TYPE)
 
     return pandas_df
 

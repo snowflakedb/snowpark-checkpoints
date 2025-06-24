@@ -20,9 +20,16 @@ from typing import Optional
 import pandas
 
 from snowflake.snowpark import DataFrame as SnowparkDataFrame
+from snowflake.snowpark.types import (
+    BinaryType,
+    FloatType,
+    StringType,
+    TimestampType,
+)
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
 from snowflake.snowpark_checkpoints.utils.constants import (
     INTEGER_TYPE_COLLECTION,
+    PANDAS_FLOAT_TYPE,
     PANDAS_LONG_TYPE,
     PANDAS_STRING_TYPE,
 )
@@ -131,29 +138,48 @@ class SamplingAdapter:
 
 def to_pandas(sampled_df: SnowparkDataFrame) -> pandas.DataFrame:
     """Convert a Snowpark DataFrame to a Pandas DataFrame, handling missing values and type conversions."""
-    LOGGER.debug("Converting Snowpark DataFrame to Pandas DataFrame")
-    pandas_df = sampled_df.toPandas()
-    pandas_df = normalize_missing_values_pandas(pandas_df)
+    pandas_df = normalize_missing_values_pandas(sampled_df)
     return pandas_df
 
 
-def normalize_missing_values_pandas(df: pandas.DataFrame) -> pandas.DataFrame:
+def normalize_missing_values_pandas(sampled_df: SnowparkDataFrame) -> pandas.DataFrame:
     """Normalize missing values in a Pandas DataFrame to ensure consistent handling of NA values."""
-    fill_values = {}
-    for col, dtype in df.dtypes.items():
-        if dtype in INTEGER_TYPE_COLLECTION or str(dtype) in PANDAS_LONG_TYPE:
-            fill_values[col] = 0
-            df[col] = df[col].astype(PANDAS_LONG_TYPE)
-        elif dtype is float or dtype == "float64":
-            fill_values[col] = 0.0
-        elif dtype is bool or dtype == "bool" or dtype == "boolean":
-            fill_values[col] = False
-        elif dtype is object or dtype == "object" or dtype is str:
-            fill_values[col] = ""
-            df[col] = df[col].astype(PANDAS_STRING_TYPE)
-        elif pandas.api.types.is_datetime64_any_dtype(dtype):
-            df[col] = convert_all_to_utc_naive(df[col])
-    return df.fillna(value=fill_values)
+    LOGGER.debug("Converting Snowpark DataFrame to Pandas DataFrame")
+    pandas_df = sampled_df.toPandas()
+    for field in sampled_df.schema.fields:
+        is_snowpark_integer = field.datatype.typeName() in INTEGER_TYPE_COLLECTION
+        is_snowpark_string = isinstance(field.datatype, StringType)
+        is_snowpark_binary = isinstance(field.datatype, BinaryType)
+        is_snowpark_timestamp = isinstance(field.datatype, TimestampType)
+        is_snowpark_float = isinstance(field.datatype, FloatType)
+        if is_snowpark_integer:
+            LOGGER.debug(
+                "Converting Spark integer column '%s' to Pandas nullable '%s' type",
+                field.name,
+                PANDAS_LONG_TYPE,
+            )
+            pandas_df[field.name] = pandas_df[field.name].astype(PANDAS_LONG_TYPE)
+        elif is_snowpark_string or is_snowpark_binary:
+            LOGGER.debug(
+                "Converting Spark string column '%s' to Pandas nullable '%s' type",
+                field.name,
+                PANDAS_STRING_TYPE,
+            )
+            pandas_df[field.name] = pandas_df[field.name].astype(PANDAS_STRING_TYPE)
+        elif is_snowpark_timestamp:
+            LOGGER.debug(
+                "Converting Spark timestamp column '%s' to UTC naive Pandas datetime",
+                field.name,
+            )
+            pandas_df[field.name] = convert_all_to_utc_naive(pandas_df[field.name])
+        elif is_snowpark_float:
+            LOGGER.debug(
+                "Converting Spark float column '%s' to Pandas nullable float",
+                field.name,
+            )
+            pandas_df[field.name] = pandas_df[field.name].astype(PANDAS_FLOAT_TYPE)
+
+    return pandas_df
 
 
 def convert_all_to_utc_naive(series: pandas.Series) -> pandas.Series:

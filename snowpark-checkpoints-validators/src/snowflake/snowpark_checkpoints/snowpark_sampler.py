@@ -138,12 +138,6 @@ class SamplingAdapter:
 
 def to_pandas(sampled_df: SnowparkDataFrame) -> pandas.DataFrame:
     """Convert a Snowpark DataFrame to a Pandas DataFrame, handling missing values and type conversions."""
-    pandas_df = normalize_missing_values_pandas(sampled_df)
-    return pandas_df
-
-
-def normalize_missing_values_pandas(sampled_df: SnowparkDataFrame) -> pandas.DataFrame:
-    """Normalize missing values in a Pandas DataFrame to ensure consistent handling of NA values."""
     LOGGER.debug("Converting Snowpark DataFrame to Pandas DataFrame")
     pandas_df = sampled_df.toPandas()
     for field in sampled_df.schema.fields:

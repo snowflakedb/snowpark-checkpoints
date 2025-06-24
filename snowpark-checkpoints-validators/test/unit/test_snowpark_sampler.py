@@ -13,84 +13,105 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from snowflake.snowpark_checkpoints.snowpark_sampler import (
-    normalize_missing_values_pandas,
-    to_pandas,
-)
 import pandas as pd
-import numpy as np
+from snowflake.snowpark_checkpoints.snowpark_sampler import (
+    to_pandas,
+    convert_all_to_utc_naive,
+)
+from snowflake.snowpark.types import (
+    BinaryType,
+    FloatType,
+    StringType,
+    TimestampType,
+)
+from snowflake.snowpark_checkpoints.utils.constants import (
+    PANDAS_FLOAT_TYPE,
+    PANDAS_LONG_TYPE,
+    PANDAS_STRING_TYPE,
+)
+
+
+class DummyDataType:
+    def __init__(self, name):
+        self._name = name
+
+    def typeName(self):
+        return self._name
+
+
+class DummyField:
+    def __init__(self, name, datatype):
+        self.name = name
+        self.datatype = datatype
+        self.typeName = datatype
+
+
+class DummySchema:
+    def __init__(self, fields):
+        self.fields = fields
 
 
 class DummySnowparkDF:
-    def __init__(self, pandas_df):
+    def __init__(self, pandas_df, fields):
         self._pandas_df = pandas_df
+        self.schema = DummySchema(fields)
 
     def toPandas(self):
         return self._pandas_df
 
 
-def test_normalize_missing_values_pandas_integers():
-    df = pd.DataFrame({"a": [1, None, 3], "b": [None, 2, 3]}, dtype="Int64")
-    result = normalize_missing_values_pandas(df)
-    assert result["a"].iloc[1] == 0
-    assert result["b"].iloc[0] == 0
+def test_to_pandas_integer_conversion():
+    df = pd.DataFrame({"int_col": [1, None]}, dtype="float")
+    fields = [DummyField("int_col", DummyDataType("integer"))]
+    sp_df = DummySnowparkDF(df, fields)
+
+    result = to_pandas(sp_df)
+    assert result["int_col"].dtype == PANDAS_LONG_TYPE
+    assert result["int_col"].iloc[1] is pd.NA
 
 
-def test_normalize_missing_values_pandas_floats():
-    df = pd.DataFrame({"a": [1.1, np.nan, 3.3], "b": [np.nan, 2.2, 3.3]})
-    result = normalize_missing_values_pandas(df)
-    assert result["a"].iloc[1] == 0.0
-    assert result["b"].iloc[0] == 0.0
+def test_to_pandas_string_and_binary_conversion():
+    df = pd.DataFrame({"str_col": ["a", None], "bin_col": ["b", None]})
+    fields = [
+        DummyField("str_col", StringType()),
+        DummyField("bin_col", BinaryType()),
+    ]
+    sp_df = DummySnowparkDF(df, fields)
+
+    result = to_pandas(sp_df)
+    assert result["str_col"].dtype == PANDAS_STRING_TYPE
+    assert result["bin_col"].dtype == PANDAS_STRING_TYPE
 
 
-def test_normalize_missing_values_pandas_bools():
-    df = pd.DataFrame(
-        {"a": [True, None, False], "b": [None, False, True]}, dtype="boolean"
-    )
-    result = normalize_missing_values_pandas(df)
-    assert result["a"].iloc[1] is np.False_
-    assert result["b"].iloc[0] is np.False_
+def test_to_pandas_float_conversion():
+    df = pd.DataFrame({"float_col": [1.1, None]}, dtype="float")
+    fields = [DummyField("float_col", FloatType())]
+    sp_df = DummySnowparkDF(df, fields)
+
+    result = to_pandas(sp_df)
+    assert result["float_col"].dtype == PANDAS_FLOAT_TYPE
 
 
-def test_normalize_missing_values_pandas_objects_and_strings():
-    df = pd.DataFrame(
-        {"a": ["foo", None, "bar"], "b": [None, "baz", "qux"]}, dtype="object"
-    )
-    result = normalize_missing_values_pandas(df)
-    assert result["a"].iloc[1] == ""
-    assert result["b"].iloc[0] == ""
+def test_to_pandas_timestamp_conversion():
+    utc_ts = pd.Timestamp("2023-01-01 12:00:00", tz="UTC")
+    naive_ts = pd.Timestamp("2023-01-02 12:00:00")
+    df = pd.DataFrame({"ts_col": [utc_ts, naive_ts]})
+    fields = [DummyField("ts_col", TimestampType())]
+    sp_df = DummySnowparkDF(df, fields)
+
+    result = to_pandas(sp_df)
+    assert pd.api.types.is_datetime64_any_dtype(result["ts_col"])
+    assert result["ts_col"].iloc[0].tzinfo is None
+    assert result["ts_col"].iloc[1].tzinfo is None
 
 
-def test_normalize_missing_values_pandas_mixed_types():  ###
-    df = pd.DataFrame(
-        {
-            "int_col": pd.Series([1, None], dtype="Int64"),
-            "float_col": [1.1, np.nan],
-            "bool_col": pd.Series([True, None], dtype="boolean"),
-            "str_col": ["a", None],
-        }
-    )
-    result = normalize_missing_values_pandas(df)
-    assert result["int_col"].iloc[1] == 0
-    assert result["float_col"].iloc[1] == 0.0
-    assert result["bool_col"].iloc[1] is np.False_
-    assert result["str_col"].iloc[1] == ""
+def test_convert_all_to_utc_naive_behavior():
+    utc_ts = pd.Timestamp("2024-01-01 10:00:00", tz="UTC")
+    naive_ts = pd.Timestamp("2024-01-01 12:00:00")
+    none_val = pd.NaT
+    series = pd.Series([utc_ts, naive_ts, none_val])
 
-
-def test_to_pandas_calls_normalize(monkeypatch):
-    df = pd.DataFrame({"a": [1, None], "b": [None, "foo"]})
-    dummy_snowpark_df = DummySnowparkDF(df)
-    called = {}
-
-    def fake_normalize(df_arg):
-        called["was_called"] = True
-        return df_arg.fillna(0)
-
-    monkeypatch.setattr(
-        "snowflake.snowpark_checkpoints.snowpark_sampler.normalize_missing_values_pandas",
-        fake_normalize,
-    )
-
-    result = to_pandas(dummy_snowpark_df)
-    assert called.get("was_called", False)
-    assert isinstance(result, pd.DataFrame)
+    result = convert_all_to_utc_naive(series)
+    assert result[0].tzinfo is None
+    assert result[1].tzinfo is None
+    assert pd.isna(result[2])

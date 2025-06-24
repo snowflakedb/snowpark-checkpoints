@@ -177,11 +177,21 @@ def to_pandas(sampled_df: SnowparkDataFrame) -> pandas.DataFrame:
 
 
 def convert_all_to_utc_naive(series: pandas.Series) -> pandas.Series:
-    """Normalize timestamps to be ready for comparison."""
+    """Convert all timezone-aware or naive timestamps in a series to UTC naive.
+
+    Naive timestamps are assumed to be in UTC and localized accordingly.
+    Timezone-aware timestamps are converted to UTC and then made naive.
+
+    Args:
+        series (pandas.Series): A Pandas Series of `pd.Timestamp` objects,
+            either naive or timezone-aware.
+
+    Returns:
+        pandas.Series: A Series of UTC-normalized naive timestamps (`tzinfo=None`).
+
+    """
 
     def convert(ts):
-        if pandas.isna(ts):
-            return ts
         if ts.tz is None:
             ts = ts.tz_localize("UTC")
         return ts.tz_convert("UTC").tz_localize(None)

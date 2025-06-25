@@ -27,6 +27,8 @@ import numpy as np
 from pandera import DataFrameSchema
 
 from snowflake.snowpark import DataFrame as SnowparkDataFrame
+from snowflake.snowpark.functions import col, expr
+from snowflake.snowpark.types import TimestampType
 from snowflake.snowpark_checkpoints.errors import SchemaValidationError
 from snowflake.snowpark_checkpoints.io_utils.io_file_manager import get_io_file_manager
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
@@ -271,6 +273,7 @@ def _compare_data(
         SchemaValidationError: If there is a data mismatch between the DataFrame and the checkpoint table.
 
     """
+    df = convert_timestamps_to_utc_date(df)
     new_table_name = CHECKPOINT_TABLE_NAME_FORMAT.format(checkpoint_name)
     LOGGER.info(
         "Writing Snowpark DataFrame to table: '%s' for checkpoint: '%s'",
@@ -311,6 +314,23 @@ def _compare_data(
         _update_validation_result(checkpoint_name, PASS_STATUS, output_path)
         job_context._mark_pass(checkpoint_name, DATAFRAME_EXECUTION_MODE)
         return True, None
+
+
+def convert_timestamps_to_utc_date(df):
+    """Convert and normalize all Snowpark timestamp columns to UTC.
+
+    This function ensures timestamps are consistent across environments for reliable comparison.
+    """
+    new_cols = []
+    for field in df.schema.fields:
+        if isinstance(field.datatype, TimestampType):
+            utc_midnight_ts = expr(
+                f"convert_timezone('UTC', cast(to_date({field.name}) as timestamp_tz))"
+            ).alias(field.name)
+            new_cols.append(utc_midnight_ts)
+        else:
+            new_cols.append(col(field.name))
+    return df.select(new_cols)
 
 
 def _find_frame_in(stack: list[inspect.FrameInfo]) -> tuple:

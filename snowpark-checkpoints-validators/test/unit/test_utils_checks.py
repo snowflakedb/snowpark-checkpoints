@@ -289,7 +289,6 @@ def test_compare_data_match():
     checkpoint_name = "test_checkpoint"
     validation_status = PASS_STATUS
     output_path = "test_output_path/utils/"
-
     with (
         patch("os.getcwd", return_value="/mocked/path"),
         patch("os.path.exists", return_value=False),
@@ -298,6 +297,10 @@ def test_compare_data_match():
         patch(
             "snowflake.snowpark_checkpoints.utils.utils_checks._update_validation_result"
         ) as mock_update_validation_result,
+        patch(
+            "snowflake.snowpark_checkpoints.utils.utils_checks.convert_timestamps_to_utc_date",
+            return_value=df,
+        ),
     ):
         # Call the function
         _check_compare_data(df, job_context, checkpoint_name, output_path)
@@ -344,6 +347,10 @@ def test_compare_data_mismatch():
         patch(
             "snowflake.snowpark_checkpoints.utils.utils_checks._update_validation_result"
         ) as mock_update_validation_result,
+        patch(
+            "snowflake.snowpark_checkpoints.utils.utils_checks.convert_timestamps_to_utc_date",
+            return_value=df,
+        ),
     ):
         # Call the function and expect a SchemaValidationError
         with raises(

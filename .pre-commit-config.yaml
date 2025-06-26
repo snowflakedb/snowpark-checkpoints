@@ -90,10 +90,10 @@ repos:
           - license_header.txt
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.0
+    rev: v0.9.10
     hooks:
       - id: ruff
-        args: [--config=ruff.toml]
+        args: [--config=ruff.toml, --statistics, --verbose]
 
   - repo: local
     hooks:

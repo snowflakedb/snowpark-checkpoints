@@ -78,8 +78,12 @@ jobs:
         uses: conda-incubator/setup-miniconda@v3
         with:
           auto-update-conda: true
-          channels: conda-forge,defaults,anaconda
+          channels: conda-forge,anaconda,defaults,https://repo.anaconda.com/pkgs/snowflake
           python-version: "${{ env.PYTHON_VERSION }}"
+
+      - name: Configure Conda channels
+        run: |
+          conda config --show channels
 
       - name: Initialize Conda
         run: |
@@ -88,7 +92,7 @@ jobs:
 
       - name: Conda Create environment
         run: |
-          conda create --name ${{ env.CONDA_ENV_NAME }} -c https://repo.anaconda.com/pkgs/snowflake python=${{ env.PYTHON_VERSION }} -y
+          conda create --name ${{ env.CONDA_ENV_NAME }} python=${{ env.PYTHON_VERSION }} -y
           source ~/.bashrc
           conda activate ${{ env.CONDA_ENV_NAME }}
           conda info --envs
@@ -98,7 +102,6 @@ jobs:
         run: |
           source ~/.bashrc
           conda activate ${{ env.CONDA_ENV_NAME }}
-          conda config --add channels conda-forge
           conda install -c conda-forge pytest conda-build conda-verify -y
           conda list
 
@@ -211,8 +214,12 @@ jobs:
         uses: conda-incubator/setup-miniconda@v3
         with:
           auto-update-conda: true
-          channels: conda-forge,defaults,anaconda
+          channels: conda-forge,anaconda,defaults,https://repo.anaconda.com/pkgs/snowflake
           python-version: "${{ env.PYTHON_VERSION }}"
+
+      - name: Configure Conda channels
+        run: |
+          conda config --show channels
 
       - name: Initialize Conda
         run: |
@@ -221,7 +228,7 @@ jobs:
 
       - name: Conda Create environment
         run: |
-          conda create --name ${{ env.CONDA_ENV_NAME }} -c https://repo.anaconda.com/pkgs/snowflake python=${{ env.PYTHON_VERSION }} -y
+          conda create --name ${{ env.CONDA_ENV_NAME }} python=${{ env.PYTHON_VERSION }} -y
           source ~/.bashrc
           conda activate ${{ env.CONDA_ENV_NAME }}
           conda info --envs

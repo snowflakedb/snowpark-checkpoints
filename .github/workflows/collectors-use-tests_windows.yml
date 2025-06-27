@@ -1,4 +1,4 @@
-name: Run test - Windows [snowpark_checkpoints_collector]
+name: Test Windows [snowpark_checkpoints_collector]
 
 on:
   workflow_dispatch:

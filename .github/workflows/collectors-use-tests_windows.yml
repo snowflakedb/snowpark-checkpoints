@@ -268,8 +268,10 @@ jobs:
           hatch config set dirs.env.virtual .hatch
           hatch config set template.licenses.headers false
 
-          # Ensure hatch uses the same Python version as PySpark
-          $env:HATCH_PYTHON = $env:PYSPARK_PYTHON
+          # Set hatch Python to current Python executable (will be updated later with PYSPARK_PYTHON)
+          $pythonPath = (Get-Command python).Source
+          $env:HATCH_PYTHON = $pythonPath
+          echo "HATCH_PYTHON=$pythonPath" >> $env:GITHUB_ENV
 
           pip list
         working-directory: ./snowpark-checkpoints-collectors
@@ -295,13 +297,17 @@ jobs:
           Write-Host "Python Path: $pythonPath"
           echo "PYSPARK_PYTHON=$pythonPath" >> $env:GITHUB_ENV
           echo "PYSPARK_DRIVER_PYTHON=$pythonPath" >> $env:GITHUB_ENV
-          # Additional PySpark configuration for Windows compatibility
-          echo "PYSPARK_SUBMIT_ARGS=--master local[*] --conf spark.sql.adaptive.enabled=false --conf spark.serializer=org.apache.spark.serializer.KryoSerializer --conf spark.driver.memory=2g --conf spark.executor.memory=2g --conf spark.driver.host=127.0.0.1 --conf spark.driver.bindAddress=127.0.0.1 --conf spark.python.worker.reuse=true pyspark-shell" >> $env:GITHUB_ENV
+          echo "HATCH_PYTHON=$pythonPath" >> $env:GITHUB_ENV
+          # Set consistent PySpark configuration for Windows compatibility (using conservative settings from start)
+          echo "PYSPARK_SUBMIT_ARGS=--master local[1] --conf spark.sql.adaptive.enabled=false --conf spark.serializer=org.apache.spark.serializer.KryoSerializer --conf spark.driver.memory=1g --conf spark.executor.memory=1g --conf spark.driver.host=127.0.0.1 --conf spark.driver.bindAddress=127.0.0.1 --conf spark.python.worker.reuse=false --conf spark.sql.execution.arrow.pyspark.enabled=false --conf spark.sql.adaptive.coalescePartitions.enabled=false pyspark-shell" >> $env:GITHUB_ENV
           # Set Python path for PySpark workers
           echo "PYTHONPATH=$pythonPath" >> $env:GITHUB_ENV
           # Set network binding for Windows
           echo "SPARK_LOCAL_IP=127.0.0.1" >> $env:GITHUB_ENV
           echo "SPARK_LOCAL_HOSTNAME=localhost" >> $env:GITHUB_ENV
+          # Set additional environment variables for Windows compatibility
+          echo "PYTHONIOENCODING=utf-8" >> $env:GITHUB_ENV
+          echo "PYTHONUNBUFFERED=1" >> $env:GITHUB_ENV
 
       - name: Verify PySpark Configuration
         shell: pwsh
@@ -336,13 +342,16 @@ jobs:
           "from pyspark.conf import SparkConf" | Add-Content "test_pyspark.py"
           "" | Add-Content "test_pyspark.py"
           "conf = SparkConf()" | Add-Content "test_pyspark.py"
+          "conf.set('spark.master', 'local[1]')" | Add-Content "test_pyspark.py"
           "conf.set('spark.sql.adaptive.enabled', 'false')" | Add-Content "test_pyspark.py"
           "conf.set('spark.serializer', 'org.apache.spark.serializer.KryoSerializer')" | Add-Content "test_pyspark.py"
-          "conf.set('spark.driver.memory', '2g')" | Add-Content "test_pyspark.py"
-          "conf.set('spark.executor.memory', '2g')" | Add-Content "test_pyspark.py"
-          "conf.set('spark.python.worker.reuse', 'true')" | Add-Content "test_pyspark.py"
+          "conf.set('spark.driver.memory', '1g')" | Add-Content "test_pyspark.py"
+          "conf.set('spark.executor.memory', '1g')" | Add-Content "test_pyspark.py"
+          "conf.set('spark.python.worker.reuse', 'false')" | Add-Content "test_pyspark.py"
           "conf.set('spark.driver.host', '127.0.0.1')" | Add-Content "test_pyspark.py"
           "conf.set('spark.driver.bindAddress', '127.0.0.1')" | Add-Content "test_pyspark.py"
+          "conf.set('spark.sql.execution.arrow.pyspark.enabled', 'false')" | Add-Content "test_pyspark.py"
+          "conf.set('spark.sql.adaptive.coalescePartitions.enabled', 'false')" | Add-Content "test_pyspark.py"
           "" | Add-Content "test_pyspark.py"
           "spark = SparkSession.builder.appName('python_version_test').config(conf=conf).getOrCreate()" | Add-Content "test_pyspark.py"
           "df = spark.range(5)" | Add-Content "test_pyspark.py"
@@ -384,10 +393,6 @@ jobs:
             Add-Content -Path $hostsFile -Value "127.0.0.1 localhost" -ErrorAction SilentlyContinue
           }
 
-          # Set additional environment variables for PySpark Windows compatibility
-          echo "PYTHONIOENCODING=utf-8" >> $env:GITHUB_ENV
-          echo "PYTHONUNBUFFERED=1" >> $env:GITHUB_ENV
-
           Write-Host "Windows configuration for PySpark completed"
 
       - name: Network Diagnostics
@@ -422,7 +427,7 @@ jobs:
       - name: Configure PySpark for Tests
         shell: pwsh
         run: |
-          Write-Host "Configuring PySpark environment for actual test execution..."
+          Write-Host "Configuring PySpark directories for test execution..."
 
           # Set additional Spark configuration for Windows compatibility
           $env:SPARK_LOCAL_DIRS = "${{ github.workspace }}\temp\spark"
@@ -439,10 +444,15 @@ jobs:
           echo "SPARK_WORKER_DIR=${{ github.workspace }}\temp\spark\worker" >> $env:GITHUB_ENV
           echo "SPARK_LOG_DIR=${{ github.workspace }}\temp\spark\logs" >> $env:GITHUB_ENV
 
-          # Override PySpark submit args with more conservative settings for tests
-          echo "PYSPARK_SUBMIT_ARGS=--master local[1] --conf spark.sql.adaptive.enabled=false --conf spark.serializer=org.apache.spark.serializer.KryoSerializer --conf spark.driver.memory=1g --conf spark.executor.memory=1g --conf spark.driver.host=127.0.0.1 --conf spark.driver.bindAddress=127.0.0.1 --conf spark.python.worker.reuse=false --conf spark.sql.execution.arrow.pyspark.enabled=false --conf spark.sql.adaptive.coalescePartitions.enabled=false pyspark-shell" >> $env:GITHUB_ENV
+          # Display current PySpark configuration for verification
+          Write-Host "Current PySpark Configuration:"
+          Write-Host "PYSPARK_PYTHON: $env:PYSPARK_PYTHON"
+          Write-Host "PYSPARK_SUBMIT_ARGS: $env:PYSPARK_SUBMIT_ARGS"
+          Write-Host "SPARK_LOCAL_DIRS: $env:SPARK_LOCAL_DIRS"
+          Write-Host "SPARK_WORKER_DIR: $env:SPARK_WORKER_DIR"
+          Write-Host "SPARK_LOG_DIR: $env:SPARK_LOG_DIR"
 
-          Write-Host "PySpark environment configured for tests"
+          Write-Host "PySpark directories configured for tests"
 
       - name: Final PySpark Test Before Main Tests
         shell: pwsh
@@ -452,12 +462,33 @@ jobs:
           # Create a comprehensive test script
           "import os" | Out-File -FilePath "final_pyspark_test.py" -Encoding utf8
           "import sys" | Add-Content "final_pyspark_test.py"
+          "print('=== Environment Information ===')" | Add-Content "final_pyspark_test.py"
           "print('Python executable:', sys.executable)" | Add-Content "final_pyspark_test.py"
+          "print('Python version:', sys.version)" | Add-Content "final_pyspark_test.py"
           "print('PYSPARK_PYTHON:', os.environ.get('PYSPARK_PYTHON', 'Not set'))" | Add-Content "final_pyspark_test.py"
+          "print('PYSPARK_DRIVER_PYTHON:', os.environ.get('PYSPARK_DRIVER_PYTHON', 'Not set'))" | Add-Content "final_pyspark_test.py"
+          "print('PYSPARK_SUBMIT_ARGS:', os.environ.get('PYSPARK_SUBMIT_ARGS', 'Not set'))" | Add-Content "final_pyspark_test.py"
+          "print('PYTHONPATH:', os.environ.get('PYTHONPATH', 'Not set'))" | Add-Content "final_pyspark_test.py"
+          "print('SPARK_LOCAL_IP:', os.environ.get('SPARK_LOCAL_IP', 'Not set'))" | Add-Content "final_pyspark_test.py"
+          "print('SPARK_LOCAL_HOSTNAME:', os.environ.get('SPARK_LOCAL_HOSTNAME', 'Not set'))" | Add-Content "final_pyspark_test.py"
+          "print('SPARK_LOCAL_DIRS:', os.environ.get('SPARK_LOCAL_DIRS', 'Not set'))" | Add-Content "final_pyspark_test.py"
+          "print('SPARK_WORKER_DIR:', os.environ.get('SPARK_WORKER_DIR', 'Not set'))" | Add-Content "final_pyspark_test.py"
+          "print('SPARK_LOG_DIR:', os.environ.get('SPARK_LOG_DIR', 'Not set'))" | Add-Content "final_pyspark_test.py"
+          "print('PYTHONIOENCODING:', os.environ.get('PYTHONIOENCODING', 'Not set'))" | Add-Content "final_pyspark_test.py"
+          "print('PYTHONUNBUFFERED:', os.environ.get('PYTHONUNBUFFERED', 'Not set'))" | Add-Content "final_pyspark_test.py"
           "" | Add-Content "final_pyspark_test.py"
-          "from pyspark.sql import SparkSession" | Add-Content "final_pyspark_test.py"
-          "from pyspark.conf import SparkConf" | Add-Content "final_pyspark_test.py"
+          "print('=== PySpark Import Test ===')" | Add-Content "final_pyspark_test.py"
+          "try:" | Add-Content "final_pyspark_test.py"
+          "    from pyspark.sql import SparkSession" | Add-Content "final_pyspark_test.py"
+          "    from pyspark.conf import SparkConf" | Add-Content "final_pyspark_test.py"
+          "    print('PySpark imports successful')" | Add-Content "final_pyspark_test.py"
+          "except Exception as e:" | Add-Content "final_pyspark_test.py"
+          "    print('PySpark import failed:', str(e))" | Add-Content "final_pyspark_test.py"
+          "    import traceback" | Add-Content "final_pyspark_test.py"
+          "    traceback.print_exc()" | Add-Content "final_pyspark_test.py"
+          "    sys.exit(1)" | Add-Content "final_pyspark_test.py"
           "" | Add-Content "final_pyspark_test.py"
+          "print('=== SparkSession Creation Test ===')" | Add-Content "final_pyspark_test.py"
           "conf = SparkConf()" | Add-Content "final_pyspark_test.py"
           "conf.set('spark.master', 'local[1]')" | Add-Content "final_pyspark_test.py"
           "conf.set('spark.sql.adaptive.enabled', 'false')" | Add-Content "final_pyspark_test.py"
@@ -467,20 +498,31 @@ jobs:
           "conf.set('spark.driver.bindAddress', '127.0.0.1')" | Add-Content "final_pyspark_test.py"
           "conf.set('spark.python.worker.reuse', 'false')" | Add-Content "final_pyspark_test.py"
           "conf.set('spark.sql.execution.arrow.pyspark.enabled', 'false')" | Add-Content "final_pyspark_test.py"
+          "conf.set('spark.ui.showConsoleProgress', 'false')" | Add-Content "final_pyspark_test.py"
+          "conf.set('spark.sql.adaptive.coalescePartitions.enabled', 'false')" | Add-Content "final_pyspark_test.py"
           "" | Add-Content "final_pyspark_test.py"
           "try:" | Add-Content "final_pyspark_test.py"
           "    spark = SparkSession.builder.appName('final_test').config(conf=conf).getOrCreate()" | Add-Content "final_pyspark_test.py"
+          "    print('SparkSession created successfully')" | Add-Content "final_pyspark_test.py"
+          "    print('Spark version:', spark.version)" | Add-Content "final_pyspark_test.py"
+          "    print('Spark master:', spark.sparkContext.master)" | Add-Content "final_pyspark_test.py"
+          "" | Add-Content "final_pyspark_test.py"
+          "    print('=== DataFrame Operations Test ===')" | Add-Content "final_pyspark_test.py"
           "    df = spark.range(10)" | Add-Content "final_pyspark_test.py"
           "    count = df.count()" | Add-Content "final_pyspark_test.py"
           "    print('DataFrame count test:', count, 'rows')" | Add-Content "final_pyspark_test.py"
           "    result = df.collect()" | Add-Content "final_pyspark_test.py"
           "    print('Collect operation test:', len(result), 'rows collected')" | Add-Content "final_pyspark_test.py"
           "    spark.stop()" | Add-Content "final_pyspark_test.py"
-          "    print('Final PySpark test completed successfully')" | Add-Content "final_pyspark_test.py"
+          "    print('=== Final PySpark test completed successfully ===')" | Add-Content "final_pyspark_test.py"
           "except Exception as e:" | Add-Content "final_pyspark_test.py"
           "    print('Final PySpark test failed:', str(e))" | Add-Content "final_pyspark_test.py"
           "    import traceback" | Add-Content "final_pyspark_test.py"
           "    traceback.print_exc()" | Add-Content "final_pyspark_test.py"
+          "    try:" | Add-Content "final_pyspark_test.py"
+          "        spark.stop()" | Add-Content "final_pyspark_test.py"
+          "    except:" | Add-Content "final_pyspark_test.py"
+          "        pass" | Add-Content "final_pyspark_test.py"
           "    sys.exit(1)" | Add-Content "final_pyspark_test.py"
 
           # Run the test
@@ -545,6 +587,64 @@ jobs:
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
           PYTEST_ADDOPTS: --color=yes --tb=short -v -x --maxfail=5 --disable-warnings --no-cov-on-fail
+        working-directory: ./snowpark-checkpoints-collectors
+
+      - name: Debug Test Failures
+        if: failure()
+        shell: pwsh
+        run: |
+          Write-Host "=== DEBUGGING TEST FAILURES ==="
+          Write-Host "Current working directory: $PWD"
+
+          # Show environment variables
+          Write-Host "=== Environment Variables ==="
+          Write-Host "PYSPARK_PYTHON: $env:PYSPARK_PYTHON"
+          Write-Host "PYSPARK_DRIVER_PYTHON: $env:PYSPARK_DRIVER_PYTHON"
+          Write-Host "PYSPARK_SUBMIT_ARGS: $env:PYSPARK_SUBMIT_ARGS"
+          Write-Host "SPARK_LOCAL_DIRS: $env:SPARK_LOCAL_DIRS"
+          Write-Host "SPARK_WORKER_DIR: $env:SPARK_WORKER_DIR"
+          Write-Host "SPARK_LOG_DIR: $env:SPARK_LOG_DIR"
+          Write-Host "PYTHONIOENCODING: $env:PYTHONIOENCODING"
+          Write-Host "PYTHONUNBUFFERED: $env:PYTHONUNBUFFERED"
+
+          # Check if Spark directories exist and show contents
+          Write-Host "=== Spark Directories ==="
+          if (Test-Path "${{ github.workspace }}\temp\spark") {
+            Write-Host "Spark temp directory contents:"
+            Get-ChildItem -Path "${{ github.workspace }}\temp\spark" -Recurse -ErrorAction SilentlyContinue | Select-Object FullName, Length
+          } else {
+            Write-Host "Spark temp directory does not exist"
+          }
+
+          # Show Spark logs if they exist
+          Write-Host "=== Spark Logs ==="
+          if (Test-Path "${{ github.workspace }}\temp\spark\logs") {
+            Get-ChildItem -Path "${{ github.workspace }}\temp\spark\logs" -Recurse -ErrorAction SilentlyContinue | ForEach-Object {
+              Write-Host "=== Log file: $($_.FullName) ==="
+              Get-Content $_.FullName -ErrorAction SilentlyContinue | Select-Object -Last 50
+            }
+          } else {
+            Write-Host "No Spark logs found"
+          }
+
+          # Create and run a simple PySpark test to see the exact error
+          Write-Host "=== Simple PySpark Test ==="
+          "from pyspark.sql import SparkSession" | Out-File -FilePath "debug_test.py" -Encoding utf8
+          "spark = SparkSession.builder.appName('debug_test').master('local[1]').getOrCreate()" | Add-Content "debug_test.py"
+          "print('Spark context created successfully')" | Add-Content "debug_test.py"
+          "df = spark.range(5)" | Add-Content "debug_test.py"
+          "count = df.count()" | Add-Content "debug_test.py"
+          "print('Simple test passed:', count, 'rows')" | Add-Content "debug_test.py"
+          "spark.stop()" | Add-Content "debug_test.py"
+
+          try {
+            python debug_test.py
+          } catch {
+            Write-Host "Simple PySpark test failed: $_"
+          }
+
+          # Clean up
+          Remove-Item "debug_test.py" -ErrorAction SilentlyContinue
         working-directory: ./snowpark-checkpoints-collectors
 
       - name: Snowflake Schema Cleanup

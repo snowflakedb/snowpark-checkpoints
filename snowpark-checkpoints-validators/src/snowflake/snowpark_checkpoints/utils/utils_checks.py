@@ -122,8 +122,8 @@ def _process_sampling(
     pandera_schema_upper = pandera_schema
     new_columns: dict[Any, Any] = {}
 
-    for col in pandera_schema.columns:
-        new_columns[col.upper()] = pandera_schema.columns[col]
+    for column in pandera_schema.columns:
+        new_columns[column.upper()] = pandera_schema.columns[column]
 
     pandera_schema_upper = pandera_schema_upper.remove_columns(pandera_schema.columns)
     pandera_schema_upper = pandera_schema_upper.add_columns(new_columns)

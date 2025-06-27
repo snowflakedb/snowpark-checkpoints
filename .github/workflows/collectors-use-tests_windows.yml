@@ -325,32 +325,35 @@ jobs:
           Write-Host "PYSPARK_SUBMIT_ARGS: $env:PYSPARK_SUBMIT_ARGS"
           Write-Host "PYTHONPATH: $env:PYTHONPATH"
 
-          # Create a test script to avoid command line escaping issues
-          echo "import sys" > test_pyspark.py
-          echo "import os" >> test_pyspark.py
-          echo "print(f'Python version: {sys.version}')" >> test_pyspark.py
-          echo "print(f'Python executable: {sys.executable}')" >> test_pyspark.py
-          echo "print(f'PYSPARK_PYTHON: {os.environ.get(\"PYSPARK_PYTHON\", \"Not set\")}')" >> test_pyspark.py
-          echo "print(f'PYSPARK_DRIVER_PYTHON: {os.environ.get(\"PYSPARK_DRIVER_PYTHON\", \"Not set\")}')" >> test_pyspark.py
-          echo "" >> test_pyspark.py
-          echo "from pyspark.sql import SparkSession" >> test_pyspark.py
-          echo "from pyspark.conf import SparkConf" >> test_pyspark.py
-          echo "" >> test_pyspark.py
-          echo "conf = SparkConf()" >> test_pyspark.py
-          echo "conf.set('spark.sql.adaptive.enabled', 'false')" >> test_pyspark.py
-          echo "conf.set('spark.serializer', 'org.apache.spark.serializer.KryoSerializer')" >> test_pyspark.py
-          echo "conf.set('spark.driver.memory', '2g')" >> test_pyspark.py
-          echo "conf.set('spark.executor.memory', '2g')" >> test_pyspark.py
-          echo "conf.set('spark.python.worker.reuse', 'true')" >> test_pyspark.py
-          echo "conf.set('spark.driver.host', '127.0.0.1')" >> test_pyspark.py
-          echo "conf.set('spark.driver.bindAddress', '127.0.0.1')" >> test_pyspark.py
-          echo "" >> test_pyspark.py
-          echo "spark = SparkSession.builder.appName('python_version_test').config(conf=conf).getOrCreate()" >> test_pyspark.py
-          echo "df = spark.range(5)" >> test_pyspark.py
-          echo "result = df.collect()" >> test_pyspark.py
-          echo "print(f'Test successful: {len(result)} rows')" >> test_pyspark.py
-          echo "print(f'Spark version: {spark.version}')" >> test_pyspark.py
-          echo "spark.stop()" >> test_pyspark.py
+          # Create a simplified test script
+          "import sys, os" | Out-File -FilePath "test_pyspark.py" -Encoding utf8
+          "print('Python version:', sys.version)" | Add-Content "test_pyspark.py"
+          "print('Python executable:', sys.executable)" | Add-Content "test_pyspark.py"
+          "print('PYSPARK_PYTHON:', os.environ.get('PYSPARK_PYTHON', 'Not set'))" | Add-Content "test_pyspark.py"
+          "print('PYSPARK_DRIVER_PYTHON:', os.environ.get('PYSPARK_DRIVER_PYTHON', 'Not set'))" | Add-Content "test_pyspark.py"
+          "" | Add-Content "test_pyspark.py"
+          "from pyspark.sql import SparkSession" | Add-Content "test_pyspark.py"
+          "from pyspark.conf import SparkConf" | Add-Content "test_pyspark.py"
+          "" | Add-Content "test_pyspark.py"
+          "conf = SparkConf()" | Add-Content "test_pyspark.py"
+          "conf.set('spark.sql.adaptive.enabled', 'false')" | Add-Content "test_pyspark.py"
+          "conf.set('spark.serializer', 'org.apache.spark.serializer.KryoSerializer')" | Add-Content "test_pyspark.py"
+          "conf.set('spark.driver.memory', '2g')" | Add-Content "test_pyspark.py"
+          "conf.set('spark.executor.memory', '2g')" | Add-Content "test_pyspark.py"
+          "conf.set('spark.python.worker.reuse', 'true')" | Add-Content "test_pyspark.py"
+          "conf.set('spark.driver.host', '127.0.0.1')" | Add-Content "test_pyspark.py"
+          "conf.set('spark.driver.bindAddress', '127.0.0.1')" | Add-Content "test_pyspark.py"
+          "" | Add-Content "test_pyspark.py"
+          "spark = SparkSession.builder.appName('python_version_test').config(conf=conf).getOrCreate()" | Add-Content "test_pyspark.py"
+          "df = spark.range(5)" | Add-Content "test_pyspark.py"
+          "result = df.collect()" | Add-Content "test_pyspark.py"
+          "print('Test successful:', len(result), 'rows')" | Add-Content "test_pyspark.py"
+          "print('Spark version:', spark.version)" | Add-Content "test_pyspark.py"
+          "spark.stop()" | Add-Content "test_pyspark.py"
+
+          # Show the created file for debugging
+          Write-Host "Created test script:"
+          Get-Content "test_pyspark.py"
 
           # Run the test script
           python test_pyspark.py

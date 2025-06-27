@@ -419,6 +419,77 @@ jobs:
           Write-Host "Network interfaces:"
           Get-NetAdapter | Where-Object {$_.Status -eq "Up"} | Select-Object Name, InterfaceDescription, LinkSpeed
 
+      - name: Configure PySpark for Tests
+        shell: pwsh
+        run: |
+          Write-Host "Configuring PySpark environment for actual test execution..."
+
+          # Set additional Spark configuration for Windows compatibility
+          $env:SPARK_LOCAL_DIRS = "${{ github.workspace }}\temp\spark"
+          $env:SPARK_WORKER_DIR = "${{ github.workspace }}\temp\spark\worker"
+          $env:SPARK_LOG_DIR = "${{ github.workspace }}\temp\spark\logs"
+
+          # Create necessary directories
+          New-Item -ItemType Directory -Force -Path "${{ github.workspace }}\temp\spark" | Out-Null
+          New-Item -ItemType Directory -Force -Path "${{ github.workspace }}\temp\spark\worker" | Out-Null
+          New-Item -ItemType Directory -Force -Path "${{ github.workspace }}\temp\spark\logs" | Out-Null
+
+          # Set environment variables for subsequent steps
+          echo "SPARK_LOCAL_DIRS=${{ github.workspace }}\temp\spark" >> $env:GITHUB_ENV
+          echo "SPARK_WORKER_DIR=${{ github.workspace }}\temp\spark\worker" >> $env:GITHUB_ENV
+          echo "SPARK_LOG_DIR=${{ github.workspace }}\temp\spark\logs" >> $env:GITHUB_ENV
+
+          # Override PySpark submit args with more conservative settings for tests
+          echo "PYSPARK_SUBMIT_ARGS=--master local[1] --conf spark.sql.adaptive.enabled=false --conf spark.serializer=org.apache.spark.serializer.KryoSerializer --conf spark.driver.memory=1g --conf spark.executor.memory=1g --conf spark.driver.host=127.0.0.1 --conf spark.driver.bindAddress=127.0.0.1 --conf spark.python.worker.reuse=false --conf spark.sql.execution.arrow.pyspark.enabled=false --conf spark.sql.adaptive.coalescePartitions.enabled=false pyspark-shell" >> $env:GITHUB_ENV
+
+          Write-Host "PySpark environment configured for tests"
+
+      - name: Final PySpark Test Before Main Tests
+        shell: pwsh
+        run: |
+          Write-Host "Running final PySpark verification before main test suite..."
+
+          # Create a comprehensive test script
+          "import os" | Out-File -FilePath "final_pyspark_test.py" -Encoding utf8
+          "import sys" | Add-Content "final_pyspark_test.py"
+          "print('Python executable:', sys.executable)" | Add-Content "final_pyspark_test.py"
+          "print('PYSPARK_PYTHON:', os.environ.get('PYSPARK_PYTHON', 'Not set'))" | Add-Content "final_pyspark_test.py"
+          "" | Add-Content "final_pyspark_test.py"
+          "from pyspark.sql import SparkSession" | Add-Content "final_pyspark_test.py"
+          "from pyspark.conf import SparkConf" | Add-Content "final_pyspark_test.py"
+          "" | Add-Content "final_pyspark_test.py"
+          "conf = SparkConf()" | Add-Content "final_pyspark_test.py"
+          "conf.set('spark.master', 'local[1]')" | Add-Content "final_pyspark_test.py"
+          "conf.set('spark.sql.adaptive.enabled', 'false')" | Add-Content "final_pyspark_test.py"
+          "conf.set('spark.driver.memory', '1g')" | Add-Content "final_pyspark_test.py"
+          "conf.set('spark.executor.memory', '1g')" | Add-Content "final_pyspark_test.py"
+          "conf.set('spark.driver.host', '127.0.0.1')" | Add-Content "final_pyspark_test.py"
+          "conf.set('spark.driver.bindAddress', '127.0.0.1')" | Add-Content "final_pyspark_test.py"
+          "conf.set('spark.python.worker.reuse', 'false')" | Add-Content "final_pyspark_test.py"
+          "conf.set('spark.sql.execution.arrow.pyspark.enabled', 'false')" | Add-Content "final_pyspark_test.py"
+          "" | Add-Content "final_pyspark_test.py"
+          "try:" | Add-Content "final_pyspark_test.py"
+          "    spark = SparkSession.builder.appName('final_test').config(conf=conf).getOrCreate()" | Add-Content "final_pyspark_test.py"
+          "    df = spark.range(10)" | Add-Content "final_pyspark_test.py"
+          "    count = df.count()" | Add-Content "final_pyspark_test.py"
+          "    print('DataFrame count test:', count, 'rows')" | Add-Content "final_pyspark_test.py"
+          "    result = df.collect()" | Add-Content "final_pyspark_test.py"
+          "    print('Collect operation test:', len(result), 'rows collected')" | Add-Content "final_pyspark_test.py"
+          "    spark.stop()" | Add-Content "final_pyspark_test.py"
+          "    print('Final PySpark test completed successfully')" | Add-Content "final_pyspark_test.py"
+          "except Exception as e:" | Add-Content "final_pyspark_test.py"
+          "    print('Final PySpark test failed:', str(e))" | Add-Content "final_pyspark_test.py"
+          "    import traceback" | Add-Content "final_pyspark_test.py"
+          "    traceback.print_exc()" | Add-Content "final_pyspark_test.py"
+          "    sys.exit(1)" | Add-Content "final_pyspark_test.py"
+
+          # Run the test
+          python final_pyspark_test.py
+
+          # Clean up
+          Remove-Item "final_pyspark_test.py" -ErrorAction SilentlyContinue
+        working-directory: ./snowpark-checkpoints-collectors
+
       - name: Run tests
         shell: pwsh
         run: |
@@ -430,6 +501,9 @@ jobs:
           Write-Host "PYSPARK_SUBMIT_ARGS: $env:PYSPARK_SUBMIT_ARGS"
           Write-Host "PYTHONIOENCODING: $env:PYTHONIOENCODING"
           Write-Host "PYTHONUNBUFFERED: $env:PYTHONUNBUFFERED"
+          Write-Host "SPARK_LOCAL_DIRS: $env:SPARK_LOCAL_DIRS"
+          Write-Host "SPARK_WORKER_DIR: $env:SPARK_WORKER_DIR"
+          Write-Host "SPARK_LOG_DIR: $env:SPARK_LOG_DIR"
 
           # Configure hatch to use the correct Python version
           hatch config set dirs.env.virtual .hatch
@@ -441,6 +515,8 @@ jobs:
           # Set additional PySpark environment variables for test execution
           $env:SPARK_CONF_DIR = "${{ github.workspace }}"
           $env:SPARK_NO_DAEMONIZE = "1"
+          $env:SPARK_DRIVER_MEMORY = "1g"
+          $env:SPARK_EXECUTOR_MEMORY = "1g"
 
           # Get the Python version for hatch matrix
           $PYTHON_VERSION = "${{ matrix.python-version }}"
@@ -468,7 +544,7 @@ jobs:
           hatch run "$HATCH_ENV`:coverage"
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
-          PYTEST_ADDOPTS: --color=yes --tb=short -v
+          PYTEST_ADDOPTS: --color=yes --tb=short -v -x --maxfail=5 --disable-warnings --no-cov-on-fail
         working-directory: ./snowpark-checkpoints-collectors
 
       - name: Snowflake Schema Cleanup

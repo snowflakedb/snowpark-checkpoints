@@ -65,7 +65,7 @@ jobs:
 
       - name: Generate timestamp
         id: timestamp
-        run: echo "::set-output name=timestamp::$(date +%Y%m%d%H%M%S%3N)"
+        run: echo "timestamp=$(date +%Y%m%d%H%M%S%3N)" >> $GITHUB_OUTPUT
 
       - name: Set Snowflake Schema ID
         run: echo "SNOWFLAKE_CONNECTIONS_MYCONNECTION_SCHEMA_ID=${{ secrets.SNOWFLAKE_SCHEMA }}_${{ github.run_id }}_${{ github.run_number }}_${{ steps.timestamp.outputs.timestamp }}" >> $GITHUB_ENV

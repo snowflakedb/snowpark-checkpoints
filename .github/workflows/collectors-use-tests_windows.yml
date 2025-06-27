@@ -255,10 +255,12 @@ jobs:
           python -m pip install --upgrade pip -q
           # Install project dependencies first without pyspark
           python -m pip install ".[development]" --no-deps -q
-          # Install dependencies manually excluding pyspark
-          pip install "snowflake-snowpark-python>=1.23.0" snowflake-connector-python "pandera[io]==0.20.4" -q
-          pip install pytest>=8.3.3 pytest-cov>=6.0.0 coverage>=7.6.7 twine==5.1.1 hatchling==1.25.0 -q
-          pip install pre-commit>=4.0.1 setuptools>=70.0.0 pyarrow>=18.0.0 deepdiff>=8.0.0 certifi==2025.1.31 -q
+          # Install dependencies manually excluding pyspark - PIN CRITICAL VERSIONS
+          pip install "snowflake-snowpark-python==1.32.0" snowflake-connector-python "pandera[io]==0.20.4" -q
+          pip install pytest==8.3.5 pytest-cov==6.1.1 coverage>=7.6.7 twine==5.1.1 hatchling==1.25.0 -q
+          pip install pre-commit>=4.0.1 setuptools>=70.0.0 pyarrow==20.0.0 deepdiff>=8.0.0 certifi==2025.1.31 -q
+          # Pin pandas to the working version
+          pip install pandas==2.2.3 -q
           pip install hatch pyyaml frictionless requests -q
           # Force install PySpark 3.5.5 for Windows compatibility (avoid 4.0+ errors)
           pip install pyspark==3.5.5 py4j==0.10.9.7 -q
@@ -606,6 +608,14 @@ jobs:
           Write-Host "SPARK_LOG_DIR: $env:SPARK_LOG_DIR"
           Write-Host "PYTHONIOENCODING: $env:PYTHONIOENCODING"
           Write-Host "PYTHONUNBUFFERED: $env:PYTHONUNBUFFERED"
+
+          # Show critical package versions for debugging
+          Write-Host "=== Critical Package Versions ==="
+          python -c "import pandas; print(f'pandas: {pandas.__version__}')"
+          python -c "import pyspark; print(f'pyspark: {pyspark.__version__}')"
+          python -c "import pyarrow; print(f'pyarrow: {pyarrow.__version__}')"
+          python -c "import snowflake.snowpark; print(f'snowpark: {snowflake.snowpark.__version__}')"
+          python -c "import pytest; print(f'pytest: {pytest.__version__}')"
 
           # Check if Spark directories exist and show contents
           Write-Host "=== Spark Directories ==="

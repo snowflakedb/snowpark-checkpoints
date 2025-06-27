@@ -22,6 +22,8 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from snowflake.snowpark import Session
+from snowflake.snowpark.functions import col, expr
+from snowflake.snowpark.types import TimestampType
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     DOT_PARQUET_EXTENSION,
 )
@@ -195,9 +197,28 @@ class SnowConnection:
             stage_directory_path,
         )
         dataframe = self.session.read.parquet(path=stage_directory_path)
+        dataframe = convert_timestamps_to_utc_date(dataframe)
         LOGGER.info("Creating table '%s' from parquet files", table_name)
         dataframe.write.save_as_table(table_name=table_name, mode="overwrite")
 
     def _create_snowpark_session(self) -> Session:
         LOGGER.info("Creating a Snowpark session using the default connection")
         return Session.builder.getOrCreate()
+
+
+def convert_timestamps_to_utc_date(df):
+    """Convert all timestamp columns to UTC midnight timestamps.
+
+    Reading a parquet written by spark from a snowpark session modifies the original timestamps,
+    so this function normalizes timestamps for comparison.
+    """
+    new_cols = []
+    for field in df.schema.fields:
+        if isinstance(field.datatype, TimestampType):
+            utc_midnight_ts = expr(
+                f"convert_timezone('UTC', cast(to_date({field.name}) as timestamp_tz))"
+            ).alias(field.name)
+            new_cols.append(utc_midnight_ts)
+        else:
+            new_cols.append(col(field.name))
+    return df.select(new_cols)

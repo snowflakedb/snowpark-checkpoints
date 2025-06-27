@@ -66,7 +66,7 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
     PANDAS_DATETIME_DTYPE,
     PANDAS_FLOAT_DTYPE,
     PANDAS_INTEGER_DTYPE,
-    PANDAS_OBJECT_DTYPE,
+    PANDAS_STRING_DTYPE,
     PANDAS_TIMEDELTA_DTYPE,
     PANDERA_COLUMN_TYPE_KEY,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
@@ -428,7 +428,7 @@ def test_collect_sampled_dataframe(spark_session, output_path):
     schema_contract_output_json = json.loads(schema_contract_output)
 
     pandera_column_type_collection_expected = [
-        PANDAS_OBJECT_DTYPE,
+        PANDAS_STRING_DTYPE,
         PANDAS_INTEGER_DTYPE,
         PANDAS_FLOAT_DTYPE,
         PANDAS_DATETIME_DTYPE,

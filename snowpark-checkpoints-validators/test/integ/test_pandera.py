@@ -23,7 +23,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from numpy import int8
+from numpy import int8, int64
 from pandas import DataFrame as PandasDataFrame
 from pandera import Check, Column, DataFrameSchema
 from pytest import raises
@@ -78,7 +78,7 @@ def test_input(telemetry_output_path):
 
     in_schema = DataFrameSchema(
         {
-            "COLUMN1": Column(int8, Check(lambda x: 0 <= x <= 10, element_wise=True)),
+            "COLUMN1": Column(int64, Check(lambda x: 0 <= x <= 10, element_wise=True)),
             "COLUMN2": Column(float, Check(lambda x: x < -1.2, element_wise=True)),
         }
     )
@@ -161,7 +161,7 @@ def test_output(telemetry_output_path):
     out_schema = DataFrameSchema(
         {
             "COLUMN1": Column(
-                int8, Check.between(0, 10, include_max=True, include_min=True)
+                int64, Check.between(0, 10, include_max=True, include_min=True)
             ),
             "COLUMN2": Column(float, Check.less_than_or_equal_to(-1.2)),
             "COLUMN3": Column(float, Check.less_than(10)),
@@ -244,7 +244,7 @@ def test_df_check(telemetry_output_path):
 
     schema = DataFrameSchema(
         {
-            "COLUMN1": Column(int8, Check(lambda x: 0 <= x <= 10, element_wise=True)),
+            "COLUMN1": Column(int64, Check(lambda x: 0 <= x <= 10, element_wise=True)),
             "COLUMN2": Column(float, Check(lambda x: x < -1.2, element_wise=True)),
         }
     )
@@ -320,7 +320,7 @@ def test_df_check_from_file(telemetry_output_path):
 
     schema = DataFrameSchema(
         {
-            "COLUMN1": Column(int8, Check.between(0, 10)),
+            "COLUMN1": Column(int64, Check.between(0, 10)),
             "COLUMN2": Column(float, Check.between(-20.5, -1.0)),
         }
     )
@@ -409,7 +409,7 @@ def test_df_check_custom_check(telemetry_output_path):
 
     schema = DataFrameSchema(
         {
-            "COLUMN1": Column(int8, Check(lambda x: 0 <= x <= 10, element_wise=True)),
+            "COLUMN1": Column(int64, Check(lambda x: 0 <= x <= 10, element_wise=True)),
             "COLUMN2": Column(float, Check(lambda x: x < -1.2, element_wise=True)),
         }
     )
@@ -454,7 +454,7 @@ def test_df_check_skip_check(telemetry_output_path):
 
     schema = DataFrameSchema(
         {
-            "COLUMN1": Column(int8, Check.between(0, 10, element_wise=True)),
+            "COLUMN1": Column(int64, Check.between(0, 10, element_wise=True)),
             "COLUMN2": Column(
                 float,
                 [

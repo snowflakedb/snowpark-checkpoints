@@ -56,13 +56,17 @@ def test_create_snowflake_table_from_parquet(input_path):
             with mock.patch(
                 "snowflake.snowpark_checkpoints_collector.io_utils.io_default_strategy.IODefaultStrategy.read_bytes"
             ) as read_bytes_mock:
-                read_bytes_mock.return_value = b"test"
-                isfile_mock.return_value = True
-                glob_mock.return_value = [parquet_file_path]
-                snow_connection = SnowConnection(mocked_session)
-                snow_connection.create_snowflake_table_from_local_parquet(
-                    checkpoint_name, input_path, stage_path=checkpoint_name
-                )
+                with mock.patch(
+                    "snowflake.snowpark_checkpoints_collector.snow_connection_model.snow_connection.convert_timestamps_to_utc_date"
+                ) as mock_convert:
+                    mock_convert.return_value = mock_df
+                    read_bytes_mock.return_value = b"test"
+                    isfile_mock.return_value = True
+                    glob_mock.return_value = [parquet_file_path]
+                    snow_connection = SnowConnection(mocked_session)
+                    snow_connection.create_snowflake_table_from_local_parquet(
+                        checkpoint_name, input_path, stage_path=checkpoint_name
+                    )
 
     stage_name = stage_name.format(snow_connection.stage_id)
 

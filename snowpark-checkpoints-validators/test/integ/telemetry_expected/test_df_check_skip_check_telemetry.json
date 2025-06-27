@@ -1,6 +1,6 @@
 {
     "message": {
-        "data": "{\"function\": \"_check_dataframe_schema\", \"mode\": 1, \"status\": true, \"schema_types\": [\"int8\", \"float64\"]}",
+        "data": "{\"function\": \"_check_dataframe_schema\", \"mode\": 1, \"status\": true, \"schema_types\": [\"int64\", \"float64\"]}",
         "driver_type": "PythonConnector",
         "driver_version": "3.12.4",
         "event_name": "DataFrame_Validator_Schema",

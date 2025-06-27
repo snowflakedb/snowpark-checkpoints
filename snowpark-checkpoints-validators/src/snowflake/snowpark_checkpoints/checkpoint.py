@@ -332,7 +332,7 @@ def _check_dataframe_schema(
     pandera_schema_upper, sample_df = _process_sampling(
         df, pandera_schema, job_context, sample_frac, sample_number, sampling_strategy
     )
-    is_valid, validation_result = _validate(pandera_schema_upper, sample_df)
+    is_valid, validation_result = validate(pandera_schema_upper, sample_df)
     if is_valid:
         LOGGER.info(
             "DataFrame schema validation passed for checkpoint '%s'",
@@ -438,7 +438,7 @@ def check_output_schema(
             sampler.process_args([snowpark_results])
             pandas_sample_args = sampler.get_sampled_pandas_args()
 
-            is_valid, validation_result = _validate(
+            is_valid, validation_result = validate(
                 pandera_schema, pandas_sample_args[0]
             )
             if is_valid:
@@ -565,7 +565,7 @@ def check_input_schema(
                     )
                     continue
 
-                is_valid, validation_result = _validate(
+                is_valid, validation_result = validate(
                     pandera_schema,
                     arg,
                 )
@@ -606,11 +606,31 @@ def check_input_schema(
     return check_input_with_decorator
 
 
-def _validate(
+def validate(
     schema: Union[type[DataFrameModel], DataFrameSchema],
     df: PandasDataFrame,
     lazy: bool = True,
 ) -> tuple[bool, PandasDataFrame]:
+    """Validate a Pandas DataFrame against a given Pandera schema.
+
+    Args:
+        schema (Union[type[DataFrameModel], DataFrameSchema]):
+            The schema to validate against. Can be a Pandera `DataFrameSchema` or
+            a `DataFrameModel` class.
+        df (PandasDataFrame):
+            The Pandas DataFrame to be validated.
+        lazy (bool, optional):
+            If `True`, collect all validation errors before raising an exception.
+            If `False`, raise an exception as soon as the first error is encountered.
+            Defaults to `True`.
+
+    Returns:
+        tuple[bool, PandasDataFrame]:
+            A tuple containing:
+            - A boolean indicating whether validation passed.
+            - The validated DataFrame if successful, or the failure cases DataFrame if not.
+
+    """
     if not isinstance(schema, DataFrameSchema):
         schema = schema.to_schema()
     is_valid = True

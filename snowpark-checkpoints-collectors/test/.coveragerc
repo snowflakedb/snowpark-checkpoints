@@ -1,4 +1,5 @@
 [run]
+source = src/
 omit =
     */__init__.py
     **/__init__.py
@@ -8,6 +9,10 @@ omit =
     */test/*
     */.venv/*
     */.env/*
+    */.hatch/*
+    **/.hatch/*
+    */site-packages/*
+    **/site-packages/*
     **/telemetry.py
 
 [report]

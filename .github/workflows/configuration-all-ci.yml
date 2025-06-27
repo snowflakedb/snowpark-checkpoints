@@ -11,7 +11,8 @@ on:
       - "!snowpark-checkpoints-hypothesis/**"
       - "!Demos/**"
   pull_request:
-    branches: "**"
+    branches:
+      - "**"
     paths:
       - "**"
       - "!snowpark-checkpoints-validators/**"

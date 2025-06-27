@@ -325,8 +325,38 @@ jobs:
           Write-Host "PYSPARK_SUBMIT_ARGS: $env:PYSPARK_SUBMIT_ARGS"
           Write-Host "PYTHONPATH: $env:PYTHONPATH"
 
-          # Test PySpark with explicit configuration for Windows
-          python -c "import sys; import os; print(f'Python version: {sys.version}'); print(f'Python executable: {sys.executable}'); print(f'PYSPARK_PYTHON: {os.environ.get(\"PYSPARK_PYTHON\", \"Not set\")}'); print(f'PYSPARK_DRIVER_PYTHON: {os.environ.get(\"PYSPARK_DRIVER_PYTHON\", \"Not set\")}'); from pyspark.sql import SparkSession; from pyspark.conf import SparkConf; conf = SparkConf(); conf.set('spark.sql.adaptive.enabled', 'false'); conf.set('spark.serializer', 'org.apache.spark.serializer.KryoSerializer'); conf.set('spark.driver.memory', '2g'); conf.set('spark.executor.memory', '2g'); conf.set('spark.python.worker.reuse', 'true'); conf.set('spark.driver.host', '127.0.0.1'); conf.set('spark.driver.bindAddress', '127.0.0.1'); spark = SparkSession.builder.appName('python_version_test').config(conf=conf).getOrCreate(); df = spark.range(5); result = df.collect(); print(f'Test successful: {len(result)} rows'); print(f'Spark version: {spark.version}'); spark.stop()"
+          # Create a test script to avoid command line escaping issues
+          echo "import sys" > test_pyspark.py
+          echo "import os" >> test_pyspark.py
+          echo "print(f'Python version: {sys.version}')" >> test_pyspark.py
+          echo "print(f'Python executable: {sys.executable}')" >> test_pyspark.py
+          echo "print(f'PYSPARK_PYTHON: {os.environ.get(\"PYSPARK_PYTHON\", \"Not set\")}')" >> test_pyspark.py
+          echo "print(f'PYSPARK_DRIVER_PYTHON: {os.environ.get(\"PYSPARK_DRIVER_PYTHON\", \"Not set\")}')" >> test_pyspark.py
+          echo "" >> test_pyspark.py
+          echo "from pyspark.sql import SparkSession" >> test_pyspark.py
+          echo "from pyspark.conf import SparkConf" >> test_pyspark.py
+          echo "" >> test_pyspark.py
+          echo "conf = SparkConf()" >> test_pyspark.py
+          echo "conf.set('spark.sql.adaptive.enabled', 'false')" >> test_pyspark.py
+          echo "conf.set('spark.serializer', 'org.apache.spark.serializer.KryoSerializer')" >> test_pyspark.py
+          echo "conf.set('spark.driver.memory', '2g')" >> test_pyspark.py
+          echo "conf.set('spark.executor.memory', '2g')" >> test_pyspark.py
+          echo "conf.set('spark.python.worker.reuse', 'true')" >> test_pyspark.py
+          echo "conf.set('spark.driver.host', '127.0.0.1')" >> test_pyspark.py
+          echo "conf.set('spark.driver.bindAddress', '127.0.0.1')" >> test_pyspark.py
+          echo "" >> test_pyspark.py
+          echo "spark = SparkSession.builder.appName('python_version_test').config(conf=conf).getOrCreate()" >> test_pyspark.py
+          echo "df = spark.range(5)" >> test_pyspark.py
+          echo "result = df.collect()" >> test_pyspark.py
+          echo "print(f'Test successful: {len(result)} rows')" >> test_pyspark.py
+          echo "print(f'Spark version: {spark.version}')" >> test_pyspark.py
+          echo "spark.stop()" >> test_pyspark.py
+
+          # Run the test script
+          python test_pyspark.py
+
+          # Clean up
+          Remove-Item "test_pyspark.py" -ErrorAction SilentlyContinue
         working-directory: ./snowpark-checkpoints-collectors
 
       - name: Configure Windows for PySpark

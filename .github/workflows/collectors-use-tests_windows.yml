@@ -35,6 +35,9 @@ jobs:
       HADOOP_VERSION: "3.3.6"
       JAVA_VERSION: "21"
       PYSPARK_VERSION_WINDOWS: "==3.5.5"
+      # PySpark Windows compatibility settings
+      SPARK_LOCAL_IP: "127.0.0.1"
+      SPARK_LOCAL_HOSTNAME: "localhost"
 
     strategy:
       fail-fast: false
@@ -258,7 +261,16 @@ jobs:
           pip install pre-commit>=4.0.1 setuptools>=70.0.0 pyarrow>=18.0.0 deepdiff>=8.0.0 certifi==2025.1.31 -q
           pip install hatch pyyaml frictionless requests -q
           # Force install PySpark 3.5.5 for Windows compatibility (avoid 4.0+ errors)
-          pip install pyspark==3.5.5 -q
+          pip install pyspark==3.5.5 py4j==0.10.9.7 -q
+          # Install additional Windows-specific PySpark dependencies
+          pip install pywin32 -q
+          # Configure hatch to use the correct Python version
+          hatch config set dirs.env.virtual .hatch
+          hatch config set template.licenses.headers false
+
+          # Ensure hatch uses the same Python version as PySpark
+          $env:HATCH_PYTHON = $env:PYSPARK_PYTHON
+
           pip list
         working-directory: ./snowpark-checkpoints-collectors
 
@@ -284,7 +296,12 @@ jobs:
           echo "PYSPARK_PYTHON=$pythonPath" >> $env:GITHUB_ENV
           echo "PYSPARK_DRIVER_PYTHON=$pythonPath" >> $env:GITHUB_ENV
           # Additional PySpark configuration for Windows compatibility
-          echo "PYSPARK_SUBMIT_ARGS=--master local[1] pyspark-shell" >> $env:GITHUB_ENV
+          echo "PYSPARK_SUBMIT_ARGS=--master local[*] --conf spark.sql.adaptive.enabled=false --conf spark.serializer=org.apache.spark.serializer.KryoSerializer --conf spark.driver.memory=2g --conf spark.executor.memory=2g --conf spark.driver.host=127.0.0.1 --conf spark.driver.bindAddress=127.0.0.1 --conf spark.python.worker.reuse=true pyspark-shell" >> $env:GITHUB_ENV
+          # Set Python path for PySpark workers
+          echo "PYTHONPATH=$pythonPath" >> $env:GITHUB_ENV
+          # Set network binding for Windows
+          echo "SPARK_LOCAL_IP=127.0.0.1" >> $env:GITHUB_ENV
+          echo "SPARK_LOCAL_HOSTNAME=localhost" >> $env:GITHUB_ENV
 
       - name: Verify PySpark Configuration
         shell: pwsh
@@ -293,6 +310,9 @@ jobs:
           Write-Host "PYSPARK_PYTHON: $env:PYSPARK_PYTHON"
           Write-Host "PYSPARK_DRIVER_PYTHON: $env:PYSPARK_DRIVER_PYTHON"
           Write-Host "PYSPARK_SUBMIT_ARGS: $env:PYSPARK_SUBMIT_ARGS"
+          Write-Host "PYTHONPATH: $env:PYTHONPATH"
+          Write-Host "SPARK_LOCAL_IP: $env:SPARK_LOCAL_IP"
+          Write-Host "SPARK_LOCAL_HOSTNAME: $env:SPARK_LOCAL_HOSTNAME"
           Write-Host "Verifying PySpark installation and version..."
           python -c "import pyspark; print(f'PySpark version: {pyspark.__version__}')"
 
@@ -302,8 +322,69 @@ jobs:
           Write-Host "Testing PySpark configuration before running full test suite..."
           Write-Host "PYSPARK_PYTHON: $env:PYSPARK_PYTHON"
           Write-Host "PYSPARK_DRIVER_PYTHON: $env:PYSPARK_DRIVER_PYTHON"
-          python -c "import sys; print(f'Python version: {sys.version}'); print(f'Python executable: {sys.executable}'); from pyspark.sql import SparkSession; spark = SparkSession.builder.appName('python_version_test').config('spark.sql.adaptive.enabled', 'false').getOrCreate(); df = spark.range(5); result = df.collect(); print(f'Test successful: {len(result)} rows'); print(f'Spark version: {spark.version}'); spark.stop()"
+          Write-Host "PYSPARK_SUBMIT_ARGS: $env:PYSPARK_SUBMIT_ARGS"
+          Write-Host "PYTHONPATH: $env:PYTHONPATH"
+
+          # Test PySpark with explicit configuration for Windows
+          python -c "import sys; import os; print(f'Python version: {sys.version}'); print(f'Python executable: {sys.executable}'); print(f'PYSPARK_PYTHON: {os.environ.get(\"PYSPARK_PYTHON\", \"Not set\")}'); print(f'PYSPARK_DRIVER_PYTHON: {os.environ.get(\"PYSPARK_DRIVER_PYTHON\", \"Not set\")}'); from pyspark.sql import SparkSession; from pyspark.conf import SparkConf; conf = SparkConf(); conf.set('spark.sql.adaptive.enabled', 'false'); conf.set('spark.serializer', 'org.apache.spark.serializer.KryoSerializer'); conf.set('spark.driver.memory', '2g'); conf.set('spark.executor.memory', '2g'); conf.set('spark.python.worker.reuse', 'true'); conf.set('spark.driver.host', '127.0.0.1'); conf.set('spark.driver.bindAddress', '127.0.0.1'); spark = SparkSession.builder.appName('python_version_test').config(conf=conf).getOrCreate(); df = spark.range(5); result = df.collect(); print(f'Test successful: {len(result)} rows'); print(f'Spark version: {spark.version}'); spark.stop()"
         working-directory: ./snowpark-checkpoints-collectors
+
+      - name: Configure Windows for PySpark
+        shell: pwsh
+        run: |
+          Write-Host "Configuring Windows environment for PySpark..."
+
+          # Disable Windows Firewall temporarily for localhost connections
+          Write-Host "Configuring Windows Firewall for localhost connections..."
+          try {
+            netsh advfirewall set allprofiles state off
+            Write-Host "Windows Firewall disabled for PySpark testing"
+          } catch {
+            Write-Host "Could not disable firewall, continuing..."
+          }
+
+          # Configure hosts file to ensure localhost resolution
+          Write-Host "Ensuring localhost resolution..."
+          $hostsFile = "$env:SystemRoot\System32\drivers\etc\hosts"
+          $hostsContent = Get-Content $hostsFile -ErrorAction SilentlyContinue
+          if ($hostsContent -notcontains "127.0.0.1 localhost") {
+            Add-Content -Path $hostsFile -Value "127.0.0.1 localhost" -ErrorAction SilentlyContinue
+          }
+
+          # Set additional environment variables for PySpark Windows compatibility
+          echo "PYTHONIOENCODING=utf-8" >> $env:GITHUB_ENV
+          echo "PYTHONUNBUFFERED=1" >> $env:GITHUB_ENV
+
+          Write-Host "Windows configuration for PySpark completed"
+
+      - name: Network Diagnostics
+        shell: pwsh
+        run: |
+          Write-Host "Running network diagnostics for PySpark..."
+
+          # Test localhost connectivity
+          Write-Host "Testing localhost connectivity..."
+          try {
+            Test-NetConnection -ComputerName "127.0.0.1" -Port 80 -InformationLevel Quiet
+            Write-Host "Localhost connectivity: OK"
+          } catch {
+            Write-Host "Localhost connectivity: Issues detected"
+          }
+
+          # Check available ports
+          Write-Host "Checking available ports..."
+          $availablePorts = @()
+          foreach ($port in 4040..4050) {
+            $connection = Test-NetConnection -ComputerName "127.0.0.1" -Port $port -InformationLevel Quiet -WarningAction SilentlyContinue
+            if (-not $connection) {
+              $availablePorts += $port
+            }
+          }
+          Write-Host "Available ports: $($availablePorts -join ', ')"
+
+          # Show network configuration
+          Write-Host "Network interfaces:"
+          Get-NetAdapter | Where-Object {$_.Status -eq "Up"} | Select-Object Name, InterfaceDescription, LinkSpeed
 
       - name: Run tests
         shell: pwsh
@@ -314,6 +395,8 @@ jobs:
           Write-Host "PYSPARK_PYTHON: $env:PYSPARK_PYTHON"
           Write-Host "PYSPARK_DRIVER_PYTHON: $env:PYSPARK_DRIVER_PYTHON"
           Write-Host "PYSPARK_SUBMIT_ARGS: $env:PYSPARK_SUBMIT_ARGS"
+          Write-Host "PYTHONIOENCODING: $env:PYTHONIOENCODING"
+          Write-Host "PYTHONUNBUFFERED: $env:PYTHONUNBUFFERED"
 
           # Configure hatch to use the correct Python version
           hatch config set dirs.env.virtual .hatch
@@ -322,8 +405,9 @@ jobs:
           # Ensure hatch uses the same Python version as PySpark
           $env:HATCH_PYTHON = $env:PYSPARK_PYTHON
 
-          hatch status
-          hatch env show
+          # Set additional PySpark environment variables for test execution
+          $env:SPARK_CONF_DIR = "${{ github.workspace }}"
+          $env:SPARK_NO_DAEMONIZE = "1"
 
           # Get the Python version for hatch matrix
           $PYTHON_VERSION = "${{ matrix.python-version }}"
@@ -365,3 +449,15 @@ jobs:
           }
         env:
           SNOWFLAKE_CONNECTIONS_MYCONNECTION_SCHEMA_ID_WIN: ${{ env.SNOWFLAKE_CONNECTIONS_MYCONNECTION_SCHEMA_ID_WIN }}
+
+      - name: Restore Windows Firewall
+        if: always()
+        shell: pwsh
+        run: |
+          Write-Host "Restoring Windows Firewall..."
+          try {
+            netsh advfirewall set allprofiles state on
+            Write-Host "Windows Firewall restored"
+          } catch {
+            Write-Host "Could not restore firewall settings"
+          }

@@ -290,7 +290,7 @@ def _compare_data(
 
     session = job_context.snowpark_session
     result = get_comparison_differences(session, checkpoint_name, new_table_name)
-    has_failed = result.get("spark_only_rows") and result.get("snowpark_only_rows")
+    has_failed = result.get("spark_only_rows") or result.get("snowpark_only_rows")
     if has_failed or result.get("error"):
         error_message = f"Data mismatch for checkpoint {checkpoint_name}: {result}"
         job_context._mark_fail(

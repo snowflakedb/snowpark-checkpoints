@@ -351,6 +351,9 @@ def test_compare_data_mismatch():
             "snowflake.snowpark_checkpoints.utils.utils_checks.convert_timestamps_to_utc_date",
             return_value=df,
         ),
+        patch(
+            "snowflake.snowpark_checkpoints.utils.utils_checks.get_comparison_differences"
+        ) as mock_get_comparison_differences,
     ):
         # Call the function and expect a SchemaValidationError
         with raises(
@@ -366,11 +369,7 @@ def test_compare_data_mismatch():
     df.write.save_as_table.assert_called_once_with(
         table_name=new_checkpoint_name, mode=OVERWRITE_MODE
     )
-    calls = [
-        call(EXCEPT_HASH_AGG_QUERY, [checkpoint_name, new_checkpoint_name]),
-        call().count(),
-    ]
-    session.sql.assert_has_calls(calls)
+    mock_get_comparison_differences.assert_called_once()
     job_context._mark_fail.assert_called()
     job_context._mark_pass.assert_not_called()
 

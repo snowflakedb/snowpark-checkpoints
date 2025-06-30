@@ -282,6 +282,7 @@ def test_compare_data_match():
     job_context = MagicMock(spec=SnowparkJobContext)
     session = MagicMock()
     job_context.snowpark_session = session
+    job_context.job_name = checkpoint_name
 
     # Mock session.sql to return an empty DataFrame (indicating no mismatch)
     session.sql.return_value.count.return_value = 0
@@ -301,6 +302,10 @@ def test_compare_data_match():
             "snowflake.snowpark_checkpoints.utils.utils_checks.convert_timestamps_to_utc_date",
             return_value=df,
         ),
+        patch(
+            "snowflake.snowpark_checkpoints.utils.utils_checks.get_comparison_differences",
+            return_value={},
+        ) as mock_get_comparison_differences,
     ):
         # Call the function
         _check_compare_data(df, job_context, checkpoint_name, output_path)
@@ -312,11 +317,7 @@ def test_compare_data_match():
     df.write.save_as_table.assert_called_once_with(
         table_name=new_checkpoint_name, mode=OVERWRITE_MODE
     )
-    calls = [
-        call(EXCEPT_HASH_AGG_QUERY, [checkpoint_name, new_checkpoint_name]),
-        call().count(),
-    ]
-    session.sql.assert_has_calls(calls)
+    mock_get_comparison_differences.assert_called_once()
     job_context._mark_pass.assert_called_once_with(
         checkpoint_name, DATAFRAME_EXECUTION_MODE
     )

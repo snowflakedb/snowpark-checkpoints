@@ -25,6 +25,7 @@ from pyspark.sql import DataFrame as SparkDataFrame
 from pyspark.sql.functions import col
 from pyspark.sql.types import BinaryType as SparkBinaryType
 from pyspark.sql.types import BooleanType, IntegerType, StructField
+from pyspark.sql.types import DateType as SparkDateType
 from pyspark.sql.types import DoubleType as SparkDoubleType
 from pyspark.sql.types import FloatType as SparkFloatType
 from pyspark.sql.types import StringType as SparkStringType
@@ -83,6 +84,8 @@ default_null_types = {
     SparkDoubleType(): 0.0,
     SparkStringType(): "",
     BooleanType(): False,
+    SparkTimestampType(): None,
+    SparkDateType(): None,
 }
 
 
@@ -485,32 +488,56 @@ def _to_pandas(sampled_df: SparkDataFrame) -> pandas.DataFrame:
         is_spark_binary = isinstance(field.dataType, SparkBinaryType)
         is_spark_timestamp = isinstance(field.dataType, SparkTimestampType)
         is_spark_float = isinstance(field.dataType, SparkFloatType)
+        is_spark_boolean = isinstance(field.dataType, BooleanType)
+        is_spark_date = isinstance(field.dataType, SparkDateType)
         if is_integer:
             LOGGER.debug(
                 "Converting Spark integer column '%s' to Pandas nullable '%s' type",
                 field.name,
                 PANDAS_LONG_TYPE,
             )
-            pandas_df[field.name] = pandas_df[field.name].astype(PANDAS_LONG_TYPE)
+            pandas_df[field.name] = (
+                pandas_df[field.name].astype(PANDAS_LONG_TYPE).fillna(0)
+            )
         elif is_spark_string or is_spark_binary:
             LOGGER.debug(
                 "Converting Spark string column '%s' to Pandas nullable '%s' type",
                 field.name,
                 PANDAS_STRING_TYPE,
             )
-            pandas_df[field.name] = pandas_df[field.name].astype(PANDAS_STRING_TYPE)
+            pandas_df[field.name] = (
+                pandas_df[field.name].astype(PANDAS_STRING_TYPE).fillna("")
+            )
         elif is_spark_timestamp:
             LOGGER.debug(
                 "Converting Spark timestamp column '%s' to UTC naive Pandas datetime",
                 field.name,
             )
-            pandas_df[field.name] = convert_all_to_utc_naive(pandas_df[field.name])
+            pandas_df[field.name] = convert_all_to_utc_naive(
+                pandas_df[field.name]
+            ).fillna(pandas.NaT)
         elif is_spark_float:
             LOGGER.debug(
                 "Converting Spark float column '%s' to Pandas nullable float",
                 field.name,
             )
-            pandas_df[field.name] = pandas_df[field.name].astype(PANDAS_FLOAT_TYPE)
+            pandas_df[field.name] = (
+                pandas_df[field.name].astype(PANDAS_FLOAT_TYPE).fillna(0.0)
+            )
+        elif is_spark_boolean:
+            LOGGER.debug(
+                "Converting Spark boolean column '%s' to Pandas nullable boolean",
+                field.name,
+            )
+            pandas_df[field.name] = (
+                pandas_df[field.name].astype("boolean").fillna(False)
+            )
+        elif is_spark_date:
+            LOGGER.debug(
+                "Converting Spark date column '%s' to Pandas nullable datetime",
+                field.name,
+            )
+            pandas_df[field.name] = pandas_df[field.name].fillna(pandas.NaT)
 
     return pandas_df
 

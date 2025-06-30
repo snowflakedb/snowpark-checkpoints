@@ -27,6 +27,7 @@ import numpy as np
 from pandera import DataFrameSchema
 
 from snowflake.snowpark import DataFrame as SnowparkDataFrame
+from snowflake.snowpark import Session
 from snowflake.snowpark.functions import col, expr
 from snowflake.snowpark.types import TimestampType
 from snowflake.snowpark_checkpoints.errors import SchemaValidationError
@@ -44,7 +45,6 @@ from snowflake.snowpark_checkpoints.utils.constants import (
     DATAFRAME_EXECUTION_MODE,
     DATAFRAME_PANDERA_SCHEMA_KEY,
     DEFAULT_KEY,
-    EXCEPT_HASH_AGG_QUERY,
     FAIL_STATUS,
     PASS_STATUS,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
@@ -287,12 +287,12 @@ def _compare_data(
         new_table_name,
         checkpoint_name,
     )
-    expect_df = job_context.snowpark_session.sql(
-        EXCEPT_HASH_AGG_QUERY, [checkpoint_name, new_table_name]
-    )
 
-    if expect_df.count() != 0:
-        error_message = f"Data mismatch for checkpoint {checkpoint_name}"
+    session = job_context.snowpark_session
+    result = get_comparison_differences(session, checkpoint_name, new_table_name)
+    has_failed = result.get("spark_only_rows") and result.get("snowpark_only_rows")
+    if has_failed or result.get("error"):
+        error_message = f"Data mismatch for checkpoint {checkpoint_name}: {result}"
         job_context._mark_fail(
             error_message,
             checkpoint_name,
@@ -314,6 +314,66 @@ def _compare_data(
         _update_validation_result(checkpoint_name, PASS_STATUS, output_path)
         job_context._mark_pass(checkpoint_name, DATAFRAME_EXECUTION_MODE)
         return True, None
+
+
+def get_comparison_differences(
+    session: Session, table1_name: str, table2_name: str
+) -> dict:
+    """Compare two tables and return the differences."""
+    try:
+        spark_raw_schema = session.table(table1_name).schema.names
+        snowpark_raw_schema = session.table(table2_name).schema.names
+
+        spark_normalized = {
+            col_name.strip('"').upper(): col_name for col_name in spark_raw_schema
+        }
+        snowpark_normalized = {
+            col_name.strip('"').upper(): col_name for col_name in snowpark_raw_schema
+        }
+
+        common_cols = sorted(
+            list(
+                set(spark_normalized.keys()).intersection(
+                    set(snowpark_normalized.keys())
+                )
+            )
+        )
+
+        if not common_cols:
+            return {
+                "error": f"No common columns found between {table1_name} and {table2_name}",
+            }
+
+        cols_for_selection_df1 = [
+            spark_normalized[norm_col_name] for norm_col_name in common_cols
+        ]
+        cols_for_selection_df2 = [
+            snowpark_normalized[norm_col_name] for norm_col_name in common_cols
+        ]
+
+        df1_ordered = session.table(table1_name).select(
+            *[col(c) for c in cols_for_selection_df1]
+        )
+        df2_ordered = session.table(table2_name).select(
+            *[col(c) for c in cols_for_selection_df2]
+        )
+
+        diff_df1_vs_df2 = df1_ordered.except_(df2_ordered)
+        rows_only_in_table1 = diff_df1_vs_df2.collect()
+
+        diff_df2_vs_df1 = df2_ordered.except_(df1_ordered)
+        rows_only_in_table2 = diff_df2_vs_df1.collect()
+
+        spark_only_rows = [row.asDict() for row in rows_only_in_table1]
+        snowpark_only_rows = [row.asDict() for row in rows_only_in_table2]
+
+        return {
+            "spark_only_rows": spark_only_rows,
+            "snowpark_only_rows": snowpark_only_rows,
+        }
+
+    except Exception as e:
+        return {"error": f"An error occurred: {str(e)}"}
 
 
 def convert_timestamps_to_utc_date(df):

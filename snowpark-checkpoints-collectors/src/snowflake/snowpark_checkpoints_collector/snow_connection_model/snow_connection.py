@@ -207,7 +207,7 @@ class SnowConnection:
 
 
 def convert_timestamps_to_utc_date(df):
-    """Convert all timestamp columns to UTC midnight timestamps.
+    """Convert all timestamp columns to UTC normalized timestamps.
 
     Reading a parquet written by spark from a snowpark session modifies the original timestamps,
     so this function normalizes timestamps for comparison.
@@ -215,10 +215,10 @@ def convert_timestamps_to_utc_date(df):
     new_cols = []
     for field in df.schema.fields:
         if isinstance(field.datatype, TimestampType):
-            utc_midnight_ts = expr(
+            utc_normalized_ts = expr(
                 f"convert_timezone('UTC', cast(to_date({field.name}) as timestamp_tz))"
             ).alias(field.name)
-            new_cols.append(utc_midnight_ts)
+            new_cols.append(utc_normalized_ts)
         else:
             new_cols.append(col(field.name))
     return df.select(new_cols)

@@ -23,13 +23,33 @@ import pandera as pa
 
 from pyspark.sql import DataFrame as SparkDataFrame
 from pyspark.sql.functions import col
-from pyspark.sql.types import BinaryType as SparkBinaryType
-from pyspark.sql.types import BooleanType, IntegerType, StructField
-from pyspark.sql.types import DateType as SparkDateType
-from pyspark.sql.types import DoubleType as SparkDoubleType
-from pyspark.sql.types import FloatType as SparkFloatType
-from pyspark.sql.types import StringType as SparkStringType
-from pyspark.sql.types import TimestampType as SparkTimestampType
+from pyspark.sql.types import (
+    BinaryType as SparkBinaryType,
+)
+from pyspark.sql.types import (
+    BooleanType as SparkBooleanType,
+)
+from pyspark.sql.types import (
+    DateType as SparkDateType,
+)
+from pyspark.sql.types import (
+    DoubleType as SparkDoubleType,
+)
+from pyspark.sql.types import (
+    FloatType as SparkFloatType,
+)
+from pyspark.sql.types import (
+    IntegerType as SparkIntegerType,
+)
+from pyspark.sql.types import (
+    StringType as SparkStringType,
+)
+from pyspark.sql.types import (
+    StructField as SparkStructField,
+)
+from pyspark.sql.types import (
+    TimestampType as SparkTimestampType,
+)
 
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT,
@@ -79,11 +99,11 @@ from snowflake.snowpark_checkpoints_collector.utils.telemetry import report_tele
 LOGGER = logging.getLogger(__name__)
 
 default_null_types = {
-    IntegerType(): 0,
+    SparkIntegerType(): 0,
     SparkFloatType(): 0.0,
     SparkDoubleType(): 0.0,
     SparkStringType(): "",
-    BooleanType(): False,
+    SparkBooleanType(): False,
     SparkTimestampType(): None,
     SparkDateType(): None,
 }
@@ -353,7 +373,7 @@ def normalize_missing_values(df: SparkDataFrame) -> SparkDataFrame:
     return df
 
 
-def _get_spark_column_types(df: SparkDataFrame) -> dict[str, StructField]:
+def _get_spark_column_types(df: SparkDataFrame) -> dict[str, SparkStructField]:
     schema = df.schema
     column_type_collection = {}
     for field in schema.fields:
@@ -488,7 +508,7 @@ def _to_pandas(sampled_df: SparkDataFrame) -> pandas.DataFrame:
         is_spark_binary = isinstance(field.dataType, SparkBinaryType)
         is_spark_timestamp = isinstance(field.dataType, SparkTimestampType)
         is_spark_float = isinstance(field.dataType, SparkFloatType)
-        is_spark_boolean = isinstance(field.dataType, BooleanType)
+        is_spark_boolean = isinstance(field.dataType, SparkBooleanType)
         is_spark_date = isinstance(field.dataType, SparkDateType)
         if is_integer:
             LOGGER.debug(

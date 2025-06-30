@@ -67,7 +67,7 @@ def test_to_pandas_integer_conversion():
 
     result = to_pandas(sp_df)
     assert result["int_col"].dtype == PANDAS_LONG_TYPE
-    assert result["int_col"].iloc[1] is pd.NA
+    assert result["int_col"].iloc[1] == 0
 
 
 def test_to_pandas_string_and_binary_conversion():

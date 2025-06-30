@@ -317,12 +317,12 @@ def _compare_data(
 
 
 def get_comparison_differences(
-    session: Session, table1_name: str, table2_name: str
+    session: Session, spark_table: str, snowpark_table: str
 ) -> dict:
     """Compare two tables and return the differences."""
     try:
-        spark_raw_schema = session.table(table1_name).schema.names
-        snowpark_raw_schema = session.table(table2_name).schema.names
+        spark_raw_schema = session.table(spark_table).schema.names
+        snowpark_raw_schema = session.table(snowpark_table).schema.names
 
         spark_normalized = {
             col_name.strip('"').upper(): col_name for col_name in spark_raw_schema
@@ -341,31 +341,28 @@ def get_comparison_differences(
 
         if not common_cols:
             return {
-                "error": f"No common columns found between {table1_name} and {table2_name}",
+                "error": f"No common columns found between {spark_table} and {snowpark_table}",
             }
 
-        cols_for_selection_df1 = [
+        cols_for_spark_selection = [
             spark_normalized[norm_col_name] for norm_col_name in common_cols
         ]
-        cols_for_selection_df2 = [
+        cols_for_snowpark_selection = [
             snowpark_normalized[norm_col_name] for norm_col_name in common_cols
         ]
 
-        df1_ordered = session.table(table1_name).select(
-            *[col(c) for c in cols_for_selection_df1]
+        spark_ordered = session.table(spark_table).select(
+            *[col(c) for c in cols_for_spark_selection]
         )
-        df2_ordered = session.table(table2_name).select(
-            *[col(c) for c in cols_for_selection_df2]
+        snowpark_ordered = session.table(snowpark_table).select(
+            *[col(c) for c in cols_for_snowpark_selection]
         )
 
-        diff_df1_vs_df2 = df1_ordered.except_(df2_ordered)
-        rows_only_in_table1 = diff_df1_vs_df2.collect()
+        spark_leftovers = spark_ordered.except_(snowpark_ordered).collect()
+        snowpark_leftovers = snowpark_ordered.except_(spark_ordered).collect()
 
-        diff_df2_vs_df1 = df2_ordered.except_(df1_ordered)
-        rows_only_in_table2 = diff_df2_vs_df1.collect()
-
-        spark_only_rows = [row.asDict() for row in rows_only_in_table1]
-        snowpark_only_rows = [row.asDict() for row in rows_only_in_table2]
+        spark_only_rows = [row.asDict() for row in spark_leftovers]
+        snowpark_only_rows = [row.asDict() for row in snowpark_leftovers]
 
         return {
             "spark_only_rows": spark_only_rows,

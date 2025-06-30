@@ -23,9 +23,15 @@ import pandera as pa
 
 from pyspark.sql import DataFrame as SparkDataFrame
 from pyspark.sql.functions import col
-from pyspark.sql.types import BooleanType, FloatType, IntegerType, StructField
+from pyspark.sql.types import BinaryType as SparkBinaryType
+from pyspark.sql.types import BooleanType as SparkBooleanType
+from pyspark.sql.types import DateType as SparkDateType
 from pyspark.sql.types import DoubleType as SparkDoubleType
+from pyspark.sql.types import FloatType as SparkFloatType
+from pyspark.sql.types import IntegerType as SparkIntegerType
 from pyspark.sql.types import StringType as SparkStringType
+from pyspark.sql.types import StructField as SparkStructField
+from pyspark.sql.types import TimestampType as SparkTimestampType
 
 from snowflake.snowpark_checkpoints_collector.collection_common import (
     CHECKPOINT_JSON_OUTPUT_FILE_NAME_FORMAT,
@@ -36,8 +42,10 @@ from snowflake.snowpark_checkpoints_collector.collection_common import (
     DOT_PARQUET_EXTENSION,
     INTEGER_TYPE_COLLECTION,
     NULL_COLUMN_TYPE,
+    PANDAS_FLOAT_TYPE,
     PANDAS_LONG_TYPE,
     PANDAS_OBJECT_TYPE_COLLECTION,
+    PANDAS_STRING_TYPE,
     CheckpointMode,
 )
 from snowflake.snowpark_checkpoints_collector.collection_result.model import (
@@ -73,11 +81,13 @@ from snowflake.snowpark_checkpoints_collector.utils.telemetry import report_tele
 LOGGER = logging.getLogger(__name__)
 
 default_null_types = {
-    IntegerType(): 0,
-    FloatType(): 0.0,
+    SparkIntegerType(): 0,
+    SparkFloatType(): 0.0,
     SparkDoubleType(): 0.0,
     SparkStringType(): "",
-    BooleanType(): False,
+    SparkBooleanType(): False,
+    SparkTimestampType(): None,
+    SparkDateType(): None,
 }
 
 
@@ -345,7 +355,7 @@ def normalize_missing_values(df: SparkDataFrame) -> SparkDataFrame:
     return df
 
 
-def _get_spark_column_types(df: SparkDataFrame) -> dict[str, StructField]:
+def _get_spark_column_types(df: SparkDataFrame) -> dict[str, SparkStructField]:
     schema = df.schema
     column_type_collection = {}
     for field in schema.fields:
@@ -475,14 +485,83 @@ def _to_pandas(sampled_df: SparkDataFrame) -> pandas.DataFrame:
     LOGGER.debug("Converting Spark DataFrame to Pandas DataFrame")
     pandas_df = sampled_df.toPandas()
     for field in sampled_df.schema.fields:
-        has_nan = pandas_df[field.name].isna().any()
         is_integer = field.dataType.typeName() in INTEGER_TYPE_COLLECTION
-        if has_nan and is_integer:
+        is_spark_string = isinstance(field.dataType, SparkStringType)
+        is_spark_binary = isinstance(field.dataType, SparkBinaryType)
+        is_spark_timestamp = isinstance(field.dataType, SparkTimestampType)
+        is_spark_float = isinstance(field.dataType, SparkFloatType)
+        is_spark_boolean = isinstance(field.dataType, SparkBooleanType)
+        is_spark_date = isinstance(field.dataType, SparkDateType)
+        if is_integer:
             LOGGER.debug(
-                "Converting column '%s' to '%s' type",
+                "Converting Spark integer column '%s' to Pandas nullable '%s' type",
                 field.name,
                 PANDAS_LONG_TYPE,
             )
-            pandas_df[field.name] = pandas_df[field.name].astype(PANDAS_LONG_TYPE)
+            pandas_df[field.name] = (
+                pandas_df[field.name].astype(PANDAS_LONG_TYPE).fillna(0)
+            )
+        elif is_spark_string or is_spark_binary:
+            LOGGER.debug(
+                "Converting Spark string column '%s' to Pandas nullable '%s' type",
+                field.name,
+                PANDAS_STRING_TYPE,
+            )
+            pandas_df[field.name] = (
+                pandas_df[field.name].astype(PANDAS_STRING_TYPE).fillna("")
+            )
+        elif is_spark_timestamp:
+            LOGGER.debug(
+                "Converting Spark timestamp column '%s' to UTC naive Pandas datetime",
+                field.name,
+            )
+            pandas_df[field.name] = convert_all_to_utc_naive(
+                pandas_df[field.name]
+            ).fillna(pandas.NaT)
+        elif is_spark_float:
+            LOGGER.debug(
+                "Converting Spark float column '%s' to Pandas nullable float",
+                field.name,
+            )
+            pandas_df[field.name] = (
+                pandas_df[field.name].astype(PANDAS_FLOAT_TYPE).fillna(0.0)
+            )
+        elif is_spark_boolean:
+            LOGGER.debug(
+                "Converting Spark boolean column '%s' to Pandas nullable boolean",
+                field.name,
+            )
+            pandas_df[field.name] = (
+                pandas_df[field.name].astype("boolean").fillna(False)
+            )
+        elif is_spark_date:
+            LOGGER.debug(
+                "Converting Spark date column '%s' to Pandas nullable datetime",
+                field.name,
+            )
+            pandas_df[field.name] = pandas_df[field.name].fillna(pandas.NaT)
 
     return pandas_df
+
+
+def convert_all_to_utc_naive(series: pandas.Series) -> pandas.Series:
+    """Convert all timezone-aware or naive timestamps in a series to UTC naive.
+
+    Naive timestamps are assumed to be in UTC and localized accordingly.
+    Timezone-aware timestamps are converted to UTC and then made naive.
+
+    Args:
+        series (pandas.Series): A Pandas Series of `pd.Timestamp` objects,
+            either naive or timezone-aware.
+
+    Returns:
+        pandas.Series: A Series of UTC-normalized naive timestamps (`tzinfo=None`).
+
+    """
+
+    def convert(ts):
+        if ts.tz is None:
+            ts = ts.tz_localize("UTC")
+        return ts.tz_convert("UTC").tz_localize(None)
+
+    return series.apply(convert)

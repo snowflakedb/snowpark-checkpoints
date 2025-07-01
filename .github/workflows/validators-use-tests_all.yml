@@ -92,7 +92,7 @@ jobs:
         working-directory: ./snowpark-checkpoints-validators
 
       - name: Set up Snowflake CLI
-        uses: Snowflake-Labs/snowflake-cli-action@c2274560296ae95dd86b511d288d4657006235f2
+        uses: Snowflake-Labs/snowflake-cli-action@7461437d6094ed5788c3978c96509e99d0781ac5
         with:
           cli-version: ${{ matrix.snow_cli_version }}
           default-config-file-path: ".github/config/config.toml"

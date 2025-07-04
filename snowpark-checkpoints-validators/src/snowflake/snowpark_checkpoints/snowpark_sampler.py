@@ -131,6 +131,10 @@ class SamplingAdapter:
         pyspark_sample_args = []
         for arg in self.pandas_sample_args:
             if isinstance(arg, pandas.DataFrame):
+                if self.job_context.spark_session is None:
+                    raise ValueError(
+                        "A valid SparkSession must be provided. 'spark_session' cannot be None."
+                    )
                 pyspark_df = self.job_context.spark_session.createDataFrame(arg)
                 pyspark_sample_args.append(pyspark_df)
             else:

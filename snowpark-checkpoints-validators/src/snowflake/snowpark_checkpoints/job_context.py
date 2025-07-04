@@ -51,7 +51,7 @@ class SnowparkJobContext:
     ):
         self.log_results = log_results
         self.job_name = job_name
-        self.spark_session = spark_session or self._create_pyspark_session()
+        self.spark_session = spark_session  # A default pyspark session breaks the workflow on snowflake environments.
         self.snowpark_session = snowpark_session
 
     def _mark_fail(

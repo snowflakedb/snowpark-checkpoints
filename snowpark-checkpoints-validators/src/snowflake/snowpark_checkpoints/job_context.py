@@ -122,7 +122,3 @@ class SnowparkJobContext:
         report_df = session.createDataFrame(df)
         LOGGER.info("Writing pass result to table: '%s'", RESULTS_TABLE)
         report_df.write.mode("append").save_as_table(RESULTS_TABLE)
-
-    def _create_pyspark_session(self) -> SparkSession:
-        LOGGER.info("Creating a PySpark session")
-        return SparkSession.builder.getOrCreate()

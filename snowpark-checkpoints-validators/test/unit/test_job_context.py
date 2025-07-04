@@ -47,3 +47,23 @@ def test_mark_fail_log_results_disabled(caplog: pytest.LogCaptureFixture):
     )
 
     assert "Recording of migration results into Snowflake is disabled" in caplog.text
+
+
+def test_job_context_no_spark_session(caplog: pytest.LogCaptureFixture):
+    """Testing job context with no spark session."""
+
+    snowpark_session = MagicMock()
+    job_context = SnowparkJobContext(snowpark_session)
+
+    assert job_context.snowpark_session == snowpark_session
+    assert job_context.spark_session == None
+
+
+def test_job_context_with_none_spark_session(caplog: pytest.LogCaptureFixture):
+    """Testing job context with none spark session."""
+
+    snowpark_session = MagicMock()
+    job_context = SnowparkJobContext(snowpark_session, spark_session=None)
+
+    assert job_context.snowpark_session == snowpark_session
+    assert job_context.spark_session == None

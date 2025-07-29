@@ -51,7 +51,7 @@ class SnowparkJobContext:
     ):
         self.log_results = log_results
         self.job_name = job_name
-        self.spark_session = spark_session or self._create_pyspark_session()
+        self.spark_session = spark_session  # A default pyspark session breaks the workflow on snowflake environments.
         self.snowpark_session = snowpark_session
 
     def _mark_fail(
@@ -122,7 +122,3 @@ class SnowparkJobContext:
         report_df = session.createDataFrame(df)
         LOGGER.info("Writing pass result to table: '%s'", RESULTS_TABLE)
         report_df.write.mode("append").save_as_table(RESULTS_TABLE)
-
-    def _create_pyspark_session(self) -> SparkSession:
-        LOGGER.info("Creating a PySpark session")
-        return SparkSession.builder.getOrCreate()

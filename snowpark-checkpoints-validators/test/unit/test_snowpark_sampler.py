@@ -14,9 +14,12 @@
 # limitations under the License.
 
 import pandas as pd
+import pytest
 from snowflake.snowpark_checkpoints.snowpark_sampler import (
     to_pandas,
     convert_all_to_utc_naive,
+    SamplingAdapter,
+    SamplingError,
 )
 from snowflake.snowpark.types import (
     BinaryType,
@@ -29,6 +32,7 @@ from snowflake.snowpark_checkpoints.utils.constants import (
     PANDAS_LONG_TYPE,
     PANDAS_STRING_TYPE,
 )
+from unittest.mock import MagicMock
 
 
 class DummyDataType:
@@ -115,3 +119,20 @@ def test_convert_all_to_utc_naive_behavior():
     assert result[0].tzinfo is None
     assert result[1].tzinfo is None
     assert pd.isna(result[2])
+
+
+def test_no_spark_session_provided_exception():
+    job_context = MagicMock()
+    job_context.snowpark_session = MagicMock()
+    job_context.spark_session = None
+    sampling_adapter = SamplingAdapter(job_context=job_context)
+    mock_df = pd.DataFrame({"col1": [1, 2], "col2": [3, 4]})
+    sampling_adapter.pandas_sample_args = [mock_df]
+
+    with pytest.raises(SamplingError) as excinfo:
+        sampling_adapter.get_sampled_spark_args()
+
+    assert (
+        "A valid SparkSession must be provided. 'spark_session' cannot be None."
+        in str(excinfo.value)
+    )

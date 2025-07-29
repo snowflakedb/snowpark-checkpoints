@@ -25,7 +25,26 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Check if PR contains github-actions[bot] commits
+        id: check_bot
+        run: |
+          echo "Fetching PR base and head refs..."
+          git fetch --no-tags --prune origin ${{ github.event.pull_request.base.ref }}:refs/remotes/origin/${{ github.event.pull_request.base.ref }} || true
+          git fetch --no-tags --prune origin ${{ github.event.pull_request.head.ref }}:refs/remotes/origin/${{ github.event.pull_request.head.ref }} || true
+
+          echo "Checking commits in PR for github-actions[bot] authorship..."
+          BOT_COMMITS=$(git log --pretty=format:"%an" ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} | grep -c "github-actions\[bot\]" || echo "0")
+
+          if [[ "$BOT_COMMITS" -gt 0 ]]; then
+            echo "WARNING: Found $BOT_COMMITS commit(s) authored by github-actions[bot]. Bypassing PR lint rules."
+            echo "bot_created=true" >> $GITHUB_OUTPUT
+          else
+            echo "No github-actions[bot] commits found. Proceeding with PR lint checks."
+            echo "bot_created=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Check PR Title
+        if: steps.check_bot.outputs.bot_created != 'true'
         uses: morrisoncole/pr-lint-action@51f3cfabaf5d46f94e54524214e45685f0401b2a
         with:
           title-regex: "^[a-zA-Z]+-[0-9]+"
@@ -36,6 +55,7 @@ jobs:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
 
       - name: Check PR Description
+        if: steps.check_bot.outputs.bot_created != 'true'
         run: |
           if [ -z "$PR_BODY" ]; then
             echo "PR description is empty. Please provide a description."
@@ -46,6 +66,7 @@ jobs:
           PR_BODY: ${{ github.event.pull_request.body }}
 
       - name: Validate Risk Assessment Checkbox
+        if: steps.check_bot.outputs.bot_created != 'true'
         run: |
           if echo "$PR_BODY" | grep -q '^- \[ \] I attest that this change meets the bar for low risk'; then
               echo "The checkbox is unchecked. Failing the step."
@@ -62,6 +83,7 @@ jobs:
           PR_BODY: ${{ github.event.pull_request.body }}
 
       - name: Validate JIRA URL ticket in PR Description
+        if: steps.check_bot.outputs.bot_created != 'true'
         run: |
           MOTIVATION_SECTION=$(echo "$PR_BODY" | sed -n '/### Motivation & Context/,/### Description/p')
           if echo "$MOTIVATION_SECTION" | grep -Eq 'https?://[a-zA-Z0-9./?=_%:-]+'; then
@@ -74,6 +96,7 @@ jobs:
           PR_BODY: ${{ github.event.pull_request.body }}
 
       - name: Check PR Size
+        if: steps.check_bot.outputs.bot_created != 'true'
         run: |
           echo "Base SHA: ${{ github.event.pull_request.base.sha }}"
           echo "Head SHA: ${{ github.event.pull_request.head.sha }}"

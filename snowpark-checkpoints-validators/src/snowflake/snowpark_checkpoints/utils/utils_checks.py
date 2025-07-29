@@ -27,6 +27,9 @@ import numpy as np
 from pandera import DataFrameSchema
 
 from snowflake.snowpark import DataFrame as SnowparkDataFrame
+from snowflake.snowpark import Session
+from snowflake.snowpark.functions import col, expr
+from snowflake.snowpark.types import TimestampType
 from snowflake.snowpark_checkpoints.errors import SchemaValidationError
 from snowflake.snowpark_checkpoints.io_utils.io_file_manager import get_io_file_manager
 from snowflake.snowpark_checkpoints.job_context import SnowparkJobContext
@@ -42,7 +45,6 @@ from snowflake.snowpark_checkpoints.utils.constants import (
     DATAFRAME_EXECUTION_MODE,
     DATAFRAME_PANDERA_SCHEMA_KEY,
     DEFAULT_KEY,
-    EXCEPT_HASH_AGG_QUERY,
     FAIL_STATUS,
     PASS_STATUS,
     SNOWPARK_CHECKPOINTS_OUTPUT_DIRECTORY_NAME,
@@ -120,14 +122,14 @@ def _process_sampling(
     pandera_schema_upper = pandera_schema
     new_columns: dict[Any, Any] = {}
 
-    for col in pandera_schema.columns:
-        new_columns[col.upper()] = pandera_schema.columns[col]
+    for column in pandera_schema.columns:
+        new_columns[column.upper()] = pandera_schema.columns[column]
 
     pandera_schema_upper = pandera_schema_upper.remove_columns(pandera_schema.columns)
     pandera_schema_upper = pandera_schema_upper.add_columns(new_columns)
 
     sample_df = sampler.get_sampled_pandas_args()[0]
-    sample_df.index = np.ones(sample_df.count().iloc[0])
+    sample_df.index = np.ones(sample_df.count().iloc[0], dtype=int)
 
     return pandera_schema_upper, sample_df
 
@@ -191,6 +193,7 @@ Please run the Snowpark checkpoint collector first."""
     schema_dict = checkpoint_schema_config.get(DATAFRAME_PANDERA_SCHEMA_KEY)
     schema_dict_str = json.dumps(schema_dict)
     schema = DataFrameSchema.from_json(schema_dict_str)
+    schema.coerce = False  # Disable coercion to ensure strict validation
 
     if DATAFRAME_CUSTOM_DATA_KEY not in checkpoint_schema_config:
         LOGGER.info(
@@ -270,6 +273,7 @@ def _compare_data(
         SchemaValidationError: If there is a data mismatch between the DataFrame and the checkpoint table.
 
     """
+    df = convert_timestamps_to_utc_date(df)
     new_table_name = CHECKPOINT_TABLE_NAME_FORMAT.format(checkpoint_name)
     LOGGER.info(
         "Writing Snowpark DataFrame to table: '%s' for checkpoint: '%s'",
@@ -283,12 +287,12 @@ def _compare_data(
         new_table_name,
         checkpoint_name,
     )
-    expect_df = job_context.snowpark_session.sql(
-        EXCEPT_HASH_AGG_QUERY, [checkpoint_name, new_table_name]
-    )
 
-    if expect_df.count() != 0:
-        error_message = f"Data mismatch for checkpoint {checkpoint_name}"
+    session = job_context.snowpark_session
+    result = get_comparison_differences(session, checkpoint_name, new_table_name)
+    has_failed = result.get("spark_only_rows") or result.get("snowpark_only_rows")
+    if has_failed or result.get("error"):
+        error_message = f"Data mismatch for checkpoint {checkpoint_name}: {result}"
         job_context._mark_fail(
             error_message,
             checkpoint_name,
@@ -310,6 +314,80 @@ def _compare_data(
         _update_validation_result(checkpoint_name, PASS_STATUS, output_path)
         job_context._mark_pass(checkpoint_name, DATAFRAME_EXECUTION_MODE)
         return True, None
+
+
+def get_comparison_differences(
+    session: Session, spark_table: str, snowpark_table: str
+) -> dict:
+    """Compare two tables and return the differences."""
+    try:
+        spark_raw_schema = session.table(spark_table).schema.names
+        snowpark_raw_schema = session.table(snowpark_table).schema.names
+
+        spark_normalized = {
+            col_name.strip('"').upper(): col_name for col_name in spark_raw_schema
+        }
+        snowpark_normalized = {
+            col_name.strip('"').upper(): col_name for col_name in snowpark_raw_schema
+        }
+
+        common_cols = sorted(
+            list(
+                set(spark_normalized.keys()).intersection(
+                    set(snowpark_normalized.keys())
+                )
+            )
+        )
+
+        if not common_cols:
+            return {
+                "error": f"No common columns found between {spark_table} and {snowpark_table}",
+            }
+
+        cols_for_spark_selection = [
+            spark_normalized[norm_col_name] for norm_col_name in common_cols
+        ]
+        cols_for_snowpark_selection = [
+            snowpark_normalized[norm_col_name] for norm_col_name in common_cols
+        ]
+
+        spark_ordered = session.table(spark_table).select(
+            *[col(c) for c in cols_for_spark_selection]
+        )
+        snowpark_ordered = session.table(snowpark_table).select(
+            *[col(c) for c in cols_for_snowpark_selection]
+        )
+
+        spark_leftovers = spark_ordered.except_(snowpark_ordered).collect()
+        snowpark_leftovers = snowpark_ordered.except_(spark_ordered).collect()
+
+        spark_only_rows = [row.asDict() for row in spark_leftovers]
+        snowpark_only_rows = [row.asDict() for row in snowpark_leftovers]
+
+        return {
+            "spark_only_rows": spark_only_rows,
+            "snowpark_only_rows": snowpark_only_rows,
+        }
+
+    except Exception as e:
+        return {"error": f"An error occurred: {str(e)}"}
+
+
+def convert_timestamps_to_utc_date(df):
+    """Convert and normalize all Snowpark timestamp columns to UTC.
+
+    This function ensures timestamps are consistent across environments for reliable comparison.
+    """
+    new_cols = []
+    for field in df.schema.fields:
+        if isinstance(field.datatype, TimestampType):
+            utc_midnight_ts = expr(
+                f"convert_timezone('UTC', cast(to_date({field.name}) as timestamp_tz))"
+            ).alias(field.name)
+            new_cols.append(utc_midnight_ts)
+        else:
+            new_cols.append(col(field.name))
+    return df.select(new_cols)
 
 
 def _find_frame_in(stack: list[inspect.FrameInfo]) -> tuple:

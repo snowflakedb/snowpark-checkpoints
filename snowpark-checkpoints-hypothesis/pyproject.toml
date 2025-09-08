@@ -55,7 +55,7 @@ development = [
   "hatchling==1.25.0",
   "pre-commit>=4.0.1",
   "setuptools>=70.0.0",
-  "deepdiff>=8.0.0",
+  "deepdiff>=8.1.1",
   "certifi==2025.1.31",
 ]
 

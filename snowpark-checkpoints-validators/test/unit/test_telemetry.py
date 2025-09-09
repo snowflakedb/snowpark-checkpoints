@@ -515,12 +515,8 @@ class TelemetryManagerTest(unittest.TestCase):
         ), patch(
             "builtins.open", mock_open()
         ), patch(
-            "datetime.datetime",
-            MagicMock(
-                now=MagicMock(
-                    return_value=MagicMock(strftime=MagicMock(return_value=mock_date))
-                )
-            ),
+            "snowflake.snowpark_checkpoints.utils.telemetry.datetime.datetime.now",
+            return_value=MagicMock(strftime=MagicMock(return_value=mock_date)),
         ):
             from snowflake.snowpark_checkpoints.utils.telemetry import TelemetryManager
             from os import path
@@ -1016,14 +1012,8 @@ class TelemetryManagerTest(unittest.TestCase):
                 "snowflake.snowpark_checkpoints.utils.telemetry.TelemetryManager._sc_upload_local_telemetry",
                 return_value=MagicMock(),
             ), patch(
-                "datetime.datetime",
-                MagicMock(
-                    now=MagicMock(
-                        return_value=MagicMock(
-                            strftime=MagicMock(return_value=mock_date)
-                        )
-                    )
-                ),
+                "snowflake.snowpark_checkpoints.utils.telemetry.datetime.datetime.now",
+                return_value=MagicMock(strftime=MagicMock(return_value=mock_date)),
             ):
                 from snowflake.snowpark_checkpoints.utils.telemetry import (
                     TelemetryManager,

@@ -152,7 +152,7 @@ jobs:
         working-directory: ./snowpark-checkpoints-collectors
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: all-snowpark-checkpoints
           path: |

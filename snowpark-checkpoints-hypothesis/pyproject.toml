@@ -30,6 +30,7 @@ dependencies = [
   "snowflake-connector-python[pandas]",
   "hypothesis==6.130.3",
   "pandera[io]==0.20.4",
+  "pandas<3.0.0",
 ]
 description = "Hypothesis extension for generating Snowpark DataFrames"
 dynamic = ['version']

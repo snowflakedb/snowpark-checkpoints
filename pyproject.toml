@@ -53,6 +53,7 @@ keywords = [
 
 dependencies = [
   "pandera[io]==0.20.4",
+  "pandas<3.0.0",
   "hypothesis",
   "snowflake-snowpark-python>=1.23.0",
   "snowflake-connector-python",

@@ -205,7 +205,7 @@ jobs:
 
     steps:
       - name: Download Conda Artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: all-conda-snowpark-checkpoints
           path: ./dist

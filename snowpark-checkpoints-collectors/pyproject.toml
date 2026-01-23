@@ -44,7 +44,7 @@ keywords = [
 license = {text = "Apache License, Version 2.0"}
 name = "snowpark-checkpoints-collectors"
 readme = "README.md"
-requires-python = '>=3.9,<3.12'
+requires-python = '>=3.10,<3.12'
 
 [project.optional-dependencies]
 pyspark = [

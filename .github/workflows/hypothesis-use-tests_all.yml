@@ -95,7 +95,7 @@ jobs:
           Write-Output "Long paths have been enabled."
 
       - name: Set up Snowflake CLI
-        uses: Snowflake-Labs/snowflake-cli-action@221a6a1a3c3cd61bf56d646820cfd614f84bf4ea
+        uses: Snowflake-Labs/snowflake-cli-action@9919a3568fd44cd3ef953cebf049a8e3e712b16c
         with:
           cli-version: ${{ matrix.snow_cli_version }}
           default-config-file-path: ".github/config/config.toml"

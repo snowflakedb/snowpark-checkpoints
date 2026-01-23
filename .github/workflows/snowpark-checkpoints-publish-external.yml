@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -194,7 +194,7 @@ jobs:
         working-directory: ${{ github.workspace }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: py-artifacts_v${{ steps.get_version.outputs.version }}
           path: |
@@ -207,10 +207,10 @@ jobs:
     needs: deploy
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Download artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: py-artifacts_v${{ needs.deploy.outputs.version }}
           path: ./dist

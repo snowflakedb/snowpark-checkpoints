@@ -25,7 +25,7 @@ jobs:
 
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
@@ -65,5 +65,6 @@ jobs:
           DIR_NAME: "snowpark-checkpoints-configuration"
 
       - name: Run Snyk test
+        working-directory: ./snowpark-checkpoints-configuration
         run: |
-          snyk test --all-projects --detection-depth=10 --severity-threshold=high
+          snyk test --all-projects --detection-depth=10 --severity-threshold=high --policy-path=../.snyk

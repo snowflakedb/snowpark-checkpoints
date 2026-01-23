@@ -27,4 +27,4 @@ JIRA: SNOW-000000
 <!--- Use this section to request review and approval from specific individuals. -->
 <!--- Include any relevant instructions for each reviewer and approver. -->
 
-**Note**: Use GitHub's [draft PR feature](https://github.blog/news-insights/product-news/introducing-draft-pull-requests/) instead of tagging a PR as `DO NOT MERGE`.
+**Note**: Use GitHub's [draft PR feature](https://github.blog/news-insights/product-news/introducing-draft-pull-requests/) for work-in-progress changes. The repository automatically applies "DO NOT MERGE" labels to draft PRs and removes them when ready for review.

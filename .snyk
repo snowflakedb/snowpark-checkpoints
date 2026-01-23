@@ -1,0 +1,12 @@
+# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.
+version: v1.25.0
+# ignores vulnerabilities until expiry date; change duration by modifying expiry date
+ignore:
+  'snyk:lic:pip:secretstorage:Unknown':
+    - '*':
+        reason: >-
+          secretstorage uses BSD-3-Clause license which is valid. Snyk fails to detect
+          the license in version 3.5.0. The license is clearly stated in the project's
+          metadata and GitHub repository.
+        expires: 2027-01-23T00:00:00.000Z
+        created: 2026-01-23T00:00:00.000Z

@@ -29,7 +29,7 @@ requirements:
 
 test:
   commands:
-    - pip install pandera[io]==0.20.4
+    - pip install "pandas<3.0.0" pandera[io]==0.20.4
     - pip check
     - pip list --verbose
     - python -c "import pandera"

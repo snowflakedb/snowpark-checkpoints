@@ -4,28 +4,3 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-
-registries:
-  snowmountain-nuget:
-    type: nuget-feed
-    url: https://pkgs.dev.azure.com/snowmountain/_packaging/snowmountain-nuget%40Local/nuget/v3/index.json
-    username: _
-    password: ${{secrets.ADO_FEED_PAT}}
-
-  snowmountain-nuget-alpha:
-    type: nuget-feed
-    url: https://pkgs.dev.azure.com/snowmountain/SnowMountain/_packaging/snowmountain-nuget-alpha/nuget/v3/index.json
-    username: _
-    password: ${{secrets.ADO_FEED_PAT}}
-
-  snowsit-nuget:
-    type: nuget-feed
-    url: https://pkgs.dev.azure.com/snowsit/_packaging/snowsit-nuget%40Local/nuget/v3/index.json
-    username: _
-    password: ${{secrets.ADO_FEED_PAT}}
-
-  snowsit-nuget-alpha:
-    type: nuget-feed
-    url: https://pkgs.dev.azure.com/snowsit/SnowflakeSIT/_packaging/snowsit-nuget-alpha/nuget/v3/index.json
-    username: _
-    password: ${{secrets.ADO_FEED_PAT}}

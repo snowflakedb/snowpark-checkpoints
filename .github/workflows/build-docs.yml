@@ -53,7 +53,7 @@ jobs:
         shell: bash
 
       - name: Upload documentation
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: docs
           path: docs/build/html

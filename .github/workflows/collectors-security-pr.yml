@@ -65,4 +65,4 @@ jobs:
 
       - name: Run Snyk test
         run: |
-          snyk test --all-projects --detection-depth=10 --severity-threshold=high
+          snyk test --all-projects --detection-depth=10 --severity-threshold=high --policy-path=../.snyk

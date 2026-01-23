@@ -66,4 +66,4 @@ jobs:
 
       - name: Run Snyk monitor
         run: |
-          snyk monitor --all-projects --detection-depth=10 --severity-threshold=high
+          snyk monitor --all-projects --detection-depth=10 --severity-threshold=high --policy-path=../.snyk

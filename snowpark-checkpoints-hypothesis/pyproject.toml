@@ -125,7 +125,7 @@ exclude_lines = [
 
 [tool.hatch.envs.linter.scripts]
 check = [
-  "echo 'Running linting checks...' && ruff check --config=../ruff.toml --statistics --verbose . || (echo '❌ LINTING FAILED: Please fix the above linting issues before proceeding. Use \"ruff check --config=../ruff.toml --fix .\" to auto-fix some issues, or fix them manually.' && exit 1)",
+  "ruff check --config=../ruff.toml --fix . && echo 'Running linting checks...' && ruff check --config=../ruff.toml --statistics --verbose . || (echo '❌ LINTING FAILED: Please fix the above linting issues before proceeding. Use \"ruff check --config=../ruff.toml --fix .\" to auto-fix some issues, or fix them manually.' && exit 1)",
 ]
 
 [tool.hatch.envs.test.scripts]

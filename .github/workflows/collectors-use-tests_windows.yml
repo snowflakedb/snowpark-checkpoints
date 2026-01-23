@@ -6,10 +6,9 @@ on:
       python-version:
         description: 'Python version to test'
         required: false
-        default: '3.9'
+        default: '3.10'
         type: choice
         options:
-        - '3.9'
         - '3.10'
         - '3.11'
 
@@ -332,9 +331,6 @@ jobs:
           # Use hatch with matrix environment directly
           Write-Host "Running tests with Python $PYTHON_VERSION"
           switch ($PYTHON_VERSION) {
-            "3.9" {
-              $HATCH_ENV = "test_all.py3.9"
-            }
             "3.10" {
               $HATCH_ENV = "test_all.py3.10"
             }

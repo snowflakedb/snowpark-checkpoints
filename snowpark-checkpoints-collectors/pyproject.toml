@@ -108,16 +108,16 @@ include = [
 
 [tool.hatch.envs.default]
 features = ["development"]
-python = "3.9"
+python = "3.10"
 
 [[tool.hatch.envs.test_all.matrix]]
-python = ['3.9', '3.10', '3.11']
+python = ['3.10', '3.11']
 
 [tool.hatch.envs.test_all]
 template = 'test'
 
 [tool.hatch.envs.test]
-python = '3.9'
+python = '3.10'
 
 [tool.coverage.paths]
 src = ["src"]

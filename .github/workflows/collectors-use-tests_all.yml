@@ -198,9 +198,6 @@ jobs:
           # Use hatch with matrix environment directly
           echo "Running tests with Python $PYTHON_VERSION"
           case $PYTHON_VERSION in
-            "3.9")
-              HATCH_ENV="test_all.py3.9"
-              ;;
             "3.10")
               HATCH_ENV="test_all.py3.10"
               ;;

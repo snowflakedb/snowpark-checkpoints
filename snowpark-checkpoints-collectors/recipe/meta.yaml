@@ -16,12 +16,12 @@ build:
 
 requirements:
   host:
-    - python<3.12,>=3.9
+    - python<3.12,>=3.10
     - pip
     - wheel
     - hatchling
   run:
-    - python<3.12,>=3.9
+    - python<3.12,>=3.10
     - snowflake-connector-python
     - snowflake-snowpark-python>=1.23.0
     - pyspark>=3.5.0

@@ -194,7 +194,7 @@ jobs:
         working-directory: ${{ github.workspace }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: py-artifacts_v${{ steps.get_version.outputs.version }}
           path: |

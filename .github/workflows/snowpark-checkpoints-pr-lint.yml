@@ -27,13 +27,18 @@ jobs:
 
       - name: Check if PR contains github-actions[bot] commits
         id: check_bot
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           echo "Fetching PR base and head refs..."
-          git fetch --no-tags --prune origin ${{ github.event.pull_request.base.ref }}:refs/remotes/origin/${{ github.event.pull_request.base.ref }} || true
-          git fetch --no-tags --prune origin ${{ github.event.pull_request.head.ref }}:refs/remotes/origin/${{ github.event.pull_request.head.ref }} || true
+          git fetch --no-tags --prune origin -- "$BASE_REF":refs/remotes/origin/"$BASE_REF" || true
+          git fetch --no-tags --prune origin -- "$HEAD_REF":refs/remotes/origin/"$HEAD_REF" || true
 
           echo "Checking commits in PR for github-actions[bot] authorship..."
-          BOT_COMMITS=$(git log --pretty=format:"%an" ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} | grep -c "github-actions\[bot\]" || echo "0")
+          BOT_COMMITS=$(git log --pretty=format:"%an" "$BASE_SHA".."$HEAD_SHA" | grep -c "github-actions\[bot\]" || true)
 
           if [[ "$BOT_COMMITS" -gt 0 ]]; then
             echo "WARNING: Found $BOT_COMMITS commit(s) authored by github-actions[bot]. Bypassing PR lint rules."
@@ -97,14 +102,19 @@ jobs:
 
       - name: Check PR Size
         if: steps.check_bot.outputs.bot_created != 'true'
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Base SHA: ${{ github.event.pull_request.base.sha }}"
-          echo "Head SHA: ${{ github.event.pull_request.head.sha }}"
+          echo "Base SHA: $BASE_SHA"
+          echo "Head SHA: $HEAD_SHA"
 
           echo "Fetching diff between the base and head commits..."
-          git fetch --no-tags --prune --depth=2 origin ${{ github.event.pull_request.base.ref }} || true
+          git fetch --no-tags --prune --depth=2 origin -- "$BASE_REF" || true
 
-          CHANGED_PYFILES=$(git diff --name-only --diff-filter=d ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} | grep '\.py$' | grep -v '/test/' || true)
+          CHANGED_PYFILES=$(git diff --name-only --diff-filter=d "$BASE_SHA" "$HEAD_SHA" | grep '\.py$' | grep -v '/test/' || true)
           echo "Changed Python files:" $CHANGED_PYFILES
 
           if [ -z "$CHANGED_PYFILES" ]; then
@@ -123,5 +133,3 @@ jobs:
           fi
 
           echo "PR size check passed successfully."
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

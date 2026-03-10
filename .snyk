@@ -10,3 +10,11 @@ ignore:
           metadata and GitHub repository.
         expires: 2027-01-23T00:00:00.000Z
         created: 2026-01-23T00:00:00.000Z
+  'snyk:lic:pip:pyarrow:Unknown':
+    - '*':
+        reason: >-
+          pyarrow uses Apache-2.0 license which is valid. Snyk fails to detect
+          the license in version 23.0.1. The license is clearly stated in the project's
+          metadata and GitHub repository.
+        expires: 2027-03-10T00:00:00.000Z
+        created: 2026-03-10T00:00:00.000Z

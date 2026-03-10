@@ -57,7 +57,7 @@ development = [
   "twine==5.1.1",
   "hatchling==1.25.0",
   "pre-commit>=4.0.1",
-  "setuptools>=70.0.0",
+  "setuptools>=78.1.1",
   "pyarrow>=18.0.0",
   "deepdiff>=8.1.1",
   "pyspark>=3.5.0",

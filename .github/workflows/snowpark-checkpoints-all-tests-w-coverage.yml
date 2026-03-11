@@ -275,7 +275,7 @@ jobs:
         working-directory: ./snowpark-checkpoints-validators
 
       - name: Upload coverage reports
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           include-hidden-files: true
           name: coverage_python-${{ matrix.python-version }}

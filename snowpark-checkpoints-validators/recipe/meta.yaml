@@ -32,6 +32,7 @@ requirements:
 
 test:
   requires:
+    - setuptools <82
     - pydantic
   commands:
     - pip install pandera[io]==0.20.4

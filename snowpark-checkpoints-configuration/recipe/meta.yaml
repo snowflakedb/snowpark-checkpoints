@@ -28,6 +28,7 @@ requirements:
 test:
   requires:
     - pip
+    - setuptools <82
     - snowflake-snowpark-python>=1.23.0
     - pandas
     - pydantic
